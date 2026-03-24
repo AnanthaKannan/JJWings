@@ -30,7 +30,7 @@ export default function LoginScreen({
   const navigation = useNavigation();
 
   const handleLogin = () => {
-    navigation.navigate('Calculate');
+    navigation.navigate('Main');
     if (onLogin) onLogin(name, code);
   };
 

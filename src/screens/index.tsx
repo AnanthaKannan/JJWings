@@ -1,2 +1,3 @@
 export { default as Calculate } from './Calulate';
 export { default as LoginScreen } from './Loginscreen';
+export { default as ProfileScreen } from './ProfileScreen';
