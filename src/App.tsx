@@ -4,7 +4,12 @@ import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import { Calculate, LoginScreen, ProfileScreen } from './src/screens';
+import {
+  Calculate,
+  LoginScreen,
+  ProfileScreen,
+  HomeworkScreen,
+} from './screens';
 
 // ✅ Bottom tabs for the main app (after login)
 const MainTabs = createBottomTabNavigator({
@@ -28,12 +33,12 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
-    Profile: {
-      screen: ProfileScreen, // replace with your Profile screen
+    Homework: {
+      screen: HomeworkScreen,
       options: {
-        tabBarLabel: 'Profile',
+        tabBarLabel: 'Homework',
         tabBarIcon: ({ color, size }) => (
-          <TabIcon label="👤" color={color} size={size} />
+          <TabIcon label="⊞" color={color} size={size} />
         ),
       },
     },
