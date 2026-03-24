@@ -1,5 +1,7 @@
 import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { createStaticNavigation } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { Calculate, LoginScreen } from './src/screens';
 
@@ -14,16 +16,32 @@ function App() {
   );
 }
 
+const RootStack = createNativeStackNavigator({
+  initialRouteName: 'Login',
+  screens: {
+    Calculate: Calculate,
+    Login: {
+      screen: LoginScreen,
+      options: {
+        headerShown: false,
+      },
+    },
+  },
+});
+
+const Navigation = createStaticNavigation(RootStack);
+
 function AppContent() {
   return (
-    <View style={styles.container}>
-      {/* <LoginScreen
-        onLogin={(name, code) => console.log(name, code)}
-        onForgotCode={() => console.log('forgot code')}
-        onJoinNow={() => console.log('join now')}
-      /> */}
-      <Calculate />
-    </View>
+    <Navigation />
+    // <View style={styles.container}>
+    //   {/* <LoginScreen
+    //     onLogin={(name, code) => console.log(name, code)}
+    //     onForgotCode={() => console.log('forgot code')}
+    //     onJoinNow={() => console.log('join now')}
+    //   /> */}
+    //   <Calculate />
+    // </View>
   );
 }
 
