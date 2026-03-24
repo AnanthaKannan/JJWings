@@ -10,25 +10,27 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 // ─── Types ───────────────────────────────────────────────
 interface LoginScreenProps {
   onLogin?: (name: string, code: string) => void;
   onForgotCode?: () => void;
-  onJoinNow?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────
 export default function LoginScreen({
   onLogin,
   onForgotCode,
-  onJoinNow,
 }: LoginScreenProps) {
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
+  const [name, setName] = useState('Billa');
+  const [code, setCode] = useState('Yahoo');
   const [showCode, setShowCode] = useState(false);
 
+  const navigation = useNavigation();
+
   const handleLogin = () => {
+    navigation.navigate('Calculate');
     if (onLogin) onLogin(name, code);
   };
 
