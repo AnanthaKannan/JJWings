@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import {
   Calculate,
@@ -11,7 +12,20 @@ import {
   HomeworkScreen,
 } from './screens';
 
-// ✅ Bottom tabs for the main app (after login)
+// ✅ Nested stack inside the Homework tab — keeps bottom nav visible
+const HomeworkStack = createNativeStackNavigator({
+  screenOptions: { headerShown: false },
+  screens: {
+    HomeworkList: {
+      screen: HomeworkScreen,
+    },
+    Calculate: {
+      screen: Calculate,
+    },
+  },
+});
+
+// ✅ Bottom tabs
 const MainTabs = createBottomTabNavigator({
   screenOptions: {
     headerShown: false,
@@ -23,81 +37,42 @@ const MainTabs = createBottomTabNavigator({
     },
   },
   screens: {
-    Calculate: {
-      screen: Calculate,
-      options: {
-        tabBarLabel: 'Calculate',
-        tabBarIcon: ({ color, size }) => (
-          // Using a simple text icon — swap with react-native-vector-icons if available
-          <TabIcon label="⊞" color={color} size={size} />
-        ),
-      },
-    },
+    // ✅ HomeworkStack replaces HomeworkScreen — Calculate lives inside it
     Homework: {
-      screen: HomeworkScreen,
+      screen: HomeworkStack,
       options: {
         tabBarLabel: 'Homework',
         tabBarIcon: ({ color, size }) => (
-          <TabIcon label="⊞" color={color} size={size} />
+          <MaterialIcons name="book" color={color} size={size} />
         ),
       },
     },
-    Dashboard: {
-      screen: ProfileScreen, // replace with your Profile screen
+    Logout: {
+      screen: ProfileScreen,
       options: {
-        tabBarLabel: 'Profile',
+        tabBarLabel: 'Logout',
         tabBarIcon: ({ color, size }) => (
-          <TabIcon label="👤" color={color} size={size} />
-        ),
-      },
-    },
-    Final: {
-      screen: ProfileScreen, // replace with your Profile screen
-      options: {
-        tabBarLabel: 'Profile',
-        tabBarIcon: ({ color, size }) => (
-          <TabIcon label="👤" color={color} size={size} />
+          <MaterialIcons name="logout" color={color} size={size} />
         ),
       },
     },
   },
 });
 
-// ✅ Root stack — Login is at root level, not inside tabs
+// ✅ Root stack — only Login here, no Calculate
 const RootStack = createNativeStackNavigator({
   initialRouteName: 'Login',
-  screenOptions: {
-    headerShown: false,
-  },
+  screenOptions: { headerShown: false },
   screens: {
-    Login: {
-      screen: LoginScreen,
-    },
-    Main: {
-      screen: MainTabs,
-    },
+    Login: { screen: LoginScreen },
+    Main: { screen: MainTabs },
   },
 });
 
 const Navigation = createStaticNavigation(RootStack);
 
-// Simple emoji/text icon helper (replace with vector icons for production)
-function TabIcon({
-  label,
-  color,
-  size,
-}: {
-  label: string;
-  color: string;
-  size: number;
-}) {
-  const { Text } = require('react-native');
-  return <Text style={{ fontSize: size, color }}>{label}</Text>;
-}
-
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
-
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
@@ -105,12 +80,5 @@ function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#EEF2FF',
-  },
-});
 
 export default App;

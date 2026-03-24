@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 type BadgeType = 'IN PROGRESS' | 'NEW' | 'COMPLETED';
 
@@ -33,6 +34,11 @@ function HomeworkCard({
   progress,
 }: HomeworkCardProps) {
   const badgeStyle = BADGE_STYLES[badge];
+  const navigation = useNavigation();
+
+  const handleAttend = () => {
+    navigation.navigate('Calculate');
+  };
 
   return (
     <View style={styles.card}>
@@ -66,7 +72,11 @@ function HomeworkCard({
 
       {/* Attend button — hidden for COMPLETED */}
       {badge !== 'COMPLETED' && (
-        <TouchableOpacity style={styles.attendBtn} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.attendBtn}
+          activeOpacity={0.85}
+          onPress={handleAttend}
+        >
           <Text style={styles.attendBtnText}>Attend</Text>
         </TouchableOpacity>
       )}
