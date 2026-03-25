@@ -10,6 +10,7 @@ import {
   LoginScreen,
   ProfileScreen,
   HomeworkScreen,
+  QuizReviewScreen,
 } from './screens';
 
 // ✅ Nested stack inside the Homework tab — keeps bottom nav visible
@@ -21,6 +22,9 @@ const HomeworkStack = createNativeStackNavigator({
     },
     Calculate: {
       screen: Calculate,
+    },
+    QuizReview: {
+      screen: QuizReviewScreen,
     },
   },
 });

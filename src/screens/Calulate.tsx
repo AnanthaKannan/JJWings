@@ -1,30 +1,38 @@
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, SafeAreaView, StatusBar } from 'react-native';
 
 import { QuizScreen, Header } from '../component/index';
 import Timer from '../component/Timer';
 
 export default function Calculate() {
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false} // hides scrollbar
-      keyboardShouldPersistTaps="handled" // taps work while keyboard open
-    >
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
       <Header playerName="Tactile Explorer" score={128} />
-      <Timer totalTimeSeconds={165} />
-      <QuizScreen />
-    </ScrollView>
+      <ScrollView
+        // style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false} // hides scrollbar
+        keyboardShouldPersistTaps="handled" // taps work while keyboard open
+      >
+        <Timer totalTimeSeconds={165} />
+        <QuizScreen />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F0F4FF',
   },
-  content: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     gap: 16,
-    paddingHorizontal: 20,
   },
+  // content: {
+  //   gap: 16,
+  //   paddingHorizontal: 20,
+  // },
 });
