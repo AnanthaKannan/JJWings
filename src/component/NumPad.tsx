@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 // ─── Types ───────────────────────────────────────────────
 interface NumberPadProps {
-  onSubmit?: (value: string) => void;
+  onSubmit?: (value: number) => void;
 }
 
 // ─── Component ───────────────────────────────────────────
@@ -23,7 +23,8 @@ export default function NumPad({ onSubmit }: NumberPadProps) {
   };
 
   const handleSubmit = () => {
-    if (onSubmit) onSubmit(input);
+    setInput('');
+    if (onSubmit) onSubmit(Number(input));
     console.log('Submitted:', input);
   };
 

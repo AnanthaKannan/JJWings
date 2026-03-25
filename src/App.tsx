@@ -16,7 +16,7 @@ import {
 const HomeworkStack = createNativeStackNavigator({
   screenOptions: { headerShown: false },
   screens: {
-    HomeworkList: {
+    HomeworkScreen: {
       screen: HomeworkScreen,
     },
     Calculate: {

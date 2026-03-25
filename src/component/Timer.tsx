@@ -6,7 +6,7 @@ interface TimerProps {
 }
 
 export default function Timer({
-  totalTimeSeconds = 165, // 2:45
+  totalTimeSeconds = 0, // 2:45
 }: TimerProps) {
   const [timeLeft, setTimeLeft] = useState(totalTimeSeconds);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -15,11 +15,11 @@ export default function Timer({
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current!);
-          return 0;
-        }
-        return prev - 1;
+        // if (prev <= 1) {
+        //   clearInterval(intervalRef.current!);
+        //   return 0;
+        // }
+        return prev + 1;
       });
     }, 1000);
     return () => clearInterval(intervalRef.current!);
@@ -36,9 +36,7 @@ export default function Timer({
 
   return (
     <View style={styles.timerCard}>
-      {/* <Text style={styles.timerIcon}>⏱</Text> */}
       <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
-      {/* <Text style={styles.timerLabel}>Time Remaining</Text> */}
     </View>
   );
 }
