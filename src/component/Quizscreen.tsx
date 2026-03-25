@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { NumPad } from './index';
+import { NumPad, QuizSuccessModal } from './index';
 
 // ─── Types ───────────────────────────────────────────────
 interface QuizScreenProps {
@@ -18,6 +19,13 @@ type QuizData = {
   result: boolean[]; // or boolean[] if it's correct/incorrect
 };
 
+type RootStackParamList = {
+  Home: undefined;
+  HomeworkScreen: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 // ─── Component ───────────────────────────────────────────
 export default function QuizScreen({}: // currentQuestion = 1,
 // question = '12 + 5 + 10 + 20 + 5 = ?',
@@ -27,7 +35,9 @@ QuizScreenProps) {
     answer: [],
     result: [],
   });
-  const navigation = useNavigation();
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const navigation = useNavigation<NavigationProp>();
   const { questions, answer, result } = data;
 
   // Progress percentage
@@ -39,22 +49,28 @@ QuizScreenProps) {
       answer: [...answer, value],
       result: [...result, true],
     };
-    console.log('-----', updatedData);
     setData(updatedData);
 
-    console.log(updatedData.answer.length);
-    console.log(updatedData.questions.length);
     if (updatedData.answer.length === updatedData.questions.length) {
-      console.log('------------------- I am in');
       // consider all the question are attend
       // apiCall
-      navigation.navigate('HomeworkScreen');
+      setModalVisible(true);
     }
   };
 
   return (
     // <SafeAreaView style={styles.safeArea}>
     <View>
+      <QuizSuccessModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(true)}
+        onSeeResults={() => {
+          setModalVisible(false);
+          navigation.navigate('HomeworkScreen');
+        }}
+        timeTaken="02:45"
+        accuracy="95%"
+      />
       <View style={styles.container}>
         {/* ── Question Card ── */}
         <View style={styles.questionCard}>
