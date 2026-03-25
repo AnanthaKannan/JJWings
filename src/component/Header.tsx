@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 interface HeaderProps {
   playerName?: string;
@@ -7,73 +8,63 @@ interface HeaderProps {
 }
 
 export default function Header({ playerName, score }: HeaderProps) {
-  return (
-    <View style={styles.header}>
-      <View style={styles.playerInfo}>
-        {/* Avatar placeholder */}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarEmoji}>🧑</Text>
-        </View>
-        <Text style={styles.playerName}>{playerName}</Text>
-      </View>
+  const navigation = useNavigation();
+  const handleBack = () => {
+    navigation.navigate('HomeworkScreen');
+  };
 
-      {/* Score Badge */}
-      <View style={styles.scoreBadge}>
-        <Text style={styles.scoreText}>{score}</Text>
-        <Text style={styles.starEmoji}>⭐</Text>
+  return (
+    <View style={styles.topBar}>
+      <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+        <Text style={styles.backArrow}>‹</Text>
+        <Text style={styles.backText}>Quiz Review</Text>
+      </TouchableOpacity>
+      <View style={styles.levelBadge}>
+        <Text style={styles.levelText}>⭐ Level 5A-01</Text>
       </View>
     </View>
   );
 }
 
+const TEXT = '#1E293B';
+
 const styles = StyleSheet.create({
-  // ── Header ──
-  header: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F0F4FF',
   },
-  playerInfo: {
+  backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 4,
   },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#C7D4FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+  backArrow: {
+    fontSize: 28,
+    color: TEXT,
+    lineHeight: 32,
+    marginTop: -2,
   },
-  avatarEmoji: {
-    fontSize: 22,
-  },
-  playerName: {
-    fontSize: 16,
+  backText: {
+    fontSize: 17,
     fontWeight: '700',
-    color: '#1A2259',
+    color: TEXT,
+    letterSpacing: -0.3,
   },
-  scoreBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+  levelBadge: {
+    backgroundColor: '#FFF7ED',
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 6,
-    shadowColor: '#B0BADF',
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1.5,
+    borderColor: '#FED7AA',
   },
-  scoreText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1A2259',
-  },
-  starEmoji: {
-    fontSize: 16,
+  levelText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#C2410C',
   },
 });

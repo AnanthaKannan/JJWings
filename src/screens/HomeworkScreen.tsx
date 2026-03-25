@@ -37,7 +37,11 @@ function HomeworkCard({
   const navigation = useNavigation();
 
   const handleAttend = () => {
-    navigation.navigate('Calculate');
+    if (badge === 'COMPLETED') {
+      navigation.navigate('QuizReview');
+    } else {
+      navigation.navigate('Calculate');
+    }
   };
 
   return (
@@ -71,15 +75,15 @@ function HomeworkCard({
       )}
 
       {/* Attend button — hidden for COMPLETED */}
-      {badge !== 'COMPLETED' && (
-        <TouchableOpacity
-          style={styles.attendBtn}
-          activeOpacity={0.85}
-          onPress={handleAttend}
-        >
-          <Text style={styles.attendBtnText}>Attend</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={styles.attendBtn}
+        activeOpacity={0.85}
+        onPress={handleAttend}
+      >
+        <Text style={styles.attendBtnText}>
+          {badge !== 'COMPLETED' ? 'Attend' : 'View'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -141,7 +145,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 32,
   },
 

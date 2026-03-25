@@ -1,4 +1,4 @@
-import { StatusBar, StyleSheet, useColorScheme } from 'react-native';
+import { StatusBar, Alert, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import {
   LoginScreen,
   ProfileScreen,
   HomeworkScreen,
+  QuizReviewScreen,
 } from './screens';
 
 // ✅ Nested stack inside the Homework tab — keeps bottom nav visible
@@ -21,6 +22,9 @@ const HomeworkStack = createNativeStackNavigator({
     },
     Calculate: {
       screen: Calculate,
+    },
+    QuizReview: {
+      screen: QuizReviewScreen,
     },
   },
 });
@@ -55,6 +59,31 @@ const MainTabs = createBottomTabNavigator({
           <MaterialIcons name="logout" color={color} size={size} />
         ),
       },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          // Prevent default tab switch
+          e.preventDefault();
+
+          Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+              { text: 'No', style: 'cancel' },
+              {
+                text: 'Yes',
+                style: 'destructive',
+                onPress: () => {
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Login' }],
+                  });
+                },
+              },
+            ],
+            { cancelable: true },
+          );
+        },
+      }),
     },
   },
 });
