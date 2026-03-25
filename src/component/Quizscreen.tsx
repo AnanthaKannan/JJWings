@@ -1,59 +1,104 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { NumPad, QuizSuccessModal } from './index';
 
 // ─── Types ───────────────────────────────────────────────
 interface QuizScreenProps {
   playerAvatar?: any;
   totalQuestions?: number;
   currentQuestion?: number;
-  question?: string;
+  // question?: string;
 }
 
+type QuizData = {
+  questions: string[];
+  answer: number[]; // or string[] depending on your use
+  result: boolean[]; // or boolean[] if it's correct/incorrect
+};
+
+type RootStackParamList = {
+  Home: undefined;
+  HomeworkScreen: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 // ─── Component ───────────────────────────────────────────
-export default function QuizScreen({
-  totalQuestions = 25,
-  currentQuestion = 1,
-  question = '12 + 5 = ?',
-}: QuizScreenProps) {
+export default function QuizScreen({}: // currentQuestion = 1,
+// question = '12 + 5 + 10 + 20 + 5 = ?',
+QuizScreenProps) {
+  const [data, setData] = useState<QuizData>({
+    questions: ['12 + 15 + 10', '15 + 10 + 321', '20 + 55 + 121'],
+    answer: [],
+    result: [],
+  });
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const navigation = useNavigation<NavigationProp>();
+  const { questions, answer, result } = data;
+
   // Progress percentage
-  const progress = (currentQuestion - 1) / totalQuestions;
+  const progress = result.length / questions.length;
+
+  const onSubmit = (value: number) => {
+    const updatedData = {
+      ...data,
+      answer: [...answer, value],
+      result: [...result, true],
+    };
+    setData(updatedData);
+
+    if (updatedData.answer.length === updatedData.questions.length) {
+      // consider all the question are attend
+      // apiCall
+      setModalVisible(true);
+    }
+  };
 
   return (
     // <SafeAreaView style={styles.safeArea}>
-    <View style={styles.container}>
-      {/* ── Question Card ── */}
-      <View style={styles.questionCard}>
-        {/* Question number label */}
-        <View style={styles.questionLabel}>
-          <Text style={styles.questionLabelText}>
-            Question {currentQuestion} of {totalQuestions}
-          </Text>
-        </View>
+    <View>
+      <QuizSuccessModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(true)}
+        onSeeResults={() => {
+          setModalVisible(false);
+          navigation.navigate('HomeworkScreen');
+        }}
+        timeTaken="02:45"
+        accuracy="95%"
+      />
+      <View style={styles.container}>
+        {/* ── Question Card ── */}
+        <View style={styles.questionCard}>
+          {/* Question number label */}
+          <View style={styles.questionLabel}>
+            <Text style={styles.questionLabelText}>
+              Question {result.length + 1} of {questions.length}
+            </Text>
+          </View>
 
-        {/* Question row */}
-        <View style={styles.questionRow}>
-          <Text style={styles.questionText}>{question}</Text>
+          {/* Question row */}
+          <View style={styles.questionRow}>
+            <Text style={styles.questionText}>
+              {questions[result.length]} = ?
+            </Text>
+            {/* <Text style={styles.questionText}>{' 20'}</Text>
+          <Text style={styles.questionText}>{'-50'}</Text> */}
+          </View>
 
-          {/* Operator icons */}
-          <View style={styles.operatorBox}>
-            <View style={styles.operatorRow}>
-              <Text style={styles.operatorIcon}>−</Text>
-              <Text style={styles.operatorIcon}>×</Text>
-            </View>
-            <View style={styles.operatorRow}>
-              <Text style={styles.operatorIcon}>÷</Text>
-              <Text style={styles.operatorIcon}>=</Text>
-            </View>
+          {/* Progress Bar */}
+          <View style={styles.progressTrack}>
+            <View
+              style={[styles.progressFill, { width: `${progress * 100}%` }]}
+            />
           </View>
         </View>
-
-        {/* Progress Bar */}
-        <View style={styles.progressTrack}>
-          <View
-            style={[styles.progressFill, { width: `${progress * 100}%` }]}
-          />
-        </View>
       </View>
+      <NumPad onSubmit={onSubmit} />
     </View>
     // </SafeAreaView>
   );
@@ -148,9 +193,9 @@ const styles = StyleSheet.create({
     color: '#5A6AA8',
   },
   questionRow: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    // justifyContent: 'space-between',
     marginBottom: 20,
   },
   questionText: {

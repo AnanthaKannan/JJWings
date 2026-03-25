@@ -1,13 +1,9 @@
 import { StyleSheet, ScrollView } from 'react-native';
 
-import { QuizScreen, NumPad, Header } from '../component/index';
+import { QuizScreen, Header } from '../component/index';
 import Timer from '../component/Timer';
 
 export default function Calculate() {
-  const onSubmit = (value: string) => {
-    console.log('submitted', value);
-  };
-
   return (
     <ScrollView
       style={styles.container}
@@ -17,12 +13,7 @@ export default function Calculate() {
     >
       <Header playerName="Tactile Explorer" score={128} />
       <Timer totalTimeSeconds={165} />
-      <QuizScreen
-        currentQuestion={1}
-        totalQuestions={25}
-        question="12 + 5 = ?"
-      />
-      <NumPad onSubmit={onSubmit} />
+      <QuizScreen />
     </ScrollView>
   );
 }
