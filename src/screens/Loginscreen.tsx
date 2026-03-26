@@ -12,32 +12,38 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { useGetQuestionsQuery } from '../store/api';
-// ─── Types ───────────────────────────────────────────────
-interface LoginScreenProps {
-  onLogin?: (name: string, code: string) => void;
-  onForgotCode?: () => void;
-}
+import { useLazyGetLoginQuery } from '../store/api';
+
+import { color } from '../util';
 
 // ─── Component ───────────────────────────────────────────
-export default function LoginScreen({
-  onLogin,
-  onForgotCode,
-}: LoginScreenProps) {
-  const [name, setName] = useState('Billa');
-  const [code, setCode] = useState('Yahoo');
+export default function LoginScreen() {
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [showCode, setShowCode] = useState(false);
+  const [error, setError] = useState(false);
 
   const navigation = useNavigation();
 
-  const { data: questions, isLoading } = useGetQuestionsQuery(undefined);
+  const [loginUser] = useLazyGetLoginQuery();
 
-  console.log('----------------', questions);
+  const handleLogin = async () => {
+    const userData = await loginUser({
+      userId: name,
+      password: code,
+    }).unwrap();
 
-  const handleLogin = () => {
-    navigation.navigate('Main');
-    if (onLogin) onLogin(name, code);
+    console.log(userData);
+    if (userData?.password === code) {
+      navigation.navigate('Main');
+    } else {
+      setError(true);
+    }
   };
+
+  useEffect(() => {
+    if (error) setError(false);
+  }, [name, code]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -97,6 +103,11 @@ export default function LoginScreen({
                 <Text style={styles.eyeIcon}>{showCode ? '🙈' : '👁️'}</Text>
               </TouchableOpacity>
             </View>
+            {error && (
+              <Text style={styles.errorMsg}>
+                Oops! That code doesn't look right. Try again!
+              </Text>
+            )}
 
             {/* Let's Go Button */}
             <TouchableOpacity
@@ -110,23 +121,6 @@ export default function LoginScreen({
             >
               <Text style={styles.loginBtnText}>Let's Go!</Text>
             </TouchableOpacity>
-
-            {/* Forgot Code */}
-            <TouchableOpacity onPress={onForgotCode} style={styles.forgotBtn}>
-              <Text style={styles.forgotText}>Forgot Code?</Text>
-            </TouchableOpacity>
-
-            {/* Join Now */}
-            {/* <View style={styles.joinRow}>
-              <Text style={styles.joinPrompt}>New here? </Text>
-              <TouchableOpacity
-                onPress={onJoinNow}
-                style={styles.joinNowBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.joinNowText}>Join Now</Text>
-              </TouchableOpacity>
-            </View> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -302,5 +296,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+  },
+
+  errorMsg: {
+    marginTop: 10,
+    fontSize: 12,
+    color: color.RED,
   },
 });

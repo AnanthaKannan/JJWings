@@ -1,3 +1,37 @@
+## JJ Wings
+
+### Using React Native CLI (ADB over WiFi)
+Step 1: Connect once with USB
+You still need USB for the initial setup.
+
+Step 2: Find your device IP
+On your phone:
+  * Go to Settings → About Phone → Status
+  * Note the IP address (e.g., 192.168.1.5)
+Step 3: Enable TCP/IP mode
+Run this in terminal:
+```bash
+adb tcpip 5555
+```
+Step 4: Connect over WiFi
+```bash
+adb connect 192.168.1.5:5555
+```
+Step 5: Now unplug the cable and Run your app
+```bash
+npm run android
+```
+🔍 Check connection
+```bash
+adb devices
+```
+You should see your device listed with its IP address.
+```
+192.168.1.5:5555 device
+```
+That's it! Your React Native app should now be running on your device over WiFi.
+
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
