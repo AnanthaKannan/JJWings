@@ -4,6 +4,8 @@ import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { Provider } from 'react-redux';
+import { store } from '../src/store/store';
 
 import {
   Calculate,
@@ -103,10 +105,12 @@ const Navigation = createStaticNavigation(RootStack);
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <Navigation />
-    </SafeAreaProvider>
+    <Provider store={store}>
+      <SafeAreaProvider>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <Navigation />
+      </SafeAreaProvider>
+    </Provider>
   );
 }
 

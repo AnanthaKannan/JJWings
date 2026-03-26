@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useGetQuestionsQuery } from '../store/api';
 // ─── Types ───────────────────────────────────────────────
 interface LoginScreenProps {
   onLogin?: (name: string, code: string) => void;
@@ -28,6 +29,10 @@ export default function LoginScreen({
   const [showCode, setShowCode] = useState(false);
 
   const navigation = useNavigation();
+
+  const { data: questions, isLoading } = useGetQuestionsQuery(undefined);
+
+  console.log('----------------', questions);
 
   const handleLogin = () => {
     navigation.navigate('Main');
