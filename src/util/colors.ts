@@ -1,8 +1,12 @@
-const BLUE = '#2563EB';
-const BLUE_LIGHT = '#EFF4FF';
-const RED = '#EF4444';
-const RED_LIGHT = '#FEF2F2';
-const GREEN = '#22C55E';
-const GOLD = '#F59E0B';
-const TEXT = '#1E293B';
-const MUTED = '#64748B';
+const color = {
+  BLUE: '#2563EB',
+  BLUE_LIGHT: '#EFF4FF',
+  RED: '#EF4444',
+  RED_LIGHT: '#FEF2F2',
+  GREEN: '#22C55E',
+  GOLD: '#F59E0B',
+  TEXT: '#1E293B',
+  MUTED: '#64748B',
+};
+
+export default color;
