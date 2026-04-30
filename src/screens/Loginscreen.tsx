@@ -11,32 +11,44 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useDispatch } from 'react-redux';
 
-import { useGetQuestionsQuery } from '../store/api';
+import color from '../util/colors';
+import { setCredentials } from '../store/slices';
+
+import { useGetQuestionsQuery, useLazyGetLoginQuery } from '../store/api';
 // ─── Types ───────────────────────────────────────────────
-interface LoginScreenProps {
-  onLogin?: (name: string, code: string) => void;
-  onForgotCode?: () => void;
-}
+// interface LoginScreenProps {
+//   onLogin?: (name: string, code: string) => void;
+//   onForgotCode?: () => void;
+// }
 
 // ─── Component ───────────────────────────────────────────
-export default function LoginScreen({
-  onLogin,
-  onForgotCode,
-}: LoginScreenProps) {
-  const [name, setName] = useState('Billa');
-  const [code, setCode] = useState('Yahoo');
+export default function LoginScreen() {
+  const [name, setName] = useState('JW100');
+  const [code, setCode] = useState('pass123');
   const [showCode, setShowCode] = useState(false);
 
+  const [login, loginRes] = useLazyGetLoginQuery();
+
   const navigation = useNavigation();
+  const dispatch = useDispatch();
 
-  const { data: questions, isLoading } = useGetQuestionsQuery(undefined);
+  // const {
+  //   data: questions,
+  //   isLoading,
+  //   error,
+  // } = useGetQuestionsQuery({ studentId: '1212', password: '121212' });
 
-  console.log('----------------', questions);
-
-  const handleLogin = () => {
-    navigation.navigate('Main');
-    if (onLogin) onLogin(name, code);
+  const handleLogin = async () => {
+    const { data, isSuccess } = await login({
+      studentId: name,
+      password: code,
+    });
+    if (isSuccess) {
+      dispatch(setCredentials({ studentId: name }));
+      navigation.navigate('Main');
+    }
   };
 
   return (
@@ -102,19 +114,28 @@ export default function LoginScreen({
             <TouchableOpacity
               style={[
                 styles.loginBtn,
-                (!name || !code) && styles.loginBtnDisabled,
+                (!name || !code || loginRes?.isLoading) &&
+                  styles.loginBtnDisabled,
               ]}
               onPress={handleLogin}
-              disabled={!name || !code}
+              disabled={!name || !code || loginRes?.isLoading}
               activeOpacity={0.85}
             >
-              <Text style={styles.loginBtnText}>Let's Go!</Text>
+              <Text style={styles.loginBtnText}>
+                {loginRes?.isLoading ? 'Loading' : "Let's Go!"}
+              </Text>
             </TouchableOpacity>
 
+            {loginRes?.isError && (
+              <Text style={styles.forgotText}>
+                User Name or password incorrect.
+              </Text>
+            )}
+
             {/* Forgot Code */}
-            <TouchableOpacity onPress={onForgotCode} style={styles.forgotBtn}>
+            {/* <TouchableOpacity onPress={onForgotCode} style={styles.forgotBtn}>
               <Text style={styles.forgotText}>Forgot Code?</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* Join Now */}
             {/* <View style={styles.joinRow}>
@@ -266,8 +287,9 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#4A6CF7',
+    color: color.RED,
+    textAlign: 'center',
+    marginTop: 10,
   },
   joinRow: {
     flexDirection: 'row',

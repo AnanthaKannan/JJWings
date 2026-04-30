@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+
+import { RootState } from '../store/store';
 
 type BadgeType = 'IN PROGRESS' | 'NEW' | 'COMPLETED';
 
@@ -35,6 +38,8 @@ function HomeworkCard({
 }: HomeworkCardProps) {
   const badgeStyle = BADGE_STYLES[badge];
   const navigation = useNavigation();
+
+  const studentId = useSelector((state: RootState) => state.common.studentId);
 
   const handleAttend = () => {
     if (badge === 'COMPLETED') {
