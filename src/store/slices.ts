@@ -5,6 +5,10 @@ interface AuthState {
   studentId: string | null;
   isAuthenticated: boolean;
   questions: string[];
+  result: boolean[];
+  answer: number[];
+  timer: number;
+  homeworkId: string | null;
   questionId: string | null;
 }
 
@@ -12,7 +16,11 @@ const initialState: AuthState = {
   studentId: null,
   isAuthenticated: false,
   questions: [],
-  questionId: null,
+  result: [],
+  answer: [],
+  homeworkId: null,
+  questionId: '',
+  timer: 0,
 };
 
 const commonSlice = createSlice({
@@ -25,10 +33,21 @@ const commonSlice = createSlice({
     },
     setQuestions: (
       state,
-      action: PayloadAction<{ questions: string[]; questionId: string }>,
+      action: PayloadAction<{
+        questions: string[];
+        homeworkId: string;
+        questionId: string;
+        result: boolean[];
+        answer: number[];
+        timer: number;
+      }>,
     ) => {
       state.questions = action.payload.questions;
+      state.homeworkId = action.payload.homeworkId;
       state.questionId = action.payload.questionId;
+      state.result = action.payload.result;
+      state.answer = action.payload.answer;
+      state.timer = action.payload.timer;
     },
     logout: state => {
       state.studentId = null;

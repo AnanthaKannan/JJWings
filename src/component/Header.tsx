@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 interface HeaderProps {
-  playerName?: string;
-  score?: number;
+  heading: string;
+  sideHead: string;
 }
 
-export default function Header({ playerName, score }: HeaderProps) {
+export default function Header({ heading, sideHead }: HeaderProps) {
   const navigation = useNavigation();
   const handleBack = () => {
     navigation.navigate('HomeworkScreen');
@@ -17,10 +17,10 @@ export default function Header({ playerName, score }: HeaderProps) {
     <View style={styles.topBar}>
       <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
         <Text style={styles.backArrow}>‹</Text>
-        <Text style={styles.backText}>Quiz Review</Text>
+        <Text style={styles.backText}>{heading}</Text>
       </TouchableOpacity>
       <View style={styles.levelBadge}>
-        <Text style={styles.levelText}>⭐ Level 5A-01</Text>
+        <Text style={styles.levelText}>{sideHead}</Text>
       </View>
     </View>
   );

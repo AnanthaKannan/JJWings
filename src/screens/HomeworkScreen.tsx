@@ -14,37 +14,51 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { useGetHomeworksQuery } from '../store/api';
 import { setQuestions } from '../store/slices';
-
-type BadgeType = 'IN PROGRESS' | 'NEW' | 'COMPLETED';
+import { BadgeType } from '../util/types';
+import { HomeworkState } from '../util/enum';
 
 interface HomeworkCardProps {
   questionId: string;
+  homeworkId: string;
   question: string[];
   state: BadgeType;
-  result: number[];
+  result: boolean[];
+  answer: number[];
 }
 
 const BADGE_STYLES: Record<BadgeType, { bg: string; text: string }> = {
-  'IN PROGRESS': { bg: '#3B82F6', text: '#FFFFFF' },
+  PROGRESS: { bg: '#3B82F6', text: '#FFFFFF' },
   NEW: { bg: '#F59E0B', text: '#FFFFFF' },
   COMPLETED: { bg: '#10B981', text: '#FFFFFF' },
 };
 
 function HomeworkCard({
+  homeworkId,
   questionId,
   question,
   state,
   result,
+  answer,
+  timer = 0,
 }: HomeworkCardProps) {
   const badgeStyle = BADGE_STYLES[state];
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
   const handleAttend = () => {
-    if (state === 'COMPLETED') {
+    if (state === HomeworkState.COMPLETED) {
       navigation.navigate('QuizReview');
     } else {
-      dispatch(setQuestions({ questions: question, questionId }));
+      dispatch(
+        setQuestions({
+          questions: question,
+          homeworkId,
+          result,
+          answer,
+          questionId,
+          timer,
+        }),
+      );
       navigation.navigate('Calculate');
     }
   };
@@ -68,7 +82,9 @@ function HomeworkCard({
       <View style={styles.actionRow}>
         <View style={styles.questionRow}>
           <Text style={styles.questionIcon}>📋</Text>
-          <Text style={styles.questionCount}>{question.length} questions</Text>
+          <Text style={styles.questionCount}>
+            {result.length}/{question.length} questions
+          </Text>
         </View>
         {/* Attend button — hidden for COMPLETED */}
         <TouchableOpacity
@@ -77,7 +93,7 @@ function HomeworkCard({
           onPress={handleAttend}
         >
           <Text style={styles.attendBtnText}>
-            {state !== 'COMPLETED' ? 'Attend' : 'View'}
+            {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -104,6 +120,7 @@ export default function HomeworkScreen() {
     { studentId },
     {
       skip: !studentId,
+      refetchOnMountOrArgChange: true,
     },
   );
 
@@ -130,6 +147,7 @@ export default function HomeworkScreen() {
           <HomeworkCard
             key={task.id}
             {...task}
+            homeworkId={task.id}
             question={task?.question?.question}
           />
         ))}

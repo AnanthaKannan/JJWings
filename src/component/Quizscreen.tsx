@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSelector } from 'react-redux';
 
 import { NumPad, QuizSuccessModal } from './index';
+import { RootState } from '../store/store';
+import { useUpdateHomeworkMutation } from '../store/api';
+import { HomeworkState } from '../util/enum';
 
 // ─── Types ───────────────────────────────────────────────
 interface QuizScreenProps {
-  playerAvatar?: any;
-  totalQuestions?: number;
-  currentQuestion?: number;
-  // question?: string;
+  timer: number;
 }
 
 type QuizData = {
@@ -27,14 +28,33 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 // ─── Component ───────────────────────────────────────────
-export default function QuizScreen({}: // currentQuestion = 1,
-// question = '12 + 5 + 10 + 20 + 5 = ?',
-QuizScreenProps) {
+export default function QuizScreen({ timer }: QuizScreenProps) {
+  const selResult = useSelector((state: RootState) => state.common.result);
+  const selAnswer = useSelector((state: RootState) => state.common.answer);
+  const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
+
+  console.log('>>>>>>>>>>>>>>>>>>', homeworkId, selResult, selAnswer);
+
+  const selQuestions = useSelector(
+    (state: RootState) => state.common.questions,
+  );
+  const [updateHomework] = useUpdateHomeworkMutation();
+
   const [data, setData] = useState<QuizData>({
-    questions: ['12 + 15 + 10', '15 + 10 + 321', '20 + 55 + 121'],
+    questions: [],
     answer: [],
     result: [],
   });
+
+  useEffect(() => {
+    setData(prev => ({
+      ...prev,
+      result: selResult,
+      questions: selQuestions,
+      answer: selAnswer,
+    }));
+  }, [selQuestions, selResult, selAnswer]);
+
   const [modalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation<NavigationProp>();
@@ -43,18 +63,36 @@ QuizScreenProps) {
   // Progress percentage
   const progress = result.length / questions.length;
 
-  const onSubmit = (value: number) => {
+  const onSubmit = async (value: number) => {
     const updatedData = {
       ...data,
       answer: [...answer, value],
       result: [...result, true],
     };
+
     setData(updatedData);
 
     if (updatedData.answer.length === updatedData.questions.length) {
       // consider all the question are attend
       // apiCall
+      await updateHomework({
+        homeworkId,
+        state: HomeworkState.COMPLETED,
+        result: updatedData.result,
+        answer: updatedData.answer,
+        success: updatedData.result.filter(bool => bool === true).length,
+        failure: updatedData.result.filter(bool => bool === false).length,
+        timer,
+      });
       setModalVisible(true);
+    } else {
+      await updateHomework({
+        homeworkId,
+        state: HomeworkState.PROGRESS,
+        result: updatedData.result,
+        answer: updatedData.answer,
+        timer,
+      });
     }
   };
 

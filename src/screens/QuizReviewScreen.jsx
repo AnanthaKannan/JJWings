@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   StatusBar,
   SafeAreaView,

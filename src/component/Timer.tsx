@@ -2,13 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 
 interface TimerProps {
-  totalTimeSeconds?: number;
+  timeLeft: number;
+  setTimeLeft: Function;
 }
 
-export default function Timer({
-  totalTimeSeconds = 0, // 2:45
-}: TimerProps) {
-  const [timeLeft, setTimeLeft] = useState(totalTimeSeconds);
+export default function Timer({ timeLeft = 0, setTimeLeft }: TimerProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Countdown timer

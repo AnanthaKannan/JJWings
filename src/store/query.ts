@@ -6,11 +6,17 @@ import {
   getDoc,
   where,
   doc,
+  updateDoc,
+  setDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
+
+import { HomeworkState } from '../util/enum';
 
 const STUDENTS = 'students';
 const HOMEWORKS = 'homeworks';
 const QUESTIONS = 'questions';
+const SCORES = 'scores';
 
 const login = async (studentId: string, password: string) => {
   const ref = doc(db, STUDENTS, studentId);
@@ -45,4 +51,37 @@ const getHomeworks = async (studentId: string) => {
   return enriched;
 };
 
-export { login, getHomeworks };
+type BadgeType = 'PROGRESS' | 'NEW' | 'COMPLETED';
+
+const updateHomework = async (
+  homeworkId: string,
+  state: BadgeType,
+  result: string[],
+  answer: number[],
+  timer: number,
+  success: number = 0,
+  failure: number = 0,
+) => {
+  await updateDoc(doc(db, HOMEWORKS, homeworkId), {
+    state,
+    result,
+    answer,
+    timer,
+    updatedAt: serverTimestamp(),
+  });
+
+  // If completed, upsert score record
+  if (state === HomeworkState.COMPLETED) {
+    const hw = (await getDoc(doc(db, HOMEWORKS, homeworkId))).data();
+    const scoreRef = doc(collection(db, SCORES));
+    await setDoc(scoreRef, {
+      studentId: hw.studentId,
+      homeworkId,
+      success,
+      failure,
+      createdAt: serverTimestamp(),
+    });
+  }
+};
+
+export { login, getHomeworks, updateHomework };
