@@ -16,7 +16,7 @@ import { useDispatch } from 'react-redux';
 import color from '../util/colors';
 import { setCredentials } from '../store/slices';
 
-import { useGetQuestionsQuery, useLazyGetLoginQuery } from '../store/api';
+import { useLazyGetLoginQuery } from '../store/api';
 // ─── Types ───────────────────────────────────────────────
 // interface LoginScreenProps {
 //   onLogin?: (name: string, code: string) => void;
@@ -34,14 +34,8 @@ export default function LoginScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
-  // const {
-  //   data: questions,
-  //   isLoading,
-  //   error,
-  // } = useGetQuestionsQuery({ studentId: '1212', password: '121212' });
-
   const handleLogin = async () => {
-    const { data, isSuccess } = await login({
+    const { isSuccess } = await login({
       studentId: name,
       password: code,
     });

@@ -2,18 +2,19 @@
 import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
 import { db } from '../firebase/config';
 import { getDocs, collection, addDoc } from 'firebase/firestore';
-import { login } from './query';
+import { login, getHomeworks } from './query';
 export const firestoreApi = createApi({
   reducerPath: 'firestoreApi',
   baseQuery: fakeBaseQuery(), // ← key for non-HTTP apis
   endpoints: builder => ({
     // GET questions
-    getQuestions: builder.query({
-      queryFn: async ({ studentId, password }) => {
+    getHomeworks: builder.query({
+      queryFn: async ({ studentId }) => {
         try {
-          const data = await login(studentId, password);
+          const data = await getHomeworks(studentId);
           return { data };
         } catch (e: any) {
+          console.error(e);
           return { error: e.message };
         }
       },
@@ -25,6 +26,7 @@ export const firestoreApi = createApi({
           const data = await login(studentId, password);
           return { data };
         } catch (e: any) {
+          console.error(e);
           return { error: e.message };
         }
       },
@@ -45,7 +47,7 @@ export const firestoreApi = createApi({
 });
 
 export const {
-  useGetQuestionsQuery,
+  useGetHomeworksQuery,
   useSubmitResultMutation,
   useLazyGetLoginQuery,
 } = firestoreApi;
