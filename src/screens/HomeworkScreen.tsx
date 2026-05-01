@@ -9,10 +9,11 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
 import { useGetHomeworksQuery } from '../store/api';
+import { setQuestions } from '../store/slices';
 
 type BadgeType = 'IN PROGRESS' | 'NEW' | 'COMPLETED';
 
@@ -37,11 +38,13 @@ function HomeworkCard({
 }: HomeworkCardProps) {
   const badgeStyle = BADGE_STYLES[state];
   const navigation = useNavigation();
+  const dispatch = useDispatch();
 
   const handleAttend = () => {
     if (state === 'COMPLETED') {
       navigation.navigate('QuizReview');
     } else {
+      dispatch(setQuestions({ questions: question, questionId }));
       navigation.navigate('Calculate');
     }
   };
