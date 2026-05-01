@@ -1,7 +1,16 @@
 import { db } from '../firebase/config';
-import { getDocs, collection, addDoc, getDoc, doc } from 'firebase/firestore';
+import {
+  getDocs,
+  collection,
+  query,
+  getDoc,
+  where,
+  doc,
+} from 'firebase/firestore';
 
 const STUDENTS = 'students';
+const HOMEWORKS = 'homeworks';
+const QUESTIONS = 'questions';
 
 const login = async (studentId: string, password: string) => {
   const ref = doc(db, STUDENTS, studentId);
@@ -17,4 +26,23 @@ const login = async (studentId: string, password: string) => {
   return { id: snap.id, name: data.name };
 };
 
-export { login };
+const getHomeworks = async (studentId: string) => {
+  console.log('studentId', studentId);
+  const q = query(
+    collection(db, HOMEWORKS),
+    where('studentId', '==', studentId),
+  );
+  const snapshot = await getDocs(q);
+  const homeworks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // Fetch linked question for each homework
+  const enriched = await Promise.all(
+    homeworks.map(async hw => {
+      const qSnap = await getDoc(doc(db, QUESTIONS, hw.questionId));
+      return { ...hw, question: qSnap.data() };
+    }),
+  );
+  return enriched;
+};
+
+export { login, getHomeworks };

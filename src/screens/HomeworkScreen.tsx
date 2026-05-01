@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,19 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
+import { useGetHomeworksQuery } from '../store/api';
+import { setQuestions } from '../store/slices';
 
 type BadgeType = 'IN PROGRESS' | 'NEW' | 'COMPLETED';
 
 interface HomeworkCardProps {
-  icon: string;
-  title: string;
-  questionCount: number;
-  badge: BadgeType;
-  progress?: number; // 0 to 1, only for IN PROGRESS
+  questionId: string;
+  question: string[];
+  state: BadgeType;
+  result: number[];
 }
 
 const BADGE_STYLES: Record<BadgeType, { bg: string; text: string }> = {
@@ -30,21 +31,20 @@ const BADGE_STYLES: Record<BadgeType, { bg: string; text: string }> = {
 };
 
 function HomeworkCard({
-  icon,
-  title,
-  questionCount,
-  badge,
-  progress,
+  questionId,
+  question,
+  state,
+  result,
 }: HomeworkCardProps) {
-  const badgeStyle = BADGE_STYLES[badge];
+  const badgeStyle = BADGE_STYLES[state];
   const navigation = useNavigation();
-
-  const studentId = useSelector((state: RootState) => state.common.studentId);
+  const dispatch = useDispatch();
 
   const handleAttend = () => {
-    if (badge === 'COMPLETED') {
+    if (state === 'COMPLETED') {
       navigation.navigate('QuizReview');
     } else {
+      dispatch(setQuestions({ questions: question, questionId }));
       navigation.navigate('Calculate');
     }
   };
@@ -54,67 +54,60 @@ function HomeworkCard({
       {/* Badge */}
       <View style={[styles.badge, { backgroundColor: badgeStyle.bg }]}>
         <Text style={[styles.badgeText, { color: badgeStyle.text }]}>
-          {badge}
+          {state}
         </Text>
       </View>
 
       {/* Icon */}
-      <View style={styles.iconWrapper}>
-        <Text style={styles.iconText}>{icon}</Text>
-      </View>
+      {/* <View style={styles.iconWrapper}>
+        <Text style={styles.iconText}>⊞</Text>
+      </View> */}
 
       {/* Title & subtitle */}
-      <Text style={styles.cardTitle}>{title}</Text>
-      <View style={styles.questionRow}>
-        <Text style={styles.questionIcon}>📋</Text>
-        <Text style={styles.questionCount}>{questionCount} questions</Text>
+      <Text style={styles.cardTitle}>{questionId}</Text>
+      <View style={styles.actionRow}>
+        <View style={styles.questionRow}>
+          <Text style={styles.questionIcon}>📋</Text>
+          <Text style={styles.questionCount}>{question.length} questions</Text>
+        </View>
+        {/* Attend button — hidden for COMPLETED */}
+        <TouchableOpacity
+          style={styles.attendBtn}
+          activeOpacity={0.85}
+          onPress={handleAttend}
+        >
+          <Text style={styles.attendBtnText}>
+            {state !== 'COMPLETED' ? 'Attend' : 'View'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Progress bar (only for IN PROGRESS) */}
-      {progress !== undefined && (
+      {
         <View style={styles.progressTrack}>
           <View
-            style={[styles.progressFill, { width: `${progress * 100}%` }]}
+            style={[
+              styles.progressFill,
+              { width: `${(result.length / question.length) * 100}%` },
+            ]}
           />
         </View>
-      )}
-
-      {/* Attend button — hidden for COMPLETED */}
-      <TouchableOpacity
-        style={styles.attendBtn}
-        activeOpacity={0.85}
-        onPress={handleAttend}
-      >
-        <Text style={styles.attendBtnText}>
-          {badge !== 'COMPLETED' ? 'Attend' : 'View'}
-        </Text>
-      </TouchableOpacity>
+      }
     </View>
   );
 }
 
 export default function HomeworkScreen() {
-  const tasks: HomeworkCardProps[] = [
+  const studentId = useSelector((state: RootState) => state.common.studentId);
+
+  const { data: homeworks, error } = useGetHomeworksQuery(
+    { studentId },
     {
-      icon: '⊞',
-      title: 'Visual Abacus Level 2',
-      questionCount: 25,
-      badge: 'IN PROGRESS',
-      progress: 0.35,
+      skip: !studentId,
     },
-    {
-      icon: '⭐',
-      title: 'Speed Mental Math',
-      questionCount: 15,
-      badge: 'NEW',
-    },
-    {
-      icon: '✓',
-      title: 'Basic Addition Drills',
-      questionCount: 20,
-      badge: 'COMPLETED',
-    },
-  ];
+  );
+
+  console.log('--------------------', homeworks, error);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -127,14 +120,18 @@ export default function HomeworkScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Homework</Text>
-          <Text style={styles.headerSubtitle}>
+          {/* <Text style={styles.headerSubtitle}>
             You have {tasks.length} tasks to explore today
-          </Text>
+          </Text> */}
         </View>
 
         {/* Cards */}
-        {tasks.map((task, index) => (
-          <HomeworkCard key={index} {...task} />
+        {homeworks?.map(task => (
+          <HomeworkCard
+            key={task.id}
+            {...task}
+            question={task?.question?.question}
+          />
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -223,6 +220,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     paddingRight: 90, // avoid overlap with badge
   },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
   questionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -243,7 +246,7 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: '#E2E8F0',
     borderRadius: 99,
-    marginBottom: 16,
+    marginBottom: 8,
     overflow: 'hidden',
   },
   progressFill: {
@@ -256,8 +259,8 @@ const styles = StyleSheet.create({
   attendBtn: {
     alignSelf: 'flex-end',
     backgroundColor: '#1E3A8A',
-    paddingHorizontal: 28,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
     borderRadius: 50,
   },
   attendBtnText: {
