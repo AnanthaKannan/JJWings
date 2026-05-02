@@ -117,7 +117,7 @@ export default function LoginScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.loginBtnText}>
-                {loginRes?.isLoading ? 'Loading' : "Let's Go!"}
+                {loginRes?.isLoading ? 'Loading...' : "Let's Go!"}
               </Text>
             </TouchableOpacity>
 

@@ -11,75 +11,29 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useGetStudentsQuery } from '../store/api';
+import { accuracy, randomNumber } from '../util/fn';
+import { AdminHeader } from '../component';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Student = {
   id: string;
   name: string;
   studentId: string;
-  accuracy: number;
-  avgSpeed: string;
-  avatar: string; // placeholder color
-  level: string;
+  assigned: number;
+  success: number;
+  failure: number;
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const STUDENTS: Student[] = [
-  {
-    id: '1',
-    name: 'Leo Chen',
-    studentId: 'ST-8821',
-    accuracy: 98,
-    avgSpeed: '0.8s',
-    avatar: '#E8A87C',
-    level: 'Level 5',
-  },
-  {
-    id: '2',
-    name: 'Maya Patel',
-    studentId: 'ST-8792',
-    accuracy: 91,
-    avgSpeed: '1.2s',
-    avatar: '#7EB8D4',
-    level: 'Level 3',
-  },
-  {
-    id: '3',
-    name: 'Ethan Ross',
-    studentId: 'ST-9104',
-    accuracy: 99,
-    avgSpeed: '0.6s',
-    avatar: '#F4C56A',
-    level: 'Level 7',
-  },
-  {
-    id: '4',
-    name: 'Priya Sharma',
-    studentId: 'ST-9045',
-    accuracy: 87,
-    avgSpeed: '1.5s',
-    avatar: '#B39DDB',
-    level: 'Level 2',
-  },
-  {
-    id: '5',
-    name: 'Jake Miller',
-    studentId: 'ST-8911',
-    accuracy: 94,
-    avgSpeed: '1.0s',
-    avatar: '#80CBC4',
-    level: 'Level 6',
-  },
-  {
-    id: '6',
-    name: 'Aisha Noor',
-    studentId: 'ST-9230',
-    accuracy: 96,
-    avgSpeed: '0.9s',
-    avatar: '#EF9A9A',
-    level: 'Level 4',
-  },
+const COLORS = [
+  '#E8A87C',
+  '#7EB8D4',
+  '#F4C56A',
+  '#B39DDB',
+  '#80CBC4',
+  '#EF9A9A',
 ];
 
 // ─── Avatar Component ─────────────────────────────────────────────────────────
@@ -119,63 +73,32 @@ const StudentRow = ({
   <TouchableOpacity onPress={onPress}>
     <View style={styles.row}>
       <View style={styles.studentInfo}>
-        <Avatar color={item.avatar} name={item.name} />
+        <Avatar color={COLORS[randomNumber(0, 6)]} name={item.name} />
         <View style={styles.nameBlock}>
           <Text style={styles.studentName}>{item.name}</Text>
-          <Text style={styles.studentMeta}>
-            #{item.studentId} · {item.level}
-          </Text>
+          <Text style={styles.studentMeta}>#{item?.id}</Text>
         </View>
       </View>
 
-      <AccuracyBadge value={item.accuracy} />
+      <AccuracyBadge value={accuracy(item?.success, item?.failure)} />
 
-      <Text style={styles.speedText}>{item.avgSpeed}</Text>
-
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionIcon}>
-          <Text style={styles.actionIconText}>↗</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionDots}>
-          <Text style={styles.dotsText}>···</Text>
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.speedText}>
+        {item?.failure || 0}/{item?.success || 0}
+      </Text>
+      <Text style={styles.speedText}>{item?.assigned || 0}</Text>
     </View>
   </TouchableOpacity>
-);
-
-// ─── Bottom Tab ───────────────────────────────────────────────────────────────
-
-const TAB_ITEMS = [
-  { label: 'Students', icon: '👤', active: true },
-  { label: 'Library', icon: '📖', active: false },
-  { label: 'Reports', icon: '📊', active: false },
-  { label: 'Settings', icon: '⚙️', active: false },
-];
-
-const BottomTab = () => (
-  <View style={styles.bottomTab}>
-    {TAB_ITEMS.map(tab => (
-      <TouchableOpacity key={tab.label} style={styles.tabItem}>
-        <Text style={styles.tabIcon}>{tab.icon}</Text>
-        <Text style={[styles.tabLabel, tab.active && styles.tabLabelActive]}>
-          {tab.label}
-        </Text>
-        {tab.active && <View style={styles.tabDot} />}
-      </TouchableOpacity>
-    ))}
-  </View>
 );
 
 // ─── Table Header ─────────────────────────────────────────────────────────────
 
 const TableHeader = () => (
   <View style={styles.tableHeader}>
-    <Text style={[styles.headerText, { flex: 2.2 }]}>STUDENT</Text>
+    <Text style={[styles.headerText, { flex: 2 }]}>STUDENT</Text>
     <Text style={[styles.headerText, { flex: 1 }]}>ACCURACY</Text>
-    <Text style={[styles.headerText, { flex: 0.9 }]}>AVG SPEED</Text>
-    <Text style={[styles.headerText, { flex: 0.8, textAlign: 'right' }]}>
-      ACTION
+    <Text style={[styles.headerText, { flex: 1 }]}>SUCC/FAIL</Text>
+    <Text style={[styles.headerText, { flex: 0.9, textAlign: 'right' }]}>
+      ASSIGNED
     </Text>
   </View>
 );
@@ -187,15 +110,17 @@ export default function StudentDirectoryScreen() {
 
   const navigation = useNavigation();
 
-  const filtered = STUDENTS.filter(
+  const { data: students, error } = useGetStudentsQuery(undefined);
+
+  console.log('>>>>>>>>>>>>>>>>>', students);
+
+  const filtered = students?.filter(
     s =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.studentId.toLowerCase().includes(search.toLowerCase()) ||
-      s.level.toLowerCase().includes(search.toLowerCase()),
+      s.id.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleRowPress = () => {
-    console.log('eeeeeeeeeeeeeeeeeeeeeeeeeeeee');
     navigation.navigate('AdminAddStudent');
   };
 
@@ -204,32 +129,7 @@ export default function StudentDirectoryScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton}>
-          <Text style={styles.menuIcon}>☰</Text>
-        </TouchableOpacity>
-        <View style={styles.brandRow}>
-          <View style={styles.brandIcon}>
-            <Text style={styles.brandLetter}>T</Text>
-          </View>
-          <Text style={styles.brandName}>Tactile Admin</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.bellButton}>
-            <Text>🔔</Text>
-          </TouchableOpacity>
-          <View style={styles.profileCircle} />
-        </View>
-      </View>
-
-      {/* Page Title */}
-      <View style={styles.titleSection}>
-        <Text style={styles.pageTitle}>Student Directory</Text>
-        <Text style={styles.pageSubtitle}>
-          Real-time overview of {STUDENTS.length * 41} enrolled students across
-          12 levels.
-        </Text>
-      </View>
+      <AdminHeader />
 
       {/* Search */}
       <View style={styles.searchWrapper}>
@@ -269,12 +169,9 @@ export default function StudentDirectoryScreen() {
       </View>
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
+      {/* <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
         <Text style={styles.fabIcon}>＋</Text>
-      </TouchableOpacity>
-
-      {/* Bottom Tab */}
-      <BottomTab />
+      </TouchableOpacity> */}
     </SafeAreaView>
   );
 }
@@ -301,7 +198,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: 8,
   },
   brandIcon: {

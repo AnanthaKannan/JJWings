@@ -32,6 +32,13 @@ const login = async (studentId: string, password: string) => {
   return { id: snap.id, name: data.name };
 };
 
+const listStudents = async () => {
+  const snapshot = await getDocs(collection(db, STUDENTS));
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+};
 const getHomeworks = async (studentId: string) => {
   console.log('studentId', studentId);
   const q = query(
@@ -52,8 +59,6 @@ const getHomeworks = async (studentId: string) => {
 };
 
 const getHomeworkById = async (homeworkId: string) => {
-  console.log('homeworkId', homeworkId);
-
   const qSnap = await getDoc(doc(db, HOMEWORKS, homeworkId));
   return qSnap.data();
 };
@@ -91,4 +96,4 @@ const updateHomework = async (
   }
 };
 
-export { login, getHomeworks, updateHomework, getHomeworkById };
+export { login, getHomeworks, updateHomework, getHomeworkById, listStudents };
