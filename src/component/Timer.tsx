@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+
 import { View, StyleSheet, Text } from 'react-native';
 
 interface TimerProps {
@@ -7,21 +9,19 @@ interface TimerProps {
 }
 
 export default function Timer({ timeLeft = 0, setTimeLeft }: TimerProps) {
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Countdown timer
-  useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        // if (prev <= 1) {
-        //   clearInterval(intervalRef.current!);
-        //   return 0;
-        // }
-        return prev + 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current!);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const timerId = setInterval(() => {
+        console.log('running...');
+        setTimeLeft(prev => prev + 1);
+      }, 1000);
+
+      return () => {
+        clearInterval(timerId);
+      };
+    }, []),
+  );
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {

@@ -8,6 +8,7 @@ import { NumPad, QuizSuccessModal } from './index';
 import { RootState } from '../store/store';
 import { useUpdateHomeworkMutation } from '../store/api';
 import { HomeworkState } from '../util/enum';
+import { evaluateExpression } from '../util/fn';
 
 // ─── Types ───────────────────────────────────────────────
 interface QuizScreenProps {
@@ -23,6 +24,7 @@ type QuizData = {
 type RootStackParamList = {
   Home: undefined;
   HomeworkScreen: undefined;
+  QuizReview: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -63,11 +65,17 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   // Progress percentage
   const progress = result.length / questions.length;
 
+  const calculate = (studentRes: number) => {
+    const expectedRes = evaluateExpression(questions[result.length]);
+    if (studentRes === expectedRes) return true;
+    return false;
+  };
+
   const onSubmit = async (value: number) => {
     const updatedData = {
       ...data,
       answer: [...answer, value],
-      result: [...result, true],
+      result: [...result, calculate(value)],
     };
 
     setData(updatedData);
@@ -104,7 +112,7 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
         onClose={() => setModalVisible(true)}
         onSeeResults={() => {
           setModalVisible(false);
-          navigation.navigate('HomeworkScreen');
+          navigation.navigate('QuizReview');
         }}
         timeTaken="02:45"
         accuracy="95%"

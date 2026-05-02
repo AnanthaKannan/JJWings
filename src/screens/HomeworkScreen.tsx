@@ -24,6 +24,7 @@ interface HomeworkCardProps {
   state: BadgeType;
   result: boolean[];
   answer: number[];
+  timer: number;
 }
 
 const BADGE_STYLES: Record<BadgeType, { bg: string; text: string }> = {
@@ -46,19 +47,20 @@ function HomeworkCard({
   const dispatch = useDispatch();
 
   const handleAttend = () => {
+    dispatch(
+      setQuestions({
+        questions: question,
+        homeworkId,
+        result,
+        answer,
+        questionId,
+        timer,
+      }),
+    );
+
     if (state === HomeworkState.COMPLETED) {
       navigation.navigate('QuizReview');
     } else {
-      dispatch(
-        setQuestions({
-          questions: question,
-          homeworkId,
-          result,
-          answer,
-          questionId,
-          timer,
-        }),
-      );
       navigation.navigate('Calculate');
     }
   };
@@ -71,11 +73,6 @@ function HomeworkCard({
           {state}
         </Text>
       </View>
-
-      {/* Icon */}
-      {/* <View style={styles.iconWrapper}>
-        <Text style={styles.iconText}>⊞</Text>
-      </View> */}
 
       {/* Title & subtitle */}
       <Text style={styles.cardTitle}>{questionId}</Text>

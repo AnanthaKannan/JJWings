@@ -51,6 +51,13 @@ const getHomeworks = async (studentId: string) => {
   return enriched;
 };
 
+const getHomeworkById = async (homeworkId: string) => {
+  console.log('homeworkId', homeworkId);
+
+  const qSnap = await getDoc(doc(db, HOMEWORKS, homeworkId));
+  return qSnap.data();
+};
+
 type BadgeType = 'PROGRESS' | 'NEW' | 'COMPLETED';
 
 const updateHomework = async (
@@ -84,4 +91,4 @@ const updateHomework = async (
   }
 };
 
-export { login, getHomeworks, updateHomework };
+export { login, getHomeworks, updateHomework, getHomeworkById };

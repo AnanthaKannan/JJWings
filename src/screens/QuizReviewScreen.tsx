@@ -8,43 +8,11 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import { Header } from '../component';
+import { useSelector } from 'react-redux';
 
-const QUESTIONS = [
-  {
-    id: 1,
-    question: '15 + 4 + 20 + 22 + 33',
-    yourAnswer: 19,
-    correctAnswer: 19,
-    isCorrect: true,
-    tip: null,
-  },
-  {
-    id: 2,
-    question: '22 + 9',
-    yourAnswer: 30,
-    correctAnswer: 31,
-    isCorrect: false,
-    label: 'Question 2 — Keep Practising!',
-    tip: 'Nice try! The correct answer is 25',
-  },
-  {
-    id: 3,
-    question: '8 − 3',
-    yourAnswer: 5,
-    correctAnswer: 5,
-    isCorrect: true,
-    tip: null,
-  },
-  {
-    id: 4,
-    question: '56 + 12',
-    yourAnswer: 68,
-    correctAnswer: 68,
-    isCorrect: true,
-    tip: null,
-  },
-];
+import { useGetHomeworkByIdQuery } from '../store/api';
+import { RootState } from '../store/store';
+import { Header } from '../component';
 
 const CheckIcon = () => (
   <View style={styles.checkIcon}>
@@ -64,7 +32,7 @@ const TrophyIcon = () => (
   </View>
 );
 
-const QuestionCard = ({ item, index }) => {
+const QuestionCard = ({ index, question, answer, isWrong }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -85,8 +53,6 @@ const QuestionCard = ({ item, index }) => {
     ]).start();
   }, []);
 
-  const isWrong = !item.isCorrect;
-
   return (
     <Animated.View
       style={[
@@ -98,7 +64,7 @@ const QuestionCard = ({ item, index }) => {
       {isWrong && (
         <View style={styles.wrongBadge}>
           <Text style={styles.wrongBadgeText}>
-            {item.label || `Question ${item.id} — Keep Practising!`}
+            {`Question ${index + 1} — Keep Practising!`}
           </Text>
         </View>
       )}
@@ -106,18 +72,18 @@ const QuestionCard = ({ item, index }) => {
       <View style={styles.cardRow}>
         {/* Left: Abacus Icon placeholder */}
         <View style={[styles.abacusIcon, isWrong && styles.abacusIconWrong]}>
-          <Text style={styles.abacusEmoji}>{isWrong ? '🧮' : '🧮'}</Text>
+          <Text style={styles.abacusEmoji}>🧮</Text>
         </View>
 
         {/* Middle: Question */}
         <View style={styles.questionArea}>
           {!isWrong && (
-            <Text style={styles.questionLabel}>Question {item.id}</Text>
+            <Text style={styles.questionLabel}>Question {index + 1}</Text>
           )}
           <Text
             style={[styles.questionText, isWrong && styles.questionTextWrong]}
           >
-            {item.question}
+            {question}
           </Text>
         </View>
 
@@ -132,22 +98,19 @@ const QuestionCard = ({ item, index }) => {
             <Text
               style={[styles.answerValue, isWrong && styles.answerValueWrong]}
             >
-              {item.yourAnswer}
+              {answer}
             </Text>
-            {item.isCorrect ? <CheckIcon /> : <CrossIcon />}
+            {isWrong ? <CrossIcon /> : <CheckIcon />}
           </View>
         </View>
       </View>
 
-      {isWrong && item.tip && (
+      {isWrong && (
         <View style={styles.tipRow}>
           <Text style={styles.tipIcon}>💡</Text>
           <Text style={styles.tipText}>
             Nice try! The correct answer is <Text>25</Text>
           </Text>
-          {/* <TouchableOpacity style={styles.showMeBtn}>
-            <Text style={styles.showMeText}>Show Me</Text>
-          </TouchableOpacity> */}
         </View>
       )}
     </Animated.View>
@@ -157,6 +120,19 @@ const QuestionCard = ({ item, index }) => {
 export default function QuizReviewScreen() {
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
+
+  const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
+  const questions = useSelector((state: RootState) => state.common.questions);
+
+  const { data: hw } = useGetHomeworkByIdQuery(
+    { homeworkId },
+    {
+      skip: !homeworkId,
+      refetchOnMountOrArgChange: true,
+    },
+  );
+
+  console.log('---------------------homework', hw, homeworkId);
 
   useEffect(() => {
     Animated.sequence([
@@ -177,17 +153,7 @@ export default function QuizReviewScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
-      <Header />
-      {/* Top Bar */}
-      {/* <View style={styles.topBar}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-          <Text style={styles.backArrow}>‹</Text>
-          <Text style={styles.backText}>Quiz Review</Text>
-        </TouchableOpacity>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>⭐ Level 5A-01</Text>
-        </View>
-      </View> */}
+      <Header heading="Quiz Review" sideHead={`⭐ Level ${hw?.questionId}`} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -224,8 +190,10 @@ export default function QuizReviewScreen() {
               }}
             >
               <View style={styles.scoreRow}>
-                <Text style={styles.scoreNumber}>18</Text>
-                <Text style={styles.scoreTotal}>/20</Text>
+                <Text style={styles.scoreNumber}>
+                  {hw?.result?.filter(val => val === true)?.length}
+                </Text>
+                <Text style={styles.scoreTotal}>/{hw?.result?.length}</Text>
               </View>
             </Animated.View>
           </View>
@@ -238,9 +206,17 @@ export default function QuizReviewScreen() {
         <Text style={styles.sectionTitle}>Detailed Results</Text>
 
         {/* Question Cards */}
-        {QUESTIONS.map((item, index) => (
-          <QuestionCard key={item.id} item={item} index={index} />
-        ))}
+        {hw &&
+          questions &&
+          questions.map((question, index) => (
+            <QuestionCard
+              key={question}
+              index={index}
+              question={question}
+              answer={hw?.answer[index]}
+              isWrong={!hw?.result[index]}
+            />
+          ))}
 
         <View style={{ height: 32 }} />
       </ScrollView>
