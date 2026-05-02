@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function AdminHeader() {
+export default function AdminHeader({ header }) {
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
-        <Text style={styles.brandName}>Student Directory</Text>
+        <Text style={styles.brandName}>{header}</Text>
       </View>
       <View style={styles.headerRight}>
         <View style={styles.profileCircle} />

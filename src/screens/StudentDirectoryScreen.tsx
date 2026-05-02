@@ -110,7 +110,9 @@ export default function StudentDirectoryScreen() {
 
   const navigation = useNavigation();
 
-  const { data: students, error } = useGetStudentsQuery(undefined);
+  const { data: students, error } = useGetStudentsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
 
   console.log('>>>>>>>>>>>>>>>>>', students);
 
@@ -129,7 +131,7 @@ export default function StudentDirectoryScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
 
       {/* Header */}
-      <AdminHeader />
+      <AdminHeader header="Student Directory" />
 
       {/* Search */}
       <View style={styles.searchWrapper}>

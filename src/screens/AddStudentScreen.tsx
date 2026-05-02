@@ -13,29 +13,30 @@ import {
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+
+import { useAddStudentMutation } from '../store/api';
+import { AdminHeader } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Props = {
-  navigation: any;
-};
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function AddStudentScreen({ navigation }: Props) {
+export default function AddStudentScreen() {
   const [fullName, setFullName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFormValid = fullName.trim().length > 0 && studentId.trim().length > 0;
+  const navigation = useNavigation();
+  const [addStudent] = useAddStudentMutation();
 
   const handleAddStudent = async () => {
     if (!isFormValid) return;
 
     setIsSubmitting(true);
     try {
-      // TODO: dispatch your Redux action / API call here
-      // await dispatch(addStudent({ fullName, studentId }));
+      await addStudent({ studentId, name: fullName, password: 'Welcome123' });
 
       Alert.alert(
         'Student Added',
@@ -43,7 +44,11 @@ export default function AddStudentScreen({ navigation }: Props) {
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              setStudentId('');
+              setFullName('');
+              navigation.goBack();
+            },
           },
         ],
       );
@@ -54,40 +59,12 @@ export default function AddStudentScreen({ navigation }: Props) {
     }
   };
 
-  const handleCancel = () => {
-    if (fullName || studentId) {
-      Alert.alert(
-        'Discard Changes',
-        'Are you sure you want to cancel? Your changes will be lost.',
-        [
-          { text: 'Keep Editing', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => navigation.goBack(),
-          },
-        ],
-      );
-    } else {
-      navigation.goBack();
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.backBtn}>
-          <MaterialIcons name="arrow-back" size={22} color="#1A202C" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Student</Text>
-        <TouchableOpacity style={styles.searchBtn}>
-          <MaterialIcons name="search" size={22} color="#1A202C" />
-        </TouchableOpacity>
-        <View style={styles.avatar} />
-      </View>
+      <AdminHeader header="Add Student" />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -162,17 +139,6 @@ export default function AddStudentScreen({ navigation }: Props) {
                   style={{ marginLeft: 8 }}
                 />
               )}
-            </TouchableOpacity>
-
-            {/* Cancel Link */}
-            <TouchableOpacity
-              onPress={handleCancel}
-              style={styles.cancelLink}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cancelText}>
-                Cancel & Return to Directory
-              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

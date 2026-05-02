@@ -6,6 +6,7 @@ import {
   updateHomework,
   getHomeworkById,
   listStudents,
+  addStudent,
 } from './query';
 export const firestoreApi = createApi({
   reducerPath: 'firestoreApi',
@@ -60,6 +61,18 @@ export const firestoreApi = createApi({
       },
     }),
 
+    addStudent: builder.mutation({
+      queryFn: async ({ studentId, name, password }) => {
+        try {
+          await addStudent(studentId, name, password);
+          return { data: 'success' };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
     updateHomework: builder.mutation({
       queryFn: async ({
         homeworkId,
@@ -96,4 +109,5 @@ export const {
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
   useGetStudentsQuery,
+  useAddStudentMutation,
 } = firestoreApi;

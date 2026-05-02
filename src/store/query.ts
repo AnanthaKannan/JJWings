@@ -96,4 +96,27 @@ const updateHomework = async (
   }
 };
 
-export { login, getHomeworks, updateHomework, getHomeworkById, listStudents };
+const addStudent = async (
+  studentId: string,
+  name: string,
+  password: string,
+) => {
+  // Using studentId as the doc ID for easy lookup
+  await setDoc(doc(db, STUDENTS, studentId), {
+    name: name,
+    password: password, // hash this — never store plain text
+    success: 0,
+    failure: 0,
+    assigned: 0,
+    timer: 0,
+  });
+};
+
+export {
+  login,
+  getHomeworks,
+  updateHomework,
+  getHomeworkById,
+  listStudents,
+  addStudent,
+};

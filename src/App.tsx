@@ -160,28 +160,6 @@ const AdminTabs = createBottomTabNavigator({
       },
     },
 
-    // Tab 2 — Library
-    // Library: {
-    //   screen: AdminLibraryScreen,
-    //   options: {
-    //     tabBarLabel: 'Library',
-    //     tabBarIcon: ({ color, size }) => (
-    //       <MaterialIcons name="menu-book" color={color} size={size} />
-    //     ),
-    //   },
-    // },
-
-    // // Tab 3 — Reports
-    // Reports: {
-    //   screen: AdminReportsScreen,
-    //   options: {
-    //     tabBarLabel: 'Reports',
-    //     tabBarIcon: ({ color, size }) => (
-    //       <MaterialIcons name="bar-chart" color={color} size={size} />
-    //     ),
-    //   },
-    // },
-
     // // Tab 4 — Settings / Logout
     Logout: {
       screen: ProfileScreen,
