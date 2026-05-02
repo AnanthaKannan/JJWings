@@ -41,7 +41,8 @@ export default function LoginScreen() {
     });
     if (isSuccess) {
       dispatch(setCredentials({ studentId: name }));
-      navigation.navigate('Main');
+      navigation.navigate('Admin');
+      // navigation.navigate('Main');
     }
   };
 

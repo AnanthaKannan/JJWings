@@ -13,25 +13,27 @@ import {
   ProfileScreen,
   HomeworkScreen,
   QuizReviewScreen,
+  // ── Admin screens (create these in your screens folder) ──
+  StudentDirectoryScreen,
+  AddStudentScreen,
+  HomeworkLibraryScreen,
+  CreateNewTaskScreen,
+  AssignHomeworkScreen,
 } from './screens';
 
-// ✅ Nested stack inside the Homework tab — keeps bottom nav visible
+// ─────────────────────────────────────────────────────────────────────────────
+// STUDENT NAVIGATOR
+// ─────────────────────────────────────────────────────────────────────────────
+
 const HomeworkStack = createNativeStackNavigator({
   screenOptions: { headerShown: false },
   screens: {
-    HomeworkScreen: {
-      screen: HomeworkScreen,
-    },
-    Calculate: {
-      screen: Calculate,
-    },
-    QuizReview: {
-      screen: QuizReviewScreen,
-    },
+    HomeworkScreen: { screen: HomeworkScreen },
+    Calculate: { screen: Calculate },
+    QuizReview: { screen: QuizReviewScreen },
   },
 });
 
-// ✅ Bottom tabs
 const MainTabs = createBottomTabNavigator({
   screenOptions: {
     headerShown: false,
@@ -43,7 +45,6 @@ const MainTabs = createBottomTabNavigator({
     },
   },
   screens: {
-    // ✅ HomeworkStack replaces HomeworkScreen — Calculate lives inside it
     Homework: {
       screen: HomeworkStack,
       options: {
@@ -63,9 +64,7 @@ const MainTabs = createBottomTabNavigator({
       },
       listeners: ({ navigation }) => ({
         tabPress: e => {
-          // Prevent default tab switch
           e.preventDefault();
-
           Alert.alert(
             'Logout',
             'Are you sure you want to logout?',
@@ -74,12 +73,8 @@ const MainTabs = createBottomTabNavigator({
               {
                 text: 'Yes',
                 style: 'destructive',
-                onPress: () => {
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Login' }],
-                  });
-                },
+                onPress: () =>
+                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
               },
             ],
             { cancelable: true },
@@ -90,17 +85,155 @@ const MainTabs = createBottomTabNavigator({
   },
 });
 
-// ✅ Root stack — only Login here, no Calculate
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN NAVIGATOR
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Nested stack inside Students tab so detail screens don't hide the tab bar
+const AdminStudentsStack = createNativeStackNavigator({
+  screenOptions: { headerShown: false },
+  screens: {
+    StudentDirectory: { screen: StudentDirectoryScreen },
+    AddStudent: { screen: AddStudentScreen },
+    HomeworkLibrary: { screen: HomeworkLibraryScreen },
+    CreateNewTask: { screen: CreateNewTaskScreen },
+    AssignHomework: { screen: AssignHomeworkScreen },
+  },
+});
+
+const AdminTabs = createBottomTabNavigator({
+  screenOptions: {
+    headerShown: false,
+    tabBarActiveTintColor: '#4F46E5',
+    tabBarInactiveTintColor: '#9CA3AF',
+    tabBarStyle: {
+      backgroundColor: '#FFFFFF',
+      borderTopColor: '#E5E7EB',
+    },
+  },
+  screens: {
+    // Tab 1 — Students (with nested stack)
+    AdminStudents: {
+      screen: AdminStudentsStack,
+      options: {
+        tabBarLabel: 'Students',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="people" color={color} size={size} />
+        ),
+      },
+    },
+
+    AdminAddStudent: {
+      screen: AddStudentScreen,
+      options: {
+        tabBarLabel: 'Add Student',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="menu-book" color={color} size={size} />
+        ),
+      },
+    },
+    HomeworkLibrary: {
+      screen: HomeworkLibraryScreen,
+      options: {
+        tabBarLabel: 'Homework',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="bar-chart" color={color} size={size} />
+        ),
+      },
+    },
+    CreateNewTask: {
+      screen: CreateNewTaskScreen,
+      options: {
+        tabBarLabel: 'new Task',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="bar-chart" color={color} size={size} />
+        ),
+      },
+    },
+    AssignHomework: {
+      screen: AssignHomeworkScreen,
+      options: {
+        tabBarLabel: 'assign task',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="bar-chart" color={color} size={size} />
+        ),
+      },
+    },
+
+    // Tab 2 — Library
+    // Library: {
+    //   screen: AdminLibraryScreen,
+    //   options: {
+    //     tabBarLabel: 'Library',
+    //     tabBarIcon: ({ color, size }) => (
+    //       <MaterialIcons name="menu-book" color={color} size={size} />
+    //     ),
+    //   },
+    // },
+
+    // // Tab 3 — Reports
+    // Reports: {
+    //   screen: AdminReportsScreen,
+    //   options: {
+    //     tabBarLabel: 'Reports',
+    //     tabBarIcon: ({ color, size }) => (
+    //       <MaterialIcons name="bar-chart" color={color} size={size} />
+    //     ),
+    //   },
+    // },
+
+    // // Tab 4 — Settings / Logout
+    Logout: {
+      screen: ProfileScreen,
+      options: {
+        tabBarLabel: 'Logout',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="logout" color={color} size={size} />
+        ),
+      },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          e.preventDefault();
+          Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+              { text: 'No', style: 'cancel' },
+              {
+                text: 'Yes',
+                style: 'destructive',
+                onPress: () =>
+                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
+              },
+            ],
+            { cancelable: true },
+          );
+        },
+      }),
+    },
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROOT STACK
+// Login → decides role → pushes either Main (student) or Admin
+// ─────────────────────────────────────────────────────────────────────────────
+
 const RootStack = createNativeStackNavigator({
   initialRouteName: 'Login',
   screenOptions: { headerShown: false },
   screens: {
     Login: { screen: LoginScreen },
-    Main: { screen: MainTabs },
+    Main: { screen: MainTabs }, // student flow
+    Admin: { screen: AdminTabs }, // admin flow
   },
 });
 
 const Navigation = createStaticNavigation(RootStack);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APP
+// ─────────────────────────────────────────────────────────────────────────────
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
