@@ -7,6 +7,7 @@ import {
   getHomeworkById,
   listStudents,
   addStudent,
+  getIdGenData,
 } from './query';
 export const firestoreApi = createApi({
   reducerPath: 'firestoreApi',
@@ -53,6 +54,18 @@ export const firestoreApi = createApi({
       queryFn: async () => {
         try {
           const data = await listStudents();
+          return { data };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
+    getIdGen: builder.query({
+      queryFn: async () => {
+        try {
+          const data = await getIdGenData();
           return { data };
         } catch (e: any) {
           console.error(e);
@@ -110,4 +123,5 @@ export const {
   useGetHomeworkByIdQuery,
   useGetStudentsQuery,
   useAddStudentMutation,
+  useGetIdGenQuery,
 } = firestoreApi;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
-import { useAddStudentMutation } from '../store/api';
+import { useAddStudentMutation, useGetIdGenQuery } from '../store/api';
 import { AdminHeader } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,14 +29,28 @@ export default function AddStudentScreen() {
 
   const isFormValid = fullName.trim().length > 0 && studentId.trim().length > 0;
   const navigation = useNavigation();
-  const [addStudent] = useAddStudentMutation();
 
+  const [addStudent] = useAddStudentMutation();
+  const { data: idGenData, error } = useGetIdGenQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+
+  useEffect(() => {
+    setStudentId(`JW${idGenData?.studentLastID}`);
+  }, [idGenData]);
+
+  console.log('idGenData', idGenData);
   const handleAddStudent = async () => {
     if (!isFormValid) return;
 
     setIsSubmitting(true);
     try {
-      await addStudent({ studentId, name: fullName, password: 'Welcome123' });
+      await addStudent({
+        studentId,
+        name: fullName,
+        password: 'Welcome123',
+        studentLastID: studentId,
+      });
 
       Alert.alert(
         'Student Added',
@@ -109,6 +123,7 @@ export default function AddStudentScreen() {
                   studentId.length > 0 && styles.inputFilled,
                 ]}
                 placeholder="ID-000000"
+                disableFullscreenUI
                 placeholderTextColor="#A0AEC0"
                 value={studentId}
                 onChangeText={setStudentId}

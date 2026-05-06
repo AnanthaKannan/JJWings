@@ -17,6 +17,8 @@ const STUDENTS = 'students';
 const HOMEWORKS = 'homeworks';
 const QUESTIONS = 'questions';
 const SCORES = 'scores';
+const IDGEN = 'idgen';
+const INITIAL_STUDENT_ID = 101;
 
 const login = async (studentId: string, password: string) => {
   const ref = doc(db, STUDENTS, studentId);
@@ -63,6 +65,15 @@ const getHomeworkById = async (homeworkId: string) => {
   return qSnap.data();
 };
 
+const getIdGenData = async () => {
+  const qSnap = await getDoc(doc(db, IDGEN, 'idgen'));
+  const data = qSnap.data() || {};
+  if (!data?.studentLastID) {
+    data.studentLastID = INITIAL_STUDENT_ID;
+  }
+  return data;
+};
+
 type BadgeType = 'PROGRESS' | 'NEW' | 'COMPLETED';
 
 const updateHomework = async (
@@ -100,6 +111,7 @@ const addStudent = async (
   studentId: string,
   name: string,
   password: string,
+  studentLastID: number,
 ) => {
   // Using studentId as the doc ID for easy lookup
   await setDoc(doc(db, STUDENTS, studentId), {
@@ -110,6 +122,10 @@ const addStudent = async (
     assigned: 0,
     timer: 0,
   });
+
+  await setDoc(doc(db, IDGEN, 'idgen'), {
+    studentLastID: studentLastID + 1,
+  });
 };
 
 export {
@@ -119,4 +135,5 @@ export {
   getHomeworkById,
   listStudents,
   addStudent,
+  getIdGenData,
 };
