@@ -13,6 +13,7 @@ import { useSelector } from 'react-redux';
 import { useGetHomeworkByIdQuery } from '../store/api';
 import { RootState } from '../store/store';
 import { Header } from '../component';
+import { evaluateExpression } from '../util/fn';
 
 const CheckIcon = () => (
   <View style={styles.checkIcon}>
@@ -36,6 +37,7 @@ type QuestionCardProps = {
   index: number;
   question: string;
   answer: number;
+  correctAnswer: number;
   isWrong: boolean;
 };
 
@@ -43,6 +45,7 @@ const QuestionCard = ({
   index,
   question,
   answer,
+  correctAnswer,
   isWrong,
 }: QuestionCardProps) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -121,7 +124,7 @@ const QuestionCard = ({
         <View style={styles.tipRow}>
           <Text style={styles.tipIcon}>💡</Text>
           <Text style={styles.tipText}>
-            Nice try! The correct answer is <Text>25</Text>
+            Nice try! The correct answer is <Text>{correctAnswer}</Text>
           </Text>
         </View>
       )}
@@ -226,6 +229,7 @@ export default function QuizReviewScreen() {
               index={index}
               question={question}
               answer={hw?.answer[index]}
+              correctAnswer={evaluateExpression(question)}
               isWrong={!hw?.result[index]}
             />
           ))}

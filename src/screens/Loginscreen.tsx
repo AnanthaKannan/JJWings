@@ -25,8 +25,8 @@ import { useLazyGetLoginQuery } from '../store/api';
 
 // ─── Component ───────────────────────────────────────────
 export default function LoginScreen() {
-  const [name, setName] = useState('JW100');
-  const [code, setCode] = useState('pass123');
+  const [name, setName] = useState('JW001');
+  const [code, setCode] = useState('Welcome123');
   const [showCode, setShowCode] = useState(false);
 
   const [login, loginRes] = useLazyGetLoginQuery();
@@ -40,9 +40,12 @@ export default function LoginScreen() {
       password: code,
     });
     if (isSuccess) {
-      dispatch(setCredentials({ studentId: name }));
-      navigation.navigate('Admin');
-      // navigation.navigate('Main');
+      if (name === 'JW001') {
+        navigation.navigate('Admin');
+      } else {
+        dispatch(setCredentials({ studentId: name }));
+        navigation.navigate('Main');
+      }
     }
   };
 
