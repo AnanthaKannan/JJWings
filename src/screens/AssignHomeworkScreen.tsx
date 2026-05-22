@@ -159,7 +159,7 @@ export default function AssignHomeworkScreen({
 }) {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showFilters, setShowFilters] = useState(false);
+  const [_showFilters, setShowFilters] = useState(false);
   const studentName = route?.params?.studentName ?? 'Student';
 
   const filtered = ALL_TASKS.filter(
