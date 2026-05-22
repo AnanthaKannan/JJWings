@@ -4,6 +4,7 @@ export function evaluateExpression(expr: string): number {
     throw new Error('Invalid characters in expression');
   }
 
+  // eslint-disable-next-line no-new-func
   return Function(`"use strict"; return (${expr})`)();
 }
 
