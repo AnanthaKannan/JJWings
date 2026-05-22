@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { useAddStudentMutation, useGetIdGenQuery } from '../store/api';
 import { AdminHeader } from '../component';
@@ -31,12 +31,41 @@ export default function AddStudentScreen() {
   const navigation = useNavigation();
 
   const [addStudent] = useAddStudentMutation();
-  const { data: idGenData, error } = useGetIdGenQuery(undefined, {
+  const { data: idGenData, refetch } = useGetIdGenQuery(undefined, {
+    refetchOnFocus: true,
     refetchOnMountOrArgChange: true,
   });
 
+  console.log('idGenData', idGenData);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const refreshStudentId = async () => {
+        const result = await refetch();
+        const studentLastID = result.data?.studentLastID;
+
+        if (isActive && studentLastID) {
+          setStudentId(`JW${studentLastID}`);
+        }
+      };
+
+      refreshStudentId();
+
+      return () => {
+        isActive = false;
+      };
+    }, [refetch]),
+  );
+  // useEffect(() => {
+  //   console.log('eeeeeeeeeeeeeeeeeeeee');
+  // }, []);
+
   useEffect(() => {
-    setStudentId(`JW${idGenData?.studentLastID}`);
+    if (idGenData?.studentLastID) {
+      setStudentId(`JW${idGenData.studentLastID}`);
+    }
   }, [idGenData]);
 
   console.log('idGenData', idGenData);
@@ -45,12 +74,17 @@ export default function AddStudentScreen() {
 
     setIsSubmitting(true);
     try {
+      const studentLastID =
+        idGenData?.studentLastID ?? Number(studentId.replace(/\D/g, ''));
+
       await addStudent({
         studentId,
         name: fullName,
         password: 'Welcome123',
-        studentLastID: studentId,
-      });
+        studentLastID,
+      }).unwrap();
+
+      await refetch();
 
       Alert.alert(
         'Student Added',
@@ -59,7 +93,6 @@ export default function AddStudentScreen() {
           {
             text: 'OK',
             onPress: () => {
-              setStudentId('');
               setFullName('');
               navigation.goBack();
             },
@@ -67,6 +100,7 @@ export default function AddStudentScreen() {
         ],
       );
     } catch (err) {
+      console.log(err);
       Alert.alert('Error', 'Failed to add student. Please try again.');
     } finally {
       setIsSubmitting(false);

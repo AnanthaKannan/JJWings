@@ -1,7 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function AdminHeader({ header }) {
+type AdminHeaderProps = {
+  header: string;
+};
+
+export default function AdminHeader({ header }: AdminHeaderProps) {
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>

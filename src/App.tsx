@@ -130,6 +130,7 @@ const AdminTabs = createBottomTabNavigator({
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="menu-book" color={color} size={size} />
         ),
+        unmountOnBlur: true, // ✅ forces remount every time tab is visited
       },
     },
     HomeworkLibrary: {
@@ -150,17 +151,7 @@ const AdminTabs = createBottomTabNavigator({
         ),
       },
     },
-    AssignHomework: {
-      screen: AssignHomeworkScreen,
-      options: {
-        tabBarLabel: 'assign task',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="bar-chart" color={color} size={size} />
-        ),
-      },
-    },
-
-    // // Tab 4 — Settings / Logout
+    // Tab — Settings / Logout
     Logout: {
       screen: ProfileScreen,
       options: {

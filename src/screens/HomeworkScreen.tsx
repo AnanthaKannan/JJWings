@@ -43,7 +43,7 @@ function HomeworkCard({
   timer = 0,
 }: HomeworkCardProps) {
   const badgeStyle = BADGE_STYLES[state];
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const dispatch = useDispatch();
 
   const handleAttend = () => {
@@ -114,7 +114,7 @@ export default function HomeworkScreen() {
   const studentId = useSelector((state: RootState) => state.common.studentId);
 
   const { data: homeworks, error } = useGetHomeworksQuery(
-    { studentId },
+    { studentId: studentId ?? '' },
     {
       skip: !studentId,
       refetchOnMountOrArgChange: true,
@@ -145,7 +145,7 @@ export default function HomeworkScreen() {
             key={task.id}
             {...task}
             homeworkId={task.id}
-            question={task?.question?.question}
+            question={task?.question?.question ?? []}
           />
         ))}
       </ScrollView>

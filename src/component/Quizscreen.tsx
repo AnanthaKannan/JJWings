@@ -72,6 +72,8 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   };
 
   const onSubmit = async (value: number) => {
+    if (!homeworkId) return;
+
     const updatedData = {
       ...data,
       answer: [...answer, value],

@@ -31,7 +31,7 @@ export default function LoginScreen() {
 
   const [login, loginRes] = useLazyGetLoginQuery();
 
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const dispatch = useDispatch();
 
   const handleLogin = async () => {
