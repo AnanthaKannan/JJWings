@@ -117,6 +117,20 @@ const getIdGenData = async (): Promise<IdGenData> => {
   return { studentLastID: data.studentLastID };
 };
 
+const createQuestion = async (taskId: string, question: string[]) => {
+  const questionRef = doc(db, QUESTIONS, taskId);
+  const existingQuestion = await getDoc(questionRef);
+
+  if (existingQuestion.exists()) {
+    throw new Error('Task identifier already exists');
+  }
+
+  await setDoc(questionRef, {
+    question,
+    updatedAt: serverTimestamp(),
+  });
+};
+
 type BadgeType = 'PROGRESS' | 'NEW' | 'COMPLETED';
 
 const updateHomework = async (
@@ -181,5 +195,6 @@ export {
   getHomeworkById,
   listStudents,
   addStudent,
+  createQuestion,
   getIdGenData,
 };

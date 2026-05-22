@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Animated,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
+import { useCreateQuestionMutation } from '../store/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,10 +30,17 @@ type Question = {
 /** Safely evaluates a math string like "5+20+30+40" → 95 */
 const evaluateMath = (expr: string): number | null => {
   try {
+    const trimmedExpr = expr.trim();
+
     // Allow only digits and operators
-    if (!/^[\d+\-*/().\s]+$/.test(expr)) return null;
+    if (!/^[\d+\-*/().\s]+$/.test(trimmedExpr)) return null;
+    if (/[+\-*/]{2,}/.test(trimmedExpr)) return null;
+    if (/^[+*/]/.test(trimmedExpr) || /[+\-*/]$/.test(trimmedExpr)) {
+      return null;
+    }
+
     // eslint-disable-next-line no-eval
-    const result = eval(expr);
+    const result = eval(trimmedExpr);
     if (typeof result !== 'number' || !isFinite(result)) return null;
     return Math.round(result * 100) / 100;
   } catch {
@@ -39,11 +48,13 @@ const evaluateMath = (expr: string): number | null => {
   }
 };
 
+const sanitizeMathInput = (value: string) =>
+  value.replace(/[^\d+\-*/().\s]/g, '');
+
 // ─── Question Row ─────────────────────────────────────────────────────────────
 
 const QuestionRow = ({
   item,
-  index,
   onChange,
   onDelete,
 }: {
@@ -93,53 +104,39 @@ const QuestionRow = ({
   );
 };
 
-// ─── Decorative Blobs ─────────────────────────────────────────────────────────
-
-const Blobs = () => (
-  <View style={styles.blobsRow}>
-    <View
-      style={[
-        styles.blob,
-        { backgroundColor: '#FDE68A', width: 36, height: 36 },
-      ]}
-    />
-    <View
-      style={[
-        styles.blob,
-        { backgroundColor: '#FCD34D', width: 30, height: 30, marginLeft: -10 },
-      ]}
-    />
-    <View
-      style={[
-        styles.blob,
-        { backgroundColor: '#FCA5A5', width: 26, height: 26, marginLeft: -8 },
-      ]}
-    />
-  </View>
-);
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 let nextId = 3; // start after mock data
 
-export default function CreateNewTaskScreen({
-  navigation,
-}: {
-  navigation: any;
-}) {
+const createEmptyQuestion = (): Question => ({
+  id: String(nextId++),
+  expression: '',
+  answer: null,
+});
+
+export default function CreateNewTaskScreen() {
+  const navigation = useNavigation<any>();
   const [taskId, setTaskId] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [createQuestion] = useCreateQuestionMutation();
   const [questions, setQuestions] = useState<Question[]>([
-    { id: '1', expression: '5+20+30+40', answer: 95 },
-    { id: '2', expression: '12+8+15-4', answer: 31 },
-    { id: '3', expression: '', answer: null }, // empty input row
+    createEmptyQuestion(),
   ]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleExpressionChange = (id: string, val: string) => {
+    const sanitizedValue = sanitizeMathInput(val);
+
     setQuestions(prev =>
       prev.map(q =>
-        q.id === id ? { ...q, expression: val, answer: evaluateMath(val) } : q,
+        q.id === id
+          ? {
+              ...q,
+              expression: sanitizedValue,
+              answer: evaluateMath(sanitizedValue),
+            }
+          : q,
       ),
     );
   };
@@ -169,9 +166,11 @@ export default function CreateNewTaskScreen({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const filled = questions.filter(q => q.expression.trim() !== '');
-    if (!taskId.trim()) {
+    const taskIdentifier = taskId.trim();
+
+    if (!taskIdentifier) {
       Alert.alert('Missing Task ID', 'Please enter a task identifier.');
       return;
     }
@@ -188,17 +187,46 @@ export default function CreateNewTaskScreen({
       return;
     }
 
-    // TODO: dispatch(saveTask({ taskId, questions: filled }))
-    Alert.alert(
-      'Task Saved',
-      `Task "${taskId}" saved with ${filled.length} question(s).`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }],
-    );
+    const question = filled.map(q => q.expression.trim());
+
+    setIsSaving(true);
+    try {
+      await createQuestion({
+        taskId: taskIdentifier,
+        question,
+      }).unwrap();
+
+      setTaskId('');
+      setQuestions([createEmptyQuestion()]);
+
+      Alert.alert(
+        'Task Saved',
+        `Task "${taskIdentifier}" saved with ${question.length} question(s).`,
+        [{ text: 'OK', onPress: () => navigation.navigate('HomeworkLibrary') }],
+      );
+    } catch (err) {
+      console.log(err);
+      const rawError =
+        typeof err === 'string'
+          ? err
+          : err && typeof err === 'object' && 'error' in err
+          ? String(err.error)
+          : '';
+      const errorMessage = rawError.includes('Task identifier already exists')
+        ? 'Task identifier already exists'
+        : 'Failed to save task. Please try again.';
+
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  const filledQuestions = questions.filter(q => q.expression.trim() !== '');
   const isValid =
     taskId.trim().length > 0 &&
-    questions.some(q => q.expression.trim() !== '' && q.answer !== null);
+    filledQuestions.length > 0 &&
+    filledQuestions.every(q => q.answer !== null);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -262,9 +290,6 @@ export default function CreateNewTaskScreen({
             <MaterialIcons name="add" size={16} color="#6B7280" />
             <Text style={styles.addQuestionText}>Add Question</Text>
           </TouchableOpacity>
-
-          {/* Decorative blobs */}
-          <Blobs />
         </View>
 
         {/* ── Save Task Button ── */}
@@ -272,7 +297,7 @@ export default function CreateNewTaskScreen({
           <TouchableOpacity
             style={[styles.saveBtn, !isValid && styles.saveBtnDisabled]}
             onPress={handleSave}
-            disabled={!isValid}
+            disabled={!isValid || isSaving}
             activeOpacity={0.85}
           >
             <MaterialIcons
@@ -281,7 +306,9 @@ export default function CreateNewTaskScreen({
               color="#fff"
               style={{ marginRight: 8 }}
             />
-            <Text style={styles.saveBtnText}>Save Task</Text>
+            <Text style={styles.saveBtnText}>
+              {isSaving ? 'Saving...' : 'Save Task'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

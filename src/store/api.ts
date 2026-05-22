@@ -7,6 +7,7 @@ import {
   getHomeworkById,
   listStudents,
   addStudent,
+  createQuestion,
   getIdGenData,
   type Homework,
   type IdGenData,
@@ -46,6 +47,11 @@ type UpdateHomeworkArg = {
   timer: number;
   success?: number;
   failure?: number;
+};
+
+type CreateQuestionArg = {
+  taskId: string;
+  question: string[];
 };
 
 export const firestoreApi = createApi({
@@ -125,6 +131,18 @@ export const firestoreApi = createApi({
       },
     }),
 
+    createQuestion: builder.mutation<string, CreateQuestionArg>({
+      queryFn: async ({ taskId, question }) => {
+        try {
+          await createQuestion(taskId, question);
+          return { data: 'success' };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
     updateHomework: builder.mutation<string, UpdateHomeworkArg>({
       queryFn: async ({
         homeworkId,
@@ -162,5 +180,6 @@ export const {
   useGetHomeworkByIdQuery,
   useGetStudentsQuery,
   useAddStudentMutation,
+  useCreateQuestionMutation,
   useGetIdGenQuery,
 } = firestoreApi;
