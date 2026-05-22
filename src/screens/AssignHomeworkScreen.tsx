@@ -159,7 +159,6 @@ export default function AssignHomeworkScreen({
 }) {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [_showFilters, setShowFilters] = useState(false);
   const studentName = route?.params?.studentName ?? 'Student';
 
   const filtered = ALL_TASKS.filter(
@@ -223,26 +222,11 @@ export default function AssignHomeworkScreen({
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <>
-              {/* ── Breadcrumb ── */}
-              <View style={styles.breadcrumb}>
-                <Text style={styles.breadcrumbItem}>Students</Text>
-                <MaterialIcons name="chevron-right" size={14} color="#94A3B8" />
-                <Text style={styles.breadcrumbItem}>{studentName}</Text>
-                <MaterialIcons name="chevron-right" size={14} color="#94A3B8" />
-                <Text style={[styles.breadcrumbItem, styles.breadcrumbActive]}>
-                  Assign Tasks
-                </Text>
-              </View>
-
               {/* ── Page Title ── */}
               <View style={styles.titleSection}>
                 <Text style={styles.pageTitle}>
-                  Assign Homework{'\n'}to{' '}
+                  Assign Homework to{' '}
                   <Text style={styles.pageTitleAccent}>{studentName}</Text>
-                </Text>
-                <Text style={styles.pageSubtitle}>
-                  Select advanced soroban tasks from the master library for this
-                  student.
                 </Text>
               </View>
 
@@ -265,14 +249,14 @@ export default function AssignHomeworkScreen({
               </View>
 
               {/* ── Filter Button ── */}
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={styles.filterBtn}
                 onPress={() => setShowFilters(v => !v)}
                 activeOpacity={0.8}
               >
                 <MaterialIcons name="tune" size={16} color="#4F46E5" />
                 <Text style={styles.filterBtnText}>Filters</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
 
               {/* ── Available Tasks header ── */}
               <View style={styles.sectionHeader}>
@@ -291,7 +275,7 @@ export default function AssignHomeworkScreen({
                   <Text style={styles.selectAllText}>
                     {filtered.every(t => selectedIds.has(t.id))
                       ? 'Deselect All'
-                      : 'Select All in Module\n5A'}
+                      : 'Select All in Module'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -398,7 +382,7 @@ const styles = StyleSheet.create({
   // Title
   titleSection: { marginBottom: 18 },
   pageTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1A202C',
     letterSpacing: -0.5,
@@ -423,7 +407,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,

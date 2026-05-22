@@ -161,11 +161,7 @@ const ModuleCard = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function HomeworkLibraryScreen({
-  navigation,
-}: {
-  navigation: any;
-}) {
+export default function HomeworkLibraryScreen() {
   const [modules, setModules] = useState<Module[]>(MODULES);
 
   const totalTasks = modules.reduce((sum, m) => sum + m.questions, 0);
@@ -211,19 +207,6 @@ export default function HomeworkLibraryScreen({
           <TouchableOpacity style={styles.headerBtn}>
             <MaterialIcons name="tune" size={22} color="#1A202C" />
           </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ── Stats Row ── */}
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>TOTAL TASKS</Text>
-          <Text style={styles.statValue}>{totalTasks}</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>TOTAL MODULES</Text>
-          <Text style={styles.statValue}>{modules.length}</Text>
         </View>
       </View>
 
