@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { useGetStudentsQuery } from '../store/api';
 import { accuracy, randomNumber } from '../util/fn';
@@ -20,7 +20,7 @@ import { AdminHeader } from '../component';
 type Student = {
   id: string;
   name: string;
-  studentId: string;
+  studentId?: string;
   assigned: number;
   success: number;
   failure: number;
@@ -33,6 +33,7 @@ const COLORS = [
   '#F4C56A',
   '#B39DDB',
   '#80CBC4',
+  '#EF9A9A',
   '#EF9A9A',
 ];
 
@@ -68,7 +69,7 @@ const StudentRow = ({
   onPress,
 }: {
   item: Student;
-  onPress: Function;
+  onPress: () => void;
 }) => (
   <TouchableOpacity onPress={onPress}>
     <View style={styles.row}>
@@ -108,11 +109,16 @@ const TableHeader = () => (
 export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
 
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
 
-  const { data: students, error } = useGetStudentsQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-  });
+  const { data: students, refetch } = useGetStudentsQuery(undefined);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Student Directory focused: refetching students');
+      refetch();
+    }, [refetch]),
+  );
 
   console.log('>>>>>>>>>>>>>>>>>', students);
 
@@ -122,8 +128,11 @@ export default function StudentDirectoryScreen() {
       s.id.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const handleRowPress = () => {
-    navigation.navigate('AdminAddStudent');
+  const handleRowPress = (student: Student) => {
+    navigation.navigate('AssignHomework', {
+      studentId: student.id,
+      studentName: student.name,
+    });
   };
 
   return (

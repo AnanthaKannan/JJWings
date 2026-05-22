@@ -150,16 +150,17 @@ const TaskRow = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-const STUDENT_NAME = 'Alex Johnson';
-
 export default function AssignHomeworkScreen({
   navigation,
+  route,
 }: {
   navigation: any;
+  route: any;
 }) {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showFilters, setShowFilters] = useState(false);
+  const [_showFilters, setShowFilters] = useState(false);
+  const studentName = route?.params?.studentName ?? 'Student';
 
   const filtered = ALL_TASKS.filter(
     t =>
@@ -189,7 +190,7 @@ export default function AssignHomeworkScreen({
       .join(', ');
     Alert.alert(
       'Assignment Confirmed',
-      `Assigned to ${STUDENT_NAME}:\n${names}`,
+      `Assigned to ${studentName}:\n${names}`,
       [{ text: 'Done', onPress: () => navigation.goBack() }],
     );
   };
@@ -226,7 +227,7 @@ export default function AssignHomeworkScreen({
               <View style={styles.breadcrumb}>
                 <Text style={styles.breadcrumbItem}>Students</Text>
                 <MaterialIcons name="chevron-right" size={14} color="#94A3B8" />
-                <Text style={styles.breadcrumbItem}>Alex Johnson</Text>
+                <Text style={styles.breadcrumbItem}>{studentName}</Text>
                 <MaterialIcons name="chevron-right" size={14} color="#94A3B8" />
                 <Text style={[styles.breadcrumbItem, styles.breadcrumbActive]}>
                   Assign Tasks
@@ -237,7 +238,7 @@ export default function AssignHomeworkScreen({
               <View style={styles.titleSection}>
                 <Text style={styles.pageTitle}>
                   Assign Homework{'\n'}to{' '}
-                  <Text style={styles.pageTitleAccent}>{STUDENT_NAME}</Text>
+                  <Text style={styles.pageTitleAccent}>{studentName}</Text>
                 </Text>
                 <Text style={styles.pageSubtitle}>
                   Select advanced soroban tasks from the master library for this

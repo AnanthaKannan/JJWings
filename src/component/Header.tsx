@@ -8,7 +8,7 @@ interface HeaderProps {
 }
 
 export default function Header({ heading, sideHead }: HeaderProps) {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const handleBack = () => {
     navigation.navigate('HomeworkScreen');
   };

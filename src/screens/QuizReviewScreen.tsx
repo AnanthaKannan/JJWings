@@ -32,7 +32,19 @@ const TrophyIcon = () => (
   </View>
 );
 
-const QuestionCard = ({ index, question, answer, isWrong }) => {
+type QuestionCardProps = {
+  index: number;
+  question: string;
+  answer: number;
+  isWrong: boolean;
+};
+
+const QuestionCard = ({
+  index,
+  question,
+  answer,
+  isWrong,
+}: QuestionCardProps) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -125,7 +137,7 @@ export default function QuizReviewScreen() {
   const questions = useSelector((state: RootState) => state.common.questions);
 
   const { data: hw } = useGetHomeworkByIdQuery(
-    { homeworkId },
+    { homeworkId: homeworkId ?? '' },
     {
       skip: !homeworkId,
       refetchOnMountOrArgChange: true,

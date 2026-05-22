@@ -8,13 +8,52 @@ import {
   listStudents,
   addStudent,
   getIdGenData,
+  type Homework,
+  type IdGenData,
+  type Student,
 } from './query';
+
+type LoginArg = {
+  studentId: string;
+  password: string;
+};
+
+type LoginResult = {
+  id: string;
+  name: string;
+};
+
+type HomeworkArg = {
+  studentId: string;
+};
+
+type HomeworkByIdArg = {
+  homeworkId: string;
+};
+
+type AddStudentArg = {
+  studentId: string;
+  name: string;
+  password: string;
+  studentLastID: number;
+};
+
+type UpdateHomeworkArg = {
+  homeworkId: string;
+  state: 'PROGRESS' | 'NEW' | 'COMPLETED';
+  result: boolean[];
+  answer: number[];
+  timer: number;
+  success?: number;
+  failure?: number;
+};
+
 export const firestoreApi = createApi({
   reducerPath: 'firestoreApi',
   baseQuery: fakeBaseQuery(), // ← key for non-HTTP apis
   endpoints: builder => ({
     // GET questions
-    getHomeworks: builder.query({
+    getHomeworks: builder.query<Homework[], HomeworkArg>({
       queryFn: async ({ studentId }) => {
         try {
           const data = await getHomeworks(studentId);
@@ -26,7 +65,7 @@ export const firestoreApi = createApi({
       },
     }),
 
-    getHomeworkById: builder.query({
+    getHomeworkById: builder.query<Homework | undefined, HomeworkByIdArg>({
       queryFn: async ({ homeworkId }) => {
         try {
           const data = await getHomeworkById(homeworkId);
@@ -38,7 +77,7 @@ export const firestoreApi = createApi({
       },
     }),
 
-    getLogin: builder.query({
+    getLogin: builder.query<LoginResult, LoginArg>({
       queryFn: async ({ studentId, password }) => {
         try {
           const data = await login(studentId, password);
@@ -50,7 +89,7 @@ export const firestoreApi = createApi({
       },
     }),
 
-    getStudents: builder.query({
+    getStudents: builder.query<Student[], void>({
       queryFn: async () => {
         try {
           const data = await listStudents();
@@ -62,7 +101,7 @@ export const firestoreApi = createApi({
       },
     }),
 
-    getIdGen: builder.query({
+    getIdGen: builder.query<IdGenData, void>({
       queryFn: async () => {
         try {
           const data = await getIdGenData();
@@ -74,10 +113,10 @@ export const firestoreApi = createApi({
       },
     }),
 
-    addStudent: builder.mutation({
-      queryFn: async ({ studentId, name, password }) => {
+    addStudent: builder.mutation<string, AddStudentArg>({
+      queryFn: async ({ studentId, name, password, studentLastID }) => {
         try {
-          await addStudent(studentId, name, password);
+          await addStudent(studentId, name, password, studentLastID);
           return { data: 'success' };
         } catch (e: any) {
           console.error(e);
@@ -86,7 +125,7 @@ export const firestoreApi = createApi({
       },
     }),
 
-    updateHomework: builder.mutation({
+    updateHomework: builder.mutation<string, UpdateHomeworkArg>({
       queryFn: async ({
         homeworkId,
         state,

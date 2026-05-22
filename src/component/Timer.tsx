@@ -5,7 +5,7 @@ import { View, StyleSheet, Text } from 'react-native';
 
 interface TimerProps {
   timeLeft: number;
-  setTimeLeft: Function;
+  setTimeLeft: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export default function Timer({ timeLeft = 0, setTimeLeft }: TimerProps) {
@@ -14,7 +14,7 @@ export default function Timer({ timeLeft = 0, setTimeLeft }: TimerProps) {
     useCallback(() => {
       const timerId = setInterval(() => {
         console.log('running...');
-        setTimeLeft(prev => prev + 1);
+        setTimeLeft((prev: number) => prev + 1);
       }, 1000);
 
       return () => {

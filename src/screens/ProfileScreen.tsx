@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import Timer from '../component/Timer';
 
 export default function ProfileScreen() {
-  return <Timer totalTimeSeconds={165} />;
+  const [timeLeft, setTimeLeft] = useState(165);
+
+  return <Timer timeLeft={timeLeft} setTimeLeft={setTimeLeft} />;
 }
