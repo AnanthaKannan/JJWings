@@ -12,134 +12,75 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import {
+  useAssignHomeworkMutation,
+  useGetHomeworksQuery,
+  useGetQuestionsQuery,
+} from '../store/api';
 
 type Task = {
   id: string;
-  code: string; // e.g. "5A"
-  taskId: string; // e.g. "Task 5A-04"
-  level: number;
-  description: string;
-  badge?: string; // e.g. "Next Level Preview"
-  badgeColor?: string;
+  question: string[];
 };
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const ALL_TASKS: Task[] = [
-  {
-    id: '1',
-    code: '5A',
-    taskId: 'Task 5A-04',
-    level: 5,
-    description: 'Advanced Addition: 3-Digit Strings',
-  },
-  {
-    id: '2',
-    code: '5A',
-    taskId: 'Task 5A-05',
-    level: 5,
-    description: 'Mental Math: Visualization Focus',
-  },
-  {
-    id: '3',
-    code: '5A',
-    taskId: 'Task 5A-06',
-    level: 5,
-    description: 'Subtraction: Borrowing Principles',
-  },
-  {
-    id: '4',
-    code: '5A',
-    taskId: 'Task 5A-07',
-    level: 5,
-    description: 'Speed Challenge: Rapid Fire Addition',
-  },
-  {
-    id: '5',
-    code: '5B',
-    taskId: 'Task 5B-01',
-    level: 5,
-    description: 'Intro to 4-Digit Addition',
-    badge: 'Next Level Preview',
-    badgeColor: '#F59E0B',
-  },
-  {
-    id: '6',
-    code: '5B',
-    taskId: 'Task 5B-02',
-    level: 5,
-    description: 'Double Borrowing Subtraction',
-  },
-  {
-    id: '7',
-    code: '6A',
-    taskId: 'Task 6A-01',
-    level: 6,
-    description: 'Large Number Addition Sprint',
-  },
-];
-
-// ─── Level Badge ──────────────────────────────────────────────────────────────
-
-const LevelBadge = ({ level }: { level: number }) => (
-  <View style={styles.levelBadge}>
-    <Text style={styles.levelBadgeText}>Level {level}</Text>
-  </View>
-);
-
-// ─── Extra Badge ──────────────────────────────────────────────────────────────
-
-const ExtraBadge = ({ label, color }: { label: string; color: string }) => (
-  <View style={[styles.extraBadge, { backgroundColor: color + '22' }]}>
-    <Text style={[styles.extraBadgeText, { color }]}>{label}</Text>
-  </View>
-);
-
-// ─── Task Row ─────────────────────────────────────────────────────────────────
 
 const TaskRow = ({
   item,
   selected,
+  disabled,
   onToggle,
 }: {
   item: Task;
   selected: boolean;
+  disabled: boolean;
   onToggle: () => void;
 }) => (
   <TouchableOpacity
-    style={[styles.taskRow, selected && styles.taskRowSelected]}
+    style={[
+      styles.taskRow,
+      selected && styles.taskRowSelected,
+      disabled && styles.taskRowDisabled,
+    ]}
     onPress={onToggle}
+    disabled={disabled}
     activeOpacity={0.75}
   >
-    {/* Module code pill */}
     <View style={[styles.codePill, selected && styles.codePillSelected]}>
       <Text style={[styles.codeText, selected && styles.codeTextSelected]}>
-        {item.code}
+        {item.question.length}
       </Text>
     </View>
 
-    {/* Content */}
     <View style={styles.taskContent}>
       <View style={styles.taskTitleRow}>
-        <Text style={styles.taskId}>{item.taskId}</Text>
-        <LevelBadge level={item.level} />
-        {item.badge && (
-          <ExtraBadge label={item.badge} color={item.badgeColor ?? '#F59E0B'} />
+        <Text style={[styles.taskId, disabled && styles.taskTextDisabled]}>
+          {item.id}
+        </Text>
+        {disabled && (
+          <View style={styles.assignedBadge}>
+            <Text style={styles.assignedBadgeText}>Assigned</Text>
+          </View>
         )}
       </View>
-      <Text style={styles.taskDesc} numberOfLines={2}>
-        {item.description}
-      </Text>
+      {/* <Text style={styles.taskDesc} numberOfLines={2}>
+        {item.question.join(', ')}
+      </Text> */}
     </View>
 
-    {/* Checkbox */}
-    <TouchableOpacity onPress={onToggle} style={styles.checkbox}>
+    <TouchableOpacity
+      onPress={onToggle}
+      style={styles.checkbox}
+      disabled={disabled}
+    >
       {selected ? (
         <View style={styles.checkboxChecked}>
           <MaterialIcons name="check" size={14} color="#fff" />
+        </View>
+      ) : disabled ? (
+        <View style={styles.checkboxDisabled}>
+          <MaterialIcons name="lock" size={12} color="#94A3B8" />
         </View>
       ) : (
         <View style={styles.checkboxUnchecked} />
@@ -148,27 +89,49 @@ const TaskRow = ({
   </TouchableOpacity>
 );
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-
-export default function AssignHomeworkScreen({
-  navigation,
-  route,
-}: {
-  navigation: any;
-  route: any;
-}) {
+export default function AssignHomeworkScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const studentName = route?.params?.studentName ?? 'Student';
-
-  const filtered = ALL_TASKS.filter(
-    t =>
-      t.taskId.toLowerCase().includes(search.toLowerCase()) ||
-      t.description.toLowerCase().includes(search.toLowerCase()) ||
-      t.code.toLowerCase().includes(search.toLowerCase()),
+  const studentId = route?.params?.studentId;
+  const { data: tasks = [], isLoading } = useGetQuestionsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+  const { data: assignedHomeworks = [], refetch: refetchAssignedHomeworks } =
+    useGetHomeworksQuery(
+      { studentId: studentId ?? '' },
+      {
+        skip: !studentId,
+        refetchOnMountOrArgChange: true,
+      },
+    );
+  const [assignHomework, { isLoading: isAssigning }] =
+    useAssignHomeworkMutation();
+  const assignedQuestionIds = new Set(
+    assignedHomeworks.map(homework => homework.questionId),
   );
 
+  const filtered = tasks
+    .filter(
+      task =>
+        task.id.toLowerCase().includes(search.toLowerCase()) ||
+        task.question.some(question =>
+          question.toLowerCase().includes(search.toLowerCase()),
+        ),
+    )
+    .sort((a, b) => {
+      const aAssigned = assignedQuestionIds.has(a.id);
+      const bAssigned = assignedQuestionIds.has(b.id);
+
+      if (aAssigned === bAssigned) return a.id.localeCompare(b.id);
+      return aAssigned ? 1 : -1;
+    });
+
   const toggleSelect = (id: string) => {
+    if (assignedQuestionIds.has(id)) return;
+
     setSelectedIds(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -177,28 +140,56 @@ export default function AssignHomeworkScreen({
   };
 
   const selectAll = () => {
-    const allIds = new Set(filtered.map(t => t.id));
-    const allSelected = filtered.every(t => selectedIds.has(t.id));
+    const availableTasks = filtered.filter(
+      task => !assignedQuestionIds.has(task.id),
+    );
+    const allIds = new Set(availableTasks.map(task => task.id));
+    const allSelected =
+      availableTasks.length > 0 &&
+      availableTasks.every(task => selectedIds.has(task.id));
     setSelectedIds(allSelected ? new Set() : allIds);
   };
 
-  const handleConfirm = () => {
-    if (selectedIds.size === 0) return;
-    const names = ALL_TASKS.filter(t => selectedIds.has(t.id))
-      .map(t => t.taskId)
+  const handleConfirm = async () => {
+    if (selectedIds.size === 0 || isAssigning) return;
+
+    if (!studentId) {
+      Alert.alert('Error', 'Student ID is missing. Please try again.');
+      return;
+    }
+
+    const questionIds = Array.from(selectedIds);
+    const names = tasks
+      .filter(task => selectedIds.has(task.id))
+      .map(task => task.id)
       .join(', ');
-    Alert.alert(
-      'Assignment Confirmed',
-      `Assigned to ${studentName}:\n${names}`,
-      [{ text: 'Done', onPress: () => navigation.goBack() }],
-    );
+
+    try {
+      await assignHomework({
+        studentId,
+        questionIds,
+      }).unwrap();
+      await refetchAssignedHomeworks();
+      setSelectedIds(new Set());
+
+      Alert.alert(
+        'Assignment Confirmed',
+        `Assigned to ${studentName}:\n${names}`,
+        [{ text: 'Done', onPress: () => navigation.goBack() }],
+      );
+    } catch (err) {
+      const errorMessage =
+        err && typeof err === 'object' && 'error' in err
+          ? String(err.error)
+          : 'Failed to assign homework. Please try again.';
+      Alert.alert('Error', errorMessage);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
-      {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -222,7 +213,6 @@ export default function AssignHomeworkScreen({
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <>
-              {/* ── Page Title ── */}
               <View style={styles.titleSection}>
                 <Text style={styles.pageTitle}>
                   Assign Homework to{' '}
@@ -230,12 +220,11 @@ export default function AssignHomeworkScreen({
                 </Text>
               </View>
 
-              {/* ── Search ── */}
               <View style={styles.searchBar}>
                 <MaterialIcons name="search" size={18} color="#94A3B8" />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search tasks (e.g. 5A-04, Addition)"
+                  placeholder="Search tasks or questions"
                   placeholderTextColor="#B0B8C8"
                   value={search}
                   onChangeText={setSearch}
@@ -248,17 +237,6 @@ export default function AssignHomeworkScreen({
                 )}
               </View>
 
-              {/* ── Filter Button ── */}
-              {/* <TouchableOpacity
-                style={styles.filterBtn}
-                onPress={() => setShowFilters(v => !v)}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons name="tune" size={16} color="#4F46E5" />
-                <Text style={styles.filterBtnText}>Filters</Text>
-              </TouchableOpacity> */}
-
-              {/* ── Available Tasks header ── */}
               <View style={styles.sectionHeader}>
                 <View>
                   <Text style={styles.sectionTitle}>Available</Text>
@@ -271,11 +249,17 @@ export default function AssignHomeworkScreen({
                 <TouchableOpacity
                   onPress={selectAll}
                   style={styles.selectAllBtn}
+                  disabled={filtered.every(task =>
+                    assignedQuestionIds.has(task.id),
+                  )}
                 >
                   <Text style={styles.selectAllText}>
-                    {filtered.every(t => selectedIds.has(t.id))
+                    {filtered.some(task => !assignedQuestionIds.has(task.id)) &&
+                    filtered
+                      .filter(task => !assignedQuestionIds.has(task.id))
+                      .every(task => selectedIds.has(task.id))
                       ? 'Deselect All'
-                      : 'Select All in Module'}
+                      : 'Select All'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -285,18 +269,20 @@ export default function AssignHomeworkScreen({
             <TaskRow
               item={item}
               selected={selectedIds.has(item.id)}
+              disabled={assignedQuestionIds.has(item.id)}
               onToggle={() => toggleSelect(item.id)}
             />
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <MaterialIcons name="search-off" size={40} color="#CBD5E0" />
-              <Text style={styles.emptyText}>No tasks match your search</Text>
+              <Text style={styles.emptyText}>
+                {isLoading ? 'Loading tasks...' : 'No tasks found'}
+              </Text>
             </View>
           }
         />
 
-        {/* ── Footer ── */}
         {selectedIds.size > 0 && (
           <View style={styles.footer}>
             <View style={styles.footerLeft}>
@@ -307,17 +293,22 @@ export default function AssignHomeworkScreen({
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.confirmBtn}
+              style={[styles.confirmBtn, isAssigning && styles.confirmBtnBusy]}
               onPress={handleConfirm}
+              disabled={isAssigning}
               activeOpacity={0.85}
             >
-              <Text style={styles.confirmText}>Confirm{'\n'}Assignment</Text>
-              <MaterialIcons
-                name="arrow-forward"
-                size={18}
-                color="#fff"
-                style={{ marginLeft: 6 }}
-              />
+              <Text style={styles.confirmText}>
+                {isAssigning ? 'Assigning...' : 'Confirm\nAssignment'}
+              </Text>
+              {!isAssigning && (
+                <MaterialIcons
+                  name="arrow-forward"
+                  size={18}
+                  color="#fff"
+                  style={{ marginLeft: 6 }}
+                />
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -326,15 +317,11 @@ export default function AssignHomeworkScreen({
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#EEF0F8',
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -355,50 +342,20 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     backgroundColor: '#C4B5D6',
   },
-
-  // List
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 120,
   },
-
-  // Breadcrumb
-  breadcrumb: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginBottom: 10,
-  },
-  breadcrumbItem: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  breadcrumbActive: {
-    color: '#4F46E5',
-    fontWeight: '700',
-  },
-
-  // Title
   titleSection: { marginBottom: 18 },
   pageTitle: {
     fontSize: 20,
     fontWeight: '800',
     color: '#1A202C',
-    letterSpacing: -0.5,
     lineHeight: 32,
   },
   pageTitleAccent: {
     color: '#4F46E5',
   },
-  pageSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 6,
-    lineHeight: 19,
-  },
-
-  // Search
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -420,25 +377,6 @@ const styles = StyleSheet.create({
     color: '#1A202C',
     padding: 0,
   },
-
-  // Filters
-  filterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EEF2FF',
-    borderRadius: 30,
-    paddingVertical: 10,
-    gap: 6,
-    marginBottom: 20,
-  },
-  filterBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4F46E5',
-  },
-
-  // Section header
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -470,7 +408,7 @@ const styles = StyleSheet.create({
     color: '#C7D2FE',
     letterSpacing: 0.5,
   },
-  selectAllBtn: { marginLeft: 'auto' as any },
+  selectAllBtn: { marginLeft: 'auto' },
   selectAllText: {
     fontSize: 11,
     fontWeight: '700',
@@ -478,8 +416,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 15,
   },
-
-  // Task row
   taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -498,6 +434,11 @@ const styles = StyleSheet.create({
   taskRowSelected: {
     borderColor: '#4F46E5',
     backgroundColor: '#F5F3FF',
+  },
+  taskRowDisabled: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    opacity: 0.68,
   },
   codePill: {
     width: 38,
@@ -524,45 +465,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 5,
-    marginBottom: 3,
+    gap: 6,
   },
   taskId: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1A202C',
+    marginBottom: 3,
+  },
+  taskTextDisabled: {
+    color: '#64748B',
+  },
+  assignedBadge: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginBottom: 3,
+  },
+  assignedBadgeText: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '700',
   },
   taskDesc: {
     fontSize: 12,
     color: '#64748B',
     lineHeight: 17,
   },
-
-  // Level badge
-  levelBadge: {
-    backgroundColor: '#DBEAFE',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  levelBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#2563EB',
-  },
-
-  // Extra badge
-  extraBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  extraBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-
-  // Checkbox
   checkbox: { marginLeft: 10 },
   checkboxUnchecked: {
     width: 22,
@@ -570,6 +500,14 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     borderWidth: 2,
     borderColor: '#CBD5E0',
+  },
+  checkboxDisabled: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxChecked: {
     width: 22,
@@ -579,8 +517,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  // Empty
   emptyState: {
     alignItems: 'center',
     paddingTop: 40,
@@ -591,8 +527,6 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontWeight: '500',
   },
-
-  // Footer
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -636,6 +570,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 6,
+  },
+  confirmBtnBusy: {
+    backgroundColor: '#64748B',
   },
   confirmText: {
     color: '#fff',

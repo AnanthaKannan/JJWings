@@ -9,6 +9,8 @@ import {
   updateDoc,
   setDoc,
   serverTimestamp,
+  writeBatch,
+  increment,
 } from 'firebase/firestore';
 
 import { HomeworkState } from '../util/enum';
@@ -31,6 +33,11 @@ export type Student = {
 
 export type Question = {
   question?: string[];
+};
+
+export type QuestionTask = {
+  id: string;
+  question: string[];
 };
 
 export type Homework = {
@@ -86,7 +93,16 @@ const getHomeworks = async (studentId: string): Promise<Homework[]> => {
   const snapshot = await getDocs(q);
   const homeworks = snapshot.docs.map(d => {
     const data = d.data() as Omit<Homework, 'id'>;
-    return { id: d.id, ...data };
+
+    return {
+      id: d.id,
+      studentId: data.studentId,
+      questionId: data.questionId,
+      state: data.state ?? HomeworkState.NEW,
+      result: data.result ?? [],
+      answer: data.answer ?? [],
+      timer: data.timer ?? 0,
+    };
   });
 
   // Fetch linked question for each homework
@@ -105,7 +121,17 @@ const getHomeworkById = async (
   const qSnap = await getDoc(doc(db, HOMEWORKS, homeworkId));
   if (!qSnap.exists()) return undefined;
 
-  return { id: qSnap.id, ...(qSnap.data() as Omit<Homework, 'id'>) };
+  const data = qSnap.data() as Omit<Homework, 'id'>;
+
+  return {
+    id: qSnap.id,
+    studentId: data.studentId,
+    questionId: data.questionId,
+    state: data.state ?? HomeworkState.NEW,
+    result: data.result ?? [],
+    answer: data.answer ?? [],
+    timer: data.timer ?? 0,
+  };
 };
 
 const getIdGenData = async (): Promise<IdGenData> => {
@@ -115,6 +141,19 @@ const getIdGenData = async (): Promise<IdGenData> => {
     data.studentLastID = INITIAL_STUDENT_ID;
   }
   return { studentLastID: data.studentLastID };
+};
+
+const listQuestions = async (): Promise<QuestionTask[]> => {
+  const snapshot = await getDocs(collection(db, QUESTIONS));
+
+  return snapshot.docs.map(docSnap => {
+    const data = docSnap.data() as Question;
+
+    return {
+      id: docSnap.id,
+      question: data.question ?? [],
+    };
+  });
 };
 
 const createQuestion = async (taskId: string, question: string[]) => {
@@ -129,6 +168,49 @@ const createQuestion = async (taskId: string, question: string[]) => {
     question,
     updatedAt: serverTimestamp(),
   });
+};
+
+const assignHomework = async (studentId: string, questionIds: string[]) => {
+  if (questionIds.length === 0) return;
+
+  const homeworkRefs = questionIds.map(questionId => ({
+    questionId,
+    ref: doc(db, HOMEWORKS, `${studentId}_${questionId}`),
+  }));
+
+  const existingHomeworks = await Promise.all(
+    homeworkRefs.map(({ ref }) => getDoc(ref)),
+  );
+  const alreadyAssignedIndex = existingHomeworks.findIndex(snap =>
+    snap.exists(),
+  );
+
+  if (alreadyAssignedIndex >= 0) {
+    throw new Error(
+      `${homeworkRefs[alreadyAssignedIndex].questionId} is already assigned to this student`,
+    );
+  }
+
+  const batch = writeBatch(db);
+
+  homeworkRefs.forEach(({ ref, questionId }) => {
+    batch.set(ref, {
+      studentId,
+      questionId,
+      state: HomeworkState.NEW,
+      result: [],
+      answer: [],
+      timer: 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  });
+
+  batch.update(doc(db, STUDENTS, studentId), {
+    assigned: increment(questionIds.length),
+  });
+
+  await batch.commit();
 };
 
 type BadgeType = 'PROGRESS' | 'NEW' | 'COMPLETED';
@@ -194,7 +276,9 @@ export {
   updateHomework,
   getHomeworkById,
   listStudents,
+  listQuestions,
   addStudent,
   createQuestion,
+  assignHomework,
   getIdGenData,
 };
