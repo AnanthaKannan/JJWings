@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
@@ -25,6 +25,7 @@ interface HomeworkCardProps {
   result: boolean[];
   answer: number[];
   timer: number;
+  isAdminReview?: boolean;
 }
 
 const BADGE_STYLES: Record<BadgeType, { bg: string; text: string }> = {
@@ -47,10 +48,12 @@ function HomeworkCard({
   result,
   answer,
   timer = 0,
+  isAdminReview = false,
 }: HomeworkCardProps) {
   const badgeStyle = BADGE_STYLES[state];
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
+  const canUseAction = !isAdminReview || state === HomeworkState.COMPLETED;
 
   const handleAttend = () => {
     dispatch(
@@ -90,15 +93,17 @@ function HomeworkCard({
           </Text>
         </View>
         {/* Attend button — hidden for COMPLETED */}
-        <TouchableOpacity
-          style={styles.attendBtn}
-          activeOpacity={0.85}
-          onPress={handleAttend}
-        >
-          <Text style={styles.attendBtnText}>
-            {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
-          </Text>
-        </TouchableOpacity>
+        {canUseAction && (
+          <TouchableOpacity
+            style={styles.attendBtn}
+            activeOpacity={0.85}
+            onPress={handleAttend}
+          >
+            <Text style={styles.attendBtnText}>
+              {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Progress bar (only for IN PROGRESS) */}
@@ -117,10 +122,17 @@ function HomeworkCard({
 }
 
 export default function HomeworkScreen() {
+  const route = useRoute<any>();
+  const routeStudentId = route?.params?.studentId;
+  const studentName = route?.params?.studentName;
+  const isAdminReview = route?.params?.adminReview === true;
   const [selectedFilter, setSelectedFilter] = useState<BadgeType>(
-    HomeworkState.NEW,
+    isAdminReview ? HomeworkState.COMPLETED : HomeworkState.NEW,
   );
-  const studentId = useSelector((state: RootState) => state.common.studentId);
+  const loggedInStudentId = useSelector(
+    (state: RootState) => state.common.studentId,
+  );
+  const studentId = isAdminReview ? routeStudentId : loggedInStudentId;
 
   const { data: homeworks, error } = useGetHomeworksQuery(
     { studentId: studentId ?? '' },
@@ -134,6 +146,7 @@ export default function HomeworkScreen() {
 
   const filteredHomeworks =
     homeworks?.filter(homework => homework.state === selectedFilter) ?? [];
+  const emptyStateLabel = selectedFilter.toLowerCase();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -145,7 +158,11 @@ export default function HomeworkScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Homework</Text>
+          <Text style={styles.headerTitle}>
+            {isAdminReview
+              ? `${studentName ?? 'Student'} Performance`
+              : 'Homework'}
+          </Text>
           {/* <Text style={styles.headerSubtitle}>
             You have {tasks.length} tasks to explore today
           </Text> */}
@@ -185,12 +202,13 @@ export default function HomeworkScreen() {
             {...task}
             homeworkId={task.id}
             question={task?.question?.question ?? []}
+            isAdminReview={isAdminReview}
           />
         ))}
 
         {filteredHomeworks.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No {selectedFilter.toLowerCase()} homework</Text>
+            <Text style={styles.emptyText}>No {emptyStateLabel} homework</Text>
           </View>
         )}
       </ScrollView>

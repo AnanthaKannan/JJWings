@@ -19,6 +19,7 @@ import {
   HomeworkLibraryScreen,
   CreateNewTaskScreen,
   AssignHomeworkScreen,
+  ProgressDashboard,
 } from './screens';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,6 +46,15 @@ const MainTabs = createBottomTabNavigator({
     },
   },
   screens: {
+    Progress: {
+      screen: ProgressDashboard,
+      options: {
+        tabBarLabel: 'Progress',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="insights" color={color} size={size} />
+        ),
+      },
+    },
     Homework: {
       screen: HomeworkStack,
       options: {
@@ -98,6 +108,8 @@ const AdminStudentsStack = createNativeStackNavigator({
     HomeworkLibrary: { screen: HomeworkLibraryScreen },
     CreateNewTask: { screen: CreateNewTaskScreen },
     AssignHomework: { screen: AssignHomeworkScreen },
+    HomeworkScreen: { screen: HomeworkScreen },
+    QuizReview: { screen: QuizReviewScreen },
   },
 });
 

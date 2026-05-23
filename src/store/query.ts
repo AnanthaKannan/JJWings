@@ -57,6 +57,14 @@ export type IdGenData = {
   studentLastID: number;
 };
 
+export type Score = {
+  studentId: string;
+  success: number;
+  failure: number;
+  timeTaken: number;
+  completed: number;
+};
+
 const login = async (studentId: string, password: string) => {
   const ref = doc(db, STUDENTS, studentId);
   const snap = await getDoc(ref);
@@ -263,20 +271,34 @@ const updateHomework = async (
     updatedAt: serverTimestamp(),
   });
 
-  // If completed, upsert score record
+  // Keep one accumulated score document per student for dashboard summaries.
   if (state === HomeworkState.COMPLETED) {
     const hw = (await getDoc(doc(db, HOMEWORKS, homeworkId))).data();
-    if (!hw) return;
+    if (!hw?.studentId) return;
 
-    const scoreRef = doc(collection(db, SCORES));
+    const scoreRef = doc(db, SCORES, hw.studentId);
     await setDoc(scoreRef, {
       studentId: hw.studentId,
-      homeworkId,
-      success,
-      failure,
-      createdAt: serverTimestamp(),
-    });
+      success: increment(success),
+      failure: increment(failure),
+      timeTaken: increment(timer),
+      completed: increment(1),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
   }
+};
+
+const getScore = async (studentId: string): Promise<Score> => {
+  const scoreSnap = await getDoc(doc(db, SCORES, studentId));
+  const data = (scoreSnap.data() || {}) as Partial<Score>;
+
+  return {
+    studentId,
+    success: data.success ?? 0,
+    failure: data.failure ?? 0,
+    timeTaken: data.timeTaken ?? 0,
+    completed: data.completed ?? 0,
+  };
 };
 
 const addStudent = async (
@@ -312,4 +334,5 @@ export {
   createQuestion,
   assignHomework,
   getIdGenData,
+  getScore,
 };

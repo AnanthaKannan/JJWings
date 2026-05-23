@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface AuthState {
   studentId: string | null;
+  isStudent: boolean;
   isAuthenticated: boolean;
   questions: string[];
   result: boolean[];
@@ -15,6 +16,7 @@ interface AuthState {
 const initialState: AuthState = {
   studentId: null,
   isAuthenticated: false,
+  isStudent: false,
   questions: [],
   result: [],
   answer: [],
@@ -27,8 +29,12 @@ const commonSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials: (state, action: PayloadAction<{ studentId: string }>) => {
+    setCredentials: (
+      state,
+      action: PayloadAction<{ studentId: string; isStudent: boolean }>,
+    ) => {
       state.studentId = action.payload.studentId;
+      state.isStudent = action.payload.isStudent;
       state.isAuthenticated = true;
     },
     setQuestions: (

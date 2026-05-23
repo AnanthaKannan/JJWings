@@ -36,6 +36,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (name === 'JW001' && code === 'Welcome123') {
+      dispatch(setCredentials({ studentId: name, isStudent: false }));
       navigation.navigate('Admin');
       return;
     }
@@ -44,7 +45,7 @@ export default function LoginScreen() {
       password: code,
     });
     if (isSuccess) {
-      dispatch(setCredentials({ studentId: name }));
+      dispatch(setCredentials({ studentId: name, isStudent: true }));
       navigation.navigate('Main');
     }
   };

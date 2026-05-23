@@ -12,7 +12,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { useGetStudentsQuery } from '../store/api';
-import { accuracy, randomNumber } from '../util/fn';
+import { randomNumber } from '../util/fn';
 import { AdminHeader } from '../component';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -55,15 +55,6 @@ const Avatar = ({ color, name }: { color: string; name: string }) => {
 
 // ─── Accuracy Badge ───────────────────────────────────────────────────────────
 
-const AccuracyBadge = ({ value }: { value: number }) => {
-  const color = value >= 95 ? '#22c55e' : value >= 85 ? '#f59e0b' : '#ef4444';
-  return (
-    <View style={[styles.accuracyBadge, { backgroundColor: color + '18' }]}>
-      <Text style={[styles.accuracyText, { color }]}>{value}%</Text>
-    </View>
-  );
-};
-
 // ─── Student Row ──────────────────────────────────────────────────────────────
 
 const ProgressStat = ({
@@ -83,11 +74,11 @@ const ProgressStat = ({
 
 const StudentRow = ({
   item,
-  onAssignedPress,
+  onPerformancePress,
   onAssignPress,
 }: {
   item: Student;
-  onAssignedPress: () => void;
+  onPerformancePress: () => void;
   onAssignPress: () => void;
 }) => (
   <View style={styles.row}>
@@ -100,7 +91,6 @@ const StudentRow = ({
     </View>
 
     <View style={styles.progressCell}>
-      {/* <AccuracyBadge value={accuracy(item?.success, item?.failure)} /> */}
       <View style={styles.progressStats}>
         <ProgressStat
           label="Done"
@@ -119,9 +109,9 @@ const StudentRow = ({
     <View style={styles.actions}>
       <TouchableOpacity
         style={styles.secondaryAction}
-        onPress={onAssignedPress}
+        onPress={onPerformancePress}
       >
-        <Text style={styles.secondaryActionText}>Assigned</Text>
+        <Text style={styles.secondaryActionText}>Performance</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.primaryAction} onPress={onAssignPress}>
         <Text style={styles.primaryActionText}>Assign</Text>
@@ -142,7 +132,7 @@ const TableHeader = () => (
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-const EmptyState = () => (
+export const EmptyState = () => (
   <View style={styles.emptyState}>
     <Text style={styles.emptyIcon}>ðŸ”</Text>
     <Text style={styles.emptyText}>No students found</Text>
@@ -178,11 +168,11 @@ export default function StudentDirectoryScreen() {
     });
   };
 
-  const handleAssignedPress = (student: Student) => {
-    navigation.navigate('AssignHomework', {
+  const handlePerformancePress = (student: Student) => {
+    navigation.navigate('HomeworkScreen', {
       studentId: student.id,
       studentName: student.name,
-      showAssigned: true,
+      adminReview: true,
     });
   };
 
@@ -219,7 +209,7 @@ export default function StudentDirectoryScreen() {
           renderItem={({ item }) => (
             <StudentRow
               item={item}
-              onAssignedPress={() => handleAssignedPress(item)}
+              onPerformancePress={() => handlePerformancePress(item)}
               onAssignPress={() => handleAssignPress(item)}
             />
           )}
@@ -350,6 +340,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#A0AEC0',
     letterSpacing: 0.8,
+  },
+  studentHeader: {
+    flex: 2,
+  },
+  progressHeader: {
+    flex: 2.4,
+  },
+  actionsHeader: {
+    flex: 1.4,
+    textAlign: 'right',
   },
 
   // Row

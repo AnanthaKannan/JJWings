@@ -10,6 +10,11 @@ interface HeaderProps {
 export default function Header({ heading, sideHead }: HeaderProps) {
   const navigation = useNavigation<any>();
   const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
     navigation.navigate('HomeworkScreen');
   };
 

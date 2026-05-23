@@ -8,3 +8,4 @@ export { default as AddStudentScreen } from './AddStudentScreen';
 export { default as HomeworkLibraryScreen } from './HomeworkLibraryScreen';
 export { default as CreateNewTaskScreen } from './CreateNewTaskScreen';
 export { default as AssignHomeworkScreen } from './AssignHomeworkScreen';
+export { default as ProgressDashboard } from './ProgressDashboard';

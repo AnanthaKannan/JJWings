@@ -11,9 +11,11 @@ import {
   createQuestion,
   assignHomework,
   getIdGenData,
+  getScore,
   type Homework,
   type IdGenData,
   type QuestionTask,
+  type Score,
   type Student,
 } from './query';
 
@@ -139,6 +141,18 @@ export const firestoreApi = createApi({
       },
     }),
 
+    getScore: builder.query<Score, HomeworkArg>({
+      queryFn: async ({ studentId }) => {
+        try {
+          const data = await getScore(studentId);
+          return { data };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
     addStudent: builder.mutation<string, AddStudentArg>({
       queryFn: async ({ studentId, name, password, studentLastID }) => {
         try {
@@ -216,4 +230,5 @@ export const {
   useCreateQuestionMutation,
   useAssignHomeworkMutation,
   useGetIdGenQuery,
+  useGetScoreQuery,
 } = firestoreApi;
