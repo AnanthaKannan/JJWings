@@ -30,6 +30,22 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 // ─── Component ───────────────────────────────────────────
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
+
+  return `${minutes}:${remainingSeconds}`;
+};
+
+const formatAccuracy = (result: boolean[]) => {
+  if (result.length === 0) return '0%';
+
+  const correctAnswers = result.filter(Boolean).length;
+  return `${Math.round((correctAnswers / result.length) * 100)}%`;
+};
+
 export default function QuizScreen({ timer }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
@@ -46,6 +62,10 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
     questions: [],
     answer: [],
     result: [],
+  });
+  const [completionStats, setCompletionStats] = useState({
+    timeTaken: '00:00',
+    accuracy: '0%',
   });
 
   useEffect(() => {
@@ -94,6 +114,10 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
         failure: updatedData.result.filter(bool => bool === false).length,
         timer,
       });
+      setCompletionStats({
+        timeTaken: formatTime(timer),
+        accuracy: formatAccuracy(updatedData.result),
+      });
       setModalVisible(true);
     } else {
       await updateHomework({
@@ -111,13 +135,13 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
     <View>
       <QuizSuccessModal
         visible={modalVisible}
-        onClose={() => setModalVisible(true)}
+        onClose={() => setModalVisible(false)}
         onSeeResults={() => {
           setModalVisible(false);
           navigation.navigate('QuizReview');
         }}
-        timeTaken="02:45"
-        accuracy="95%"
+        timeTaken={completionStats.timeTaken}
+        accuracy={completionStats.accuracy}
       />
       <View style={styles.container}>
         {/* ── Question Card ── */}

@@ -96,6 +96,7 @@ export default function AssignHomeworkScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const studentName = route?.params?.studentName ?? 'Student';
   const studentId = route?.params?.studentId;
+  const showAssignedOnly = route?.params?.showAssigned === true;
   const { data: tasks = [], isLoading } = useGetQuestionsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
@@ -114,13 +115,16 @@ export default function AssignHomeworkScreen() {
   );
 
   const filtered = tasks
-    .filter(
-      task =>
+    .filter(task => {
+      if (showAssignedOnly && !assignedQuestionIds.has(task.id)) return false;
+
+      return (
         task.id.toLowerCase().includes(search.toLowerCase()) ||
         task.question.some(question =>
           question.toLowerCase().includes(search.toLowerCase()),
-        ),
-    )
+        )
+      );
+    })
     .sort((a, b) => {
       const aAssigned = assignedQuestionIds.has(a.id);
       const bAssigned = assignedQuestionIds.has(b.id);
@@ -128,8 +132,16 @@ export default function AssignHomeworkScreen() {
       if (aAssigned === bAssigned) return a.id.localeCompare(b.id);
       return aAssigned ? 1 : -1;
     });
+  const availableFilteredTasks = filtered.filter(
+    task => !assignedQuestionIds.has(task.id),
+  );
+  const hasAvailableTasks = availableFilteredTasks.length > 0;
+  const allAvailableSelected =
+    hasAvailableTasks &&
+    availableFilteredTasks.every(task => selectedIds.has(task.id));
 
   const toggleSelect = (id: string) => {
+    if (showAssignedOnly) return;
     if (assignedQuestionIds.has(id)) return;
 
     setSelectedIds(prev => {
@@ -140,14 +152,10 @@ export default function AssignHomeworkScreen() {
   };
 
   const selectAll = () => {
-    const availableTasks = filtered.filter(
-      task => !assignedQuestionIds.has(task.id),
-    );
-    const allIds = new Set(availableTasks.map(task => task.id));
-    const allSelected =
-      availableTasks.length > 0 &&
-      availableTasks.every(task => selectedIds.has(task.id));
-    setSelectedIds(allSelected ? new Set() : allIds);
+    if (showAssignedOnly) return;
+
+    const allIds = new Set(availableFilteredTasks.map(task => task.id));
+    setSelectedIds(allAvailableSelected ? new Set() : allIds);
   };
 
   const handleConfirm = async () => {
@@ -215,7 +223,9 @@ export default function AssignHomeworkScreen() {
             <>
               <View style={styles.titleSection}>
                 <Text style={styles.pageTitle}>
-                  Assign Homework to{' '}
+                  {showAssignedOnly
+                    ? 'Assigned Homework for '
+                    : 'Assign Homework to '}
                   <Text style={styles.pageTitleAccent}>{studentName}</Text>
                 </Text>
               </View>
@@ -239,7 +249,9 @@ export default function AssignHomeworkScreen() {
 
               <View style={styles.sectionHeader}>
                 <View>
-                  <Text style={styles.sectionTitle}>Available</Text>
+                  <Text style={styles.sectionTitle}>
+                    {showAssignedOnly ? 'Assigned' : 'Available'}
+                  </Text>
                   <Text style={styles.sectionTitle}>Tasks</Text>
                 </View>
                 <View style={styles.totalBadge}>
@@ -249,15 +261,12 @@ export default function AssignHomeworkScreen() {
                 <TouchableOpacity
                   onPress={selectAll}
                   style={styles.selectAllBtn}
-                  disabled={filtered.every(task =>
-                    assignedQuestionIds.has(task.id),
-                  )}
+                  disabled={showAssignedOnly || !hasAvailableTasks}
                 >
                   <Text style={styles.selectAllText}>
-                    {filtered.some(task => !assignedQuestionIds.has(task.id)) &&
-                    filtered
-                      .filter(task => !assignedQuestionIds.has(task.id))
-                      .every(task => selectedIds.has(task.id))
+                    {showAssignedOnly
+                      ? 'Assigned'
+                      : allAvailableSelected
                       ? 'Deselect All'
                       : 'Select All'}
                   </Text>
@@ -269,7 +278,7 @@ export default function AssignHomeworkScreen() {
             <TaskRow
               item={item}
               selected={selectedIds.has(item.id)}
-              disabled={assignedQuestionIds.has(item.id)}
+              disabled={showAssignedOnly || assignedQuestionIds.has(item.id)}
               onToggle={() => toggleSelect(item.id)}
             />
           )}
@@ -277,7 +286,11 @@ export default function AssignHomeworkScreen() {
             <View style={styles.emptyState}>
               <MaterialIcons name="search-off" size={40} color="#CBD5E0" />
               <Text style={styles.emptyText}>
-                {isLoading ? 'Loading tasks...' : 'No tasks found'}
+                {isLoading
+                  ? 'Loading tasks...'
+                  : showAssignedOnly
+                  ? 'No assigned homework found'
+                  : 'No tasks found'}
               </Text>
             </View>
           }

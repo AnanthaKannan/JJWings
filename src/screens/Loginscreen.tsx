@@ -35,17 +35,17 @@ export default function LoginScreen() {
   const dispatch = useDispatch();
 
   const handleLogin = async () => {
+    if (name === 'JW001' && code === 'Welcome123') {
+      navigation.navigate('Admin');
+      return;
+    }
     const { isSuccess } = await login({
       studentId: name,
       password: code,
     });
     if (isSuccess) {
-      if (name === 'JW001') {
-        navigation.navigate('Admin');
-      } else {
-        dispatch(setCredentials({ studentId: name }));
-        navigation.navigate('Main');
-      }
+      dispatch(setCredentials({ studentId: name }));
+      navigation.navigate('Main');
     }
   };
 

@@ -24,8 +24,8 @@ export default function SuccessModal({
   visible,
   onClose,
   onSeeResults,
-  timeTaken = '02:45',
-  accuracy = '95%',
+  timeTaken = '00:00',
+  accuracy = '0%',
 }: SuccessModalProps) {
   return (
     <Modal

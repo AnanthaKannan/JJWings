@@ -22,6 +22,8 @@ type Student = {
   name: string;
   studentId?: string;
   assigned: number;
+  completed: number;
+  new: number;
   success: number;
   failure: number;
 };
@@ -64,47 +66,88 @@ const AccuracyBadge = ({ value }: { value: number }) => {
 
 // ─── Student Row ──────────────────────────────────────────────────────────────
 
+const ProgressStat = ({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) => (
+  <View style={[styles.progressStat, { backgroundColor: color + '14' }]}>
+    <Text style={[styles.progressValue, { color }]}>{value}</Text>
+    <Text style={styles.progressLabel}>{label}</Text>
+  </View>
+);
+
 const StudentRow = ({
   item,
-  onPress,
+  onAssignedPress,
+  onAssignPress,
 }: {
   item: Student;
-  onPress: () => void;
+  onAssignedPress: () => void;
+  onAssignPress: () => void;
 }) => (
-  <TouchableOpacity onPress={onPress}>
-    <View style={styles.row}>
-      <View style={styles.studentInfo}>
-        <Avatar color={COLORS[randomNumber(0, 6)]} name={item.name} />
-        <View style={styles.nameBlock}>
-          <Text style={styles.studentName}>{item.name}</Text>
-          <Text style={styles.studentMeta}>#{item?.id}</Text>
-        </View>
+  <View style={styles.row}>
+    <View style={styles.studentInfo}>
+      <Avatar color={COLORS[randomNumber(0, 6)]} name={item.name} />
+      <View style={styles.nameBlock}>
+        <Text style={styles.studentName}>{item.name}</Text>
+        <Text style={styles.studentMeta}>#{item?.id}</Text>
       </View>
-
-      <AccuracyBadge value={accuracy(item?.success, item?.failure)} />
-
-      <Text style={styles.speedText}>
-        {item?.failure || 0}/{item?.success || 0}
-      </Text>
-      <Text style={styles.speedText}>{item?.assigned || 0}</Text>
     </View>
-  </TouchableOpacity>
+
+    <View style={styles.progressCell}>
+      {/* <AccuracyBadge value={accuracy(item?.success, item?.failure)} /> */}
+      <View style={styles.progressStats}>
+        <ProgressStat
+          label="Done"
+          value={item.completed || 0}
+          color="#22c55e"
+        />
+        <ProgressStat
+          label="Assigned"
+          value={item.assigned || 0}
+          color="#4F46E5"
+        />
+        <ProgressStat label="New" value={item.new || 0} color="#f59e0b" />
+      </View>
+    </View>
+
+    <View style={styles.actions}>
+      <TouchableOpacity
+        style={styles.secondaryAction}
+        onPress={onAssignedPress}
+      >
+        <Text style={styles.secondaryActionText}>Assigned</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.primaryAction} onPress={onAssignPress}>
+        <Text style={styles.primaryActionText}>Assign</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
 );
 
 // ─── Table Header ─────────────────────────────────────────────────────────────
 
 const TableHeader = () => (
   <View style={styles.tableHeader}>
-    <Text style={[styles.headerText, { flex: 2 }]}>STUDENT</Text>
-    <Text style={[styles.headerText, { flex: 1 }]}>ACCURACY</Text>
-    <Text style={[styles.headerText, { flex: 1 }]}>SUCC/FAIL</Text>
-    <Text style={[styles.headerText, { flex: 0.9, textAlign: 'right' }]}>
-      ASSIGNED
-    </Text>
+    <Text style={[styles.headerText, styles.studentHeader]}>STUDENT</Text>
+    <Text style={[styles.headerText, styles.progressHeader]}>PROGRESS</Text>
+    <Text style={[styles.headerText, styles.actionsHeader]}>ACTIONS</Text>
   </View>
 );
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
+
+const EmptyState = () => (
+  <View style={styles.emptyState}>
+    <Text style={styles.emptyIcon}>ðŸ”</Text>
+    <Text style={styles.emptyText}>No students found</Text>
+  </View>
+);
 
 export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
@@ -128,10 +171,18 @@ export default function StudentDirectoryScreen() {
       s.id.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const handleRowPress = (student: Student) => {
+  const handleAssignPress = (student: Student) => {
     navigation.navigate('AssignHomework', {
       studentId: student.id,
       studentName: student.name,
+    });
+  };
+
+  const handleAssignedPress = (student: Student) => {
+    navigation.navigate('AssignHomework', {
+      studentId: student.id,
+      studentName: student.name,
+      showAssigned: true,
     });
   };
 
@@ -166,7 +217,11 @@ export default function StudentDirectoryScreen() {
           data={filtered}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
-            <StudentRow item={item} onPress={() => handleRowPress(item)} />
+            <StudentRow
+              item={item}
+              onAssignedPress={() => handleAssignedPress(item)}
+              onAssignPress={() => handleAssignPress(item)}
+            />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           showsVerticalScrollIndicator={false}
@@ -302,9 +357,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
+    gap: 8,
   },
   studentInfo: {
-    flex: 2.2,
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -328,8 +384,7 @@ const styles = StyleSheet.create({
 
   // Accuracy
   accuracyBadge: {
-    flex: 1,
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 20,
@@ -338,34 +393,69 @@ const styles = StyleSheet.create({
   },
   accuracyText: { fontSize: 12, fontWeight: '700' },
 
-  // Speed
-  speedText: {
-    flex: 0.9,
-    fontSize: 13,
-    color: '#4A5568',
-    fontWeight: '600',
+  progressCell: {
+    flex: 2.4,
+    gap: 6,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  progressStat: {
+    flex: 1,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    alignItems: 'center',
+    minHeight: 38,
+    justifyContent: 'center',
+  },
+  progressValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 14,
+  },
+  progressLabel: {
+    fontSize: 8,
+    color: '#64748B',
+    fontWeight: '700',
+    lineHeight: 11,
     textAlign: 'center',
   },
 
   // Actions
   actions: {
-    flex: 0.8,
-    flexDirection: 'row',
+    flex: 1.4,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
-  actionIcon: {
-    width: 28,
-    height: 28,
+  secondaryAction: {
+    width: '100%',
     borderRadius: 8,
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 6,
   },
-  actionIconText: { fontSize: 14, color: '#4F46E5' },
-  actionDots: { paddingHorizontal: 4 },
-  dotsText: { fontSize: 16, color: '#CBD5E0', letterSpacing: 1 },
+  secondaryActionText: {
+    fontSize: 10,
+    color: '#4F46E5',
+    fontWeight: '800',
+  },
+  primaryAction: {
+    width: '100%',
+    borderRadius: 8,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  primaryActionText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '800',
+  },
 
   // Separator
   separator: { height: 1, backgroundColor: '#F7F7FA' },

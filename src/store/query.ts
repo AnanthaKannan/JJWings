@@ -27,6 +27,8 @@ export type Student = {
   name: string;
   studentId?: string;
   assigned: number;
+  completed: number;
+  new: number;
   success: number;
   failure: number;
 };
@@ -70,15 +72,44 @@ const login = async (studentId: string, password: string) => {
 };
 
 const listStudents = async (): Promise<Student[]> => {
-  const snapshot = await getDocs(collection(db, STUDENTS));
-  return snapshot.docs.map(docSnap => {
+  const [studentSnapshot, homeworkSnapshot] = await Promise.all([
+    getDocs(collection(db, STUDENTS)),
+    getDocs(collection(db, HOMEWORKS)),
+  ]);
+
+  const homeworkCounts = homeworkSnapshot.docs.reduce<
+    Record<string, { assigned: number; completed: number; new: number }>
+  >((counts, homeworkSnap) => {
+    const homework = homeworkSnap.data() as Homework;
+    const studentId = homework.studentId;
+
+    if (!studentId) return counts;
+
+    counts[studentId] ??= { assigned: 0, completed: 0, new: 0 };
+    counts[studentId].assigned += 1;
+
+    if (homework.state === HomeworkState.COMPLETED) {
+      counts[studentId].completed += 1;
+    }
+
+    if (homework.state === HomeworkState.NEW) {
+      counts[studentId].new += 1;
+    }
+
+    return counts;
+  }, {});
+
+  return studentSnapshot.docs.map(docSnap => {
     const data = docSnap.data() as Omit<Student, 'id'>;
+    const counts = homeworkCounts[docSnap.id];
 
     return {
       id: docSnap.id,
       name: data.name ?? '',
       studentId: data.studentId,
-      assigned: data.assigned ?? 0,
+      assigned: counts?.assigned ?? data.assigned ?? 0,
+      completed: counts?.completed ?? data.completed ?? 0,
+      new: counts?.new ?? data.new ?? 0,
       success: data.success ?? 0,
       failure: data.failure ?? 0,
     };

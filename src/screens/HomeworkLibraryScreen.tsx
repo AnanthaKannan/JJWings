@@ -164,8 +164,6 @@ const ModuleCard = ({
 export default function HomeworkLibraryScreen() {
   const [modules, setModules] = useState<Module[]>(MODULES);
 
-  const totalTasks = modules.reduce((sum, m) => sum + m.questions, 0);
-
   const handleEdit = (item: Module) => {
     // navigation.navigate('EditModule', { moduleId: item.id });
     Alert.alert('Edit', `Editing "${item.title}"`);

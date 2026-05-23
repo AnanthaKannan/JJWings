@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,12 @@ const BADGE_STYLES: Record<BadgeType, { bg: string; text: string }> = {
   NEW: { bg: '#F59E0B', text: '#FFFFFF' },
   COMPLETED: { bg: '#10B981', text: '#FFFFFF' },
 };
+
+const FILTERS: { label: string; value: BadgeType }[] = [
+  { label: 'New', value: HomeworkState.NEW },
+  { label: 'In Progress', value: HomeworkState.PROGRESS },
+  { label: 'Completed', value: HomeworkState.COMPLETED },
+];
 
 function HomeworkCard({
   homeworkId,
@@ -111,6 +117,9 @@ function HomeworkCard({
 }
 
 export default function HomeworkScreen() {
+  const [selectedFilter, setSelectedFilter] = useState<BadgeType>(
+    HomeworkState.NEW,
+  );
   const studentId = useSelector((state: RootState) => state.common.studentId);
 
   const { data: homeworks, error } = useGetHomeworksQuery(
@@ -122,6 +131,9 @@ export default function HomeworkScreen() {
   );
 
   console.log('--------------------', homeworks, error);
+
+  const filteredHomeworks =
+    homeworks?.filter(homework => homework.state === selectedFilter) ?? [];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -139,8 +151,35 @@ export default function HomeworkScreen() {
           </Text> */}
         </View>
 
+        <View style={styles.filterBar}>
+          {FILTERS.map(filter => {
+            const isSelected = selectedFilter === filter.value;
+
+            return (
+              <TouchableOpacity
+                key={filter.value}
+                style={[
+                  styles.filterButton,
+                  isSelected && styles.filterButtonActive,
+                ]}
+                activeOpacity={0.85}
+                onPress={() => setSelectedFilter(filter.value)}
+              >
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    isSelected && styles.filterButtonTextActive,
+                  ]}
+                >
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {/* Cards */}
-        {homeworks?.map(task => (
+        {filteredHomeworks.map(task => (
           <HomeworkCard
             key={task.id}
             {...task}
@@ -148,6 +187,12 @@ export default function HomeworkScreen() {
             question={task?.question?.question ?? []}
           />
         ))}
+
+        {filteredHomeworks.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No {selectedFilter.toLowerCase()} homework</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -182,6 +227,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     fontWeight: '400',
+  },
+
+  filterBar: {
+    flexDirection: 'row',
+    backgroundColor: '#DBEAFE',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 16,
+    gap: 4,
+  },
+  filterButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  filterButtonActive: {
+    backgroundColor: '#2563EB',
+  },
+  filterButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2563EB',
+    textAlign: 'center',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
   },
 
   /* Card */
