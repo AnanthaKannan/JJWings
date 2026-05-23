@@ -76,34 +76,37 @@ function HomeworkCard({
 
   return (
     <View style={styles.card}>
-      {/* Badge */}
-      <View style={[styles.badge, { backgroundColor: badgeStyle.bg }]}>
-        <Text style={[styles.badgeText, { color: badgeStyle.text }]}>
-          {state}
-        </Text>
-      </View>
-
       {/* Title & subtitle */}
-      <Text style={styles.cardTitle}>{questionId}</Text>
-      <View style={styles.actionRow}>
-        <View style={styles.questionRow}>
-          <Text style={styles.questionIcon}>📋</Text>
-          <Text style={styles.questionCount}>
-            {result.length}/{question.length} questions
-          </Text>
-        </View>
-        {/* Attend button — hidden for COMPLETED */}
-        {canUseAction && (
-          <TouchableOpacity
-            style={styles.attendBtn}
-            activeOpacity={0.85}
-            onPress={handleAttend}
-          >
-            <Text style={styles.attendBtnText}>
-              {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <View>
+          <Text style={styles.cardTitle}>{questionId}</Text>
+          <View style={styles.questionRow}>
+            <Text style={styles.questionIcon}>📋</Text>
+            <Text style={styles.questionCount}>
+              {result.length}/{question.length} questions
             </Text>
-          </TouchableOpacity>
-        )}
+          </View>
+        </View>
+        <View style={styles.actionRow}>
+          {/* Attend button — hidden for COMPLETED */}
+          {canUseAction && (
+            <TouchableOpacity
+              style={styles.attendBtn}
+              activeOpacity={0.85}
+              onPress={handleAttend}
+            >
+              <Text style={styles.attendBtnText}>
+                {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Progress bar (only for IN PROGRESS) */}
