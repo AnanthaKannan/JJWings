@@ -17,3 +17,11 @@ export function accuracy(success: number = 0, failure: number = 0): number {
 export function randomNumber(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+export function formatDuration(totalSeconds: number): string {
+  const hh = Math.floor(totalSeconds / 3600);
+  const mm = Math.floor((totalSeconds % 3600) / 60);
+  const ss = totalSeconds % 60;
+
+  return [hh, mm, ss].map(unit => String(unit).padStart(2, '0')).join(':');
+}

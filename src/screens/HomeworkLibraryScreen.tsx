@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { AdminHeader } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -193,20 +194,7 @@ export default function HomeworkLibraryScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn}>
-          <MaterialIcons name="menu" size={24} color="#1A202C" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Homework Library</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerBtn}>
-            <MaterialIcons name="search" size={22} color="#1A202C" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerBtn}>
-            <MaterialIcons name="tune" size={22} color="#1A202C" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <AdminHeader header="Homework Library" />
 
       {/* ── Module List ── */}
       <FlatList

@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { useCreateQuestionMutation } from '../store/api';
+import { AdminHeader } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -239,15 +240,7 @@ export default function CreateNewTaskScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* ── Page Title ── */}
-        <View style={styles.titleRow}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backBtn}
-          >
-            <MaterialIcons name="arrow-back" size={22} color="#1A202C" />
-          </TouchableOpacity>
-          <Text style={styles.pageTitle}>Create New Task</Text>
-        </View>
+        <AdminHeader header="Create New Task" />
 
         {/* ── Card ── */}
         <View style={styles.card}>
