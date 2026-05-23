@@ -140,7 +140,7 @@ const AdminTabs = createBottomTabNavigator({
       options: {
         tabBarLabel: 'Add Student',
         tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="menu-book" color={color} size={size} />
+          <MaterialIcons name="person-add" color={color} size={size} />
         ),
         unmountOnBlur: true, // ✅ forces remount every time tab is visited
       },
@@ -150,7 +150,7 @@ const AdminTabs = createBottomTabNavigator({
       options: {
         tabBarLabel: 'Homework',
         tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="bar-chart" color={color} size={size} />
+          <MaterialIcons name="library-books" color={color} size={size} />
         ),
       },
     },
@@ -159,7 +159,7 @@ const AdminTabs = createBottomTabNavigator({
       options: {
         tabBarLabel: 'new Task',
         tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="bar-chart" color={color} size={size} />
+          <MaterialIcons name="playlist-add" color={color} size={size} />
         ),
       },
     },
