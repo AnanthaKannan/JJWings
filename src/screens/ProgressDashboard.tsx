@@ -258,6 +258,7 @@ const PulseBadge: React.FC<PulseBadgeProps> = ({
 const ProgressDashboard: React.FC = () => {
   const navigation = useNavigation<any>();
   const studentId = useSelector((state: RootState) => state.common.studentId);
+  const studentName = useSelector((state: RootState) => state.common.name);
   const headerAnim = useRef(new Animated.Value(-60)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(80)).current;

@@ -11,10 +11,12 @@ interface AuthState {
   timer: number;
   homeworkId: string | null;
   questionId: string | null;
+  name: string;
 }
 
 const initialState: AuthState = {
   studentId: null,
+  name: '',
   isAuthenticated: false,
   isStudent: false,
   questions: [],
@@ -31,9 +33,14 @@ const commonSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ studentId: string; isStudent: boolean }>,
+      action: PayloadAction<{
+        studentId: string;
+        isStudent: boolean;
+        name: string;
+      }>,
     ) => {
       state.studentId = action.payload.studentId;
+      state.name = action.payload.name;
       state.isStudent = action.payload.isStudent;
       state.isAuthenticated = true;
     },

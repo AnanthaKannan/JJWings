@@ -9,19 +9,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
 
 import color from '../util/colors';
+import bannerImage from '../../assets/images/banner.png';
 import { setCredentials } from '../store/slices';
 
 import { useLazyGetLoginQuery } from '../store/api';
-// ─── Types ───────────────────────────────────────────────
-// interface LoginScreenProps {
-//   onLogin?: (name: string, code: string) => void;
-//   onForgotCode?: () => void;
-// }
 
 // ─── Component ───────────────────────────────────────────
 export default function LoginScreen() {
@@ -36,16 +33,22 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (name === 'JW001' && code === 'Welcome123') {
-      dispatch(setCredentials({ studentId: name, isStudent: false }));
+      dispatch(
+        setCredentials({ studentId: name, isStudent: false, name: 'Sobhana' }),
+      );
       navigation.navigate('Admin');
       return;
     }
-    const { isSuccess } = await login({
+    const { isSuccess, data } = await login({
       studentId: name,
       password: code,
     });
+
+    console.log('-----------', data);
     if (isSuccess) {
-      dispatch(setCredentials({ studentId: name, isStudent: true }));
+      dispatch(
+        setCredentials({ studentId: name, isStudent: true, name: data?.name }),
+      );
       navigation.navigate('Main');
     }
   };
@@ -62,8 +65,13 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* ── Title ── */}
-          <Text style={styles.title}>Tactile Explorer</Text>
-          <Text style={styles.subtitle}>Your Math Adventure Awaits!</Text>
+          {/* <Text style={styles.title}>Tactile Explorer</Text> */}
+          <Image
+            source={bannerImage}
+            style={styles.bannerImage}
+            resizeMode="cover"
+          />
+          {/* <Text style={styles.subtitle}>Your Abacus Adventure Awaits!</Text> */}
 
           {/* ── Avatar ── */}
           <View style={styles.avatarWrapper}>
@@ -167,6 +175,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 36,
     paddingBottom: 32,
+  },
+  bannerImage: {
+    width: '110%',
+    height: 100,
   },
 
   // Title
