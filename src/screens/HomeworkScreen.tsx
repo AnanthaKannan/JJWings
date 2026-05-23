@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,11 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+} from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
@@ -28,12 +32,6 @@ interface HomeworkCardProps {
   isAdminReview?: boolean;
 }
 
-const BADGE_STYLES: Record<BadgeType, { bg: string; text: string }> = {
-  PROGRESS: { bg: '#3B82F6', text: '#FFFFFF' },
-  NEW: { bg: '#F59E0B', text: '#FFFFFF' },
-  COMPLETED: { bg: '#10B981', text: '#FFFFFF' },
-};
-
 const FILTERS: { label: string; value: BadgeType }[] = [
   { label: 'New', value: HomeworkState.NEW },
   { label: 'In Progress', value: HomeworkState.PROGRESS },
@@ -50,7 +48,6 @@ function HomeworkCard({
   timer = 0,
   isAdminReview = false,
 }: HomeworkCardProps) {
-  const badgeStyle = BADGE_STYLES[state];
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const canUseAction = !isAdminReview || state === HomeworkState.COMPLETED;
@@ -137,12 +134,23 @@ export default function HomeworkScreen() {
   );
   const studentId = isAdminReview ? routeStudentId : loggedInStudentId;
 
-  const { data: homeworks, error } = useGetHomeworksQuery(
+  const {
+    data: homeworks,
+    error,
+    refetch,
+  } = useGetHomeworksQuery(
     { studentId: studentId ?? '' },
     {
       skip: !studentId,
       refetchOnMountOrArgChange: true,
     },
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Student Directory focused: refetching students');
+      refetch();
+    }, [refetch]),
   );
 
   console.log('--------------------', homeworks, error);
