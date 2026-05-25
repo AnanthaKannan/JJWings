@@ -5,6 +5,7 @@ import {
   getHomeworks,
   updateHomework,
   getHomeworkById,
+  getStudentById,
   listStudents,
   listQuestions,
   addStudent,
@@ -36,6 +37,10 @@ type HomeworkArg = {
 
 type HomeworkByIdArg = {
   homeworkId: string;
+};
+
+type StudentByIdArg = {
+  studentId: string;
 };
 
 type AddStudentArg = {
@@ -91,6 +96,18 @@ export const firestoreApi = createApi({
       queryFn: async ({ homeworkId }) => {
         try {
           const data = await getHomeworkById(homeworkId);
+          return { data };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
+    getStudentById: builder.query<Student | undefined, StudentByIdArg>({
+      queryFn: async ({ studentId }) => {
+        try {
+          const data = await getStudentById(studentId);
           return { data };
         } catch (e: any) {
           console.error(e);
@@ -245,6 +262,7 @@ export const {
   useLazyGetLoginQuery,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
+  useGetStudentByIdQuery,
   useGetStudentsQuery,
   useGetQuestionsQuery,
   useAddStudentMutation,

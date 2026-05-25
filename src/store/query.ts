@@ -80,6 +80,25 @@ const login = async (studentId: string, password: string) => {
   return { id: snap.id, name: data.name };
 };
 
+const getStudentById = async (studentId: string): Promise<Student | undefined> => {
+  const snap = await getDoc(doc(db, STUDENTS, studentId));
+  if (!snap.exists()) return undefined;
+
+  const data = snap.data() as Omit<Student, 'id'>;
+
+  return {
+    id: snap.id,
+    name: data.name ?? '',
+    studentId: data.studentId,
+    horizontal: data.horizontal ?? false,
+    assigned: data.assigned ?? 0,
+    completed: data.completed ?? 0,
+    new: data.new ?? 0,
+    success: data.success ?? 0,
+    failure: data.failure ?? 0,
+  };
+};
+
 const listStudents = async (): Promise<Student[]> => {
   const [studentSnapshot, homeworkSnapshot] = await Promise.all([
     getDocs(collection(db, STUDENTS)),
@@ -341,6 +360,7 @@ export {
   getHomeworks,
   updateHomework,
   getHomeworkById,
+  getStudentById,
   listStudents,
   listQuestions,
   addStudent,

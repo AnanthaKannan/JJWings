@@ -20,7 +20,7 @@ export default function Calculate() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
-      <Header heading="Quiz Review" sideHead={`⭐ Level ${questionId}`} />
+      <Header heading="Quiz Challenge" sideHead={`⭐ Level ${questionId}`} />
       <ScrollView
         // style={styles.container}
         contentContainerStyle={styles.scrollContent}

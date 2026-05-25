@@ -282,6 +282,9 @@ const ProgressDashboard: React.FC = () => {
   const done = homeworks.filter(
     hw => hw.state === HomeworkState.COMPLETED,
   ).length;
+  const newHomework = homeworks.filter(
+    hw => hw.state === HomeworkState.NEW,
+  ).length;
   const working = homeworks.filter(
     hw => hw.state === HomeworkState.PROGRESS,
   ).length;
@@ -453,19 +456,28 @@ const ProgressDashboard: React.FC = () => {
                 bgColor="#EEF2FF"
                 delay={200}
               />
+
               <StatCircle
-                value={done}
-                label="DONE"
-                color="#059669"
-                bgColor="#D1FAE5"
+                value={newHomework}
+                label="NEW"
+                color="#2563EB"
+                bgColor="#DBEAFE"
                 delay={400}
               />
+
               <StatCircle
                 value={working}
                 label="WORKING"
                 color="#D97706"
                 bgColor="#FEF3C7"
                 delay={600}
+              />
+              <StatCircle
+                value={done}
+                label="DONE"
+                color="#059669"
+                bgColor="#D1FAE5"
+                delay={800}
               />
             </View>
           </View>
@@ -633,13 +645,14 @@ const styles = StyleSheet.create({
   },
   circleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    gap: 6,
     paddingVertical: 4,
   },
   statCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
@@ -650,11 +663,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   statCircleValue: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
   },
   statCircleLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '700',
     letterSpacing: 0.5,
     marginTop: 1,

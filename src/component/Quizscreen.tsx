@@ -6,7 +6,10 @@ import { useSelector } from 'react-redux';
 
 import { NumPad, QuizSuccessModal } from './index';
 import { RootState } from '../store/store';
-import { useUpdateHomeworkMutation } from '../store/api';
+import {
+  useGetStudentByIdQuery,
+  useUpdateHomeworkMutation,
+} from '../store/api';
 import { HomeworkState } from '../util/enum';
 import { evaluateExpression } from '../util/fn';
 
@@ -46,10 +49,33 @@ const formatAccuracy = (result: boolean[]) => {
   return `${Math.round((correctAnswers / result.length) * 100)}%`;
 };
 
+const getVerticalQuestionParts = (question = '') => {
+  const parts = question.replace(/\s/g, '').match(/[+\-*/]?\d+(?:\.\d+)?/g);
+  if (!parts || parts.join('') !== question.replace(/\s/g, '')) {
+    return [question];
+  }
+
+  return parts.map((part, index) => {
+    if (index === 0) return part;
+
+    const operator = part[0];
+    const value = part.slice(1);
+    return `${operator} ${value}`;
+  });
+};
+
+const formatHorizontalQuestion = (question = '') => {
+  const parts = getVerticalQuestionParts(question);
+  if (parts.length === 1) return parts[0];
+
+  return parts.join(' ');
+};
+
 export default function QuizScreen({ timer }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
+  const studentId = useSelector((state: RootState) => state.common.studentId);
 
   console.log('>>>>>>>>>>>>>>>>>>', homeworkId, selResult, selAnswer);
 
@@ -57,6 +83,10 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
     (state: RootState) => state.common.questions,
   );
   const [updateHomework] = useUpdateHomeworkMutation();
+  const { data: student } = useGetStudentByIdQuery(
+    { studentId: studentId ?? '' },
+    { skip: !studentId, refetchOnMountOrArgChange: true },
+  );
 
   const [data, setData] = useState<QuizData>({
     questions: [],
@@ -81,6 +111,10 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
 
   const navigation = useNavigation<NavigationProp>();
   const { questions, answer, result } = data;
+  const currentQuestion = questions[result.length] ?? '';
+  const isHorizontal = student?.horizontal ?? false;
+  const verticalQuestionParts = getVerticalQuestionParts(currentQuestion);
+  const horizontalQuestion = formatHorizontalQuestion(currentQuestion);
 
   // Progress percentage
   const progress = result.length / questions.length;
@@ -154,12 +188,24 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
           </View>
 
           {/* Question row */}
-          <View style={styles.questionRow}>
-            <Text style={styles.questionText}>
-              {questions[result.length]} = ?
-            </Text>
-            {/* <Text style={styles.questionText}>{' 20'}</Text>
-          <Text style={styles.questionText}>{'-50'}</Text> */}
+          <View
+            style={[
+              styles.questionRow,
+              !isHorizontal && styles.verticalQuestionRow,
+            ]}
+          >
+            {isHorizontal ? (
+              <Text style={styles.questionText}>{horizontalQuestion} = ?</Text>
+            ) : (
+              <View style={styles.verticalQuestion}>
+                {verticalQuestionParts.map((part, index) => (
+                  <Text key={`${part}-${index}`} style={styles.questionText}>
+                    {part}
+                  </Text>
+                ))}
+                <View style={styles.answerLine} />
+              </View>
+            )}
           </View>
 
           {/* Progress Bar */}
@@ -265,16 +311,29 @@ const styles = StyleSheet.create({
     color: '#5A6AA8',
   },
   questionRow: {
-    // flexDirection: 'row',
     alignItems: 'center',
-    // justifyContent: 'space-between',
     marginBottom: 20,
+  },
+  verticalQuestionRow: {
+    alignItems: 'center',
+  },
+  verticalQuestion: {
+    alignItems: 'flex-end',
+    minWidth: 120,
   },
   questionText: {
     fontSize: 38,
     fontWeight: '800',
     color: '#1A2259',
     letterSpacing: 1,
+  },
+  answerLine: {
+    width: '100%',
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#1A2259',
+    marginTop: 4,
+    marginBottom: 4,
   },
   operatorBox: {
     backgroundColor: '#F0F4FF',
