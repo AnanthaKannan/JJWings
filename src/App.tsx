@@ -9,6 +9,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Provider } from 'react-redux';
 import { store } from '../src/store/store';
+import { clearSavedLoginCredentials } from './util/authStorage';
+import { logout } from './store/slices';
 
 import {
   Calculate,
@@ -98,8 +100,11 @@ const MainTabs = createBottomTabNavigator({
               {
                 text: 'Yes',
                 style: 'destructive',
-                onPress: () =>
-                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
+                onPress: async () => {
+                  await clearSavedLoginCredentials();
+                  store.dispatch(logout());
+                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+                },
               },
             ],
             { cancelable: true },
@@ -210,8 +215,11 @@ const AdminTabs = createBottomTabNavigator({
               {
                 text: 'Yes',
                 style: 'destructive',
-                onPress: () =>
-                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
+                onPress: async () => {
+                  await clearSavedLoginCredentials();
+                  store.dispatch(logout());
+                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+                },
               },
             ],
             { cancelable: true },

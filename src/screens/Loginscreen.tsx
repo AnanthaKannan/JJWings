@@ -1,62 +1,145 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Image,
+  View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
 
-import color from '../util/colors';
 import bannerImage from '../../assets/images/banner.png';
-import { setCredentials } from '../store/slices';
-
+import color from '../util/colors';
 import { useLazyGetLoginQuery } from '../store/api';
+import { setCredentials } from '../store/slices';
+import {
+  clearSavedLoginCredentials,
+  getSavedLoginCredentials,
+  saveLoginCredentials,
+} from '../util/authStorage';
 
-// ─── Component ───────────────────────────────────────────
 export default function LoginScreen() {
-  const [name, setName] = useState('JW001');
-  const [code, setCode] = useState('Welcome123');
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [showCode, setShowCode] = useState(false);
+  const [checkingSavedLogin, setCheckingSavedLogin] = useState(true);
 
   const [login, loginRes] = useLazyGetLoginQuery();
-
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
 
-  const handleLogin = async () => {
-    if (name === 'JW001' && code === 'Welcome123') {
-      dispatch(
-        setCredentials({ studentId: name, isStudent: false, name: 'Sobhana' }),
-      );
-      navigation.navigate('Admin');
-      return;
-    }
-    const { isSuccess, data } = await login({
-      studentId: name,
-      password: code,
-    });
+  const finishLogin = useCallback(
+    async (studentId: string, password: string, shouldSave: boolean) => {
+      const cleanStudentId = studentId.trim();
 
-    console.log('-----------', data);
-    if (isSuccess) {
-      dispatch(
-        setCredentials({ studentId: name, isStudent: true, name: data?.name }),
-      );
-      navigation.navigate('Main');
+      if (cleanStudentId === 'JW001' && password === 'Welcome123') {
+        if (shouldSave) {
+          await saveLoginCredentials({ studentId: cleanStudentId, password });
+        }
+
+        dispatch(
+          setCredentials({
+            studentId: cleanStudentId,
+            isStudent: false,
+            name: 'Sobhana',
+          }),
+        );
+        navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
+        return true;
+      }
+
+      const result = await login({
+        studentId: cleanStudentId,
+        password,
+      });
+
+      if ('data' in result && result.data) {
+        if (shouldSave) {
+          await saveLoginCredentials({ studentId: cleanStudentId, password });
+        }
+
+        dispatch(
+          setCredentials({
+            studentId: cleanStudentId,
+            isStudent: true,
+            name: result.data.name,
+          }),
+        );
+        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        return true;
+      }
+
+      return false;
+    },
+    [dispatch, login, navigation],
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const trySavedLogin = async () => {
+      try {
+        const savedCredentials = await getSavedLoginCredentials();
+
+        if (!savedCredentials) {
+          return;
+        }
+
+        const loggedIn = await finishLogin(
+          savedCredentials.studentId,
+          savedCredentials.password,
+          false,
+        );
+
+        if (!loggedIn) {
+          await clearSavedLoginCredentials();
+        }
+      } finally {
+        if (isMounted) {
+          setCheckingSavedLogin(false);
+        }
+      }
+    };
+
+    trySavedLogin();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [finishLogin]);
+
+  const handleLogin = async () => {
+    const loggedIn = await finishLogin(name, code, true);
+
+    if (!loggedIn) {
+      await clearSavedLoginCredentials();
     }
   };
+
+  if (checkingSavedLogin) {
+    return (
+      <SafeAreaView style={styles.splashArea}>
+        <Image
+          source={bannerImage}
+          style={styles.splashImage}
+          resizeMode="contain"
+        />
+        <ActivityIndicator color="#1A3A6B" size="large" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.keyboardAvoiding}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
@@ -64,31 +147,26 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Title ── */}
-          {/* <Text style={styles.title}>Tactile Explorer</Text> */}
           <Image
             source={bannerImage}
             style={styles.bannerImage}
             resizeMode="cover"
           />
-          {/* <Text style={styles.subtitle}>Your Abacus Adventure Awaits!</Text> */}
 
-          {/* ── Avatar ── */}
           <View style={styles.avatarWrapper}>
             <View style={styles.avatarCircle}>
+              {/* <Text style={styles.avatarText}>JJ</Text> */}
               <Text style={styles.avatarEmoji}>🧒</Text>
             </View>
           </View>
 
-          {/* ── Form Card ── */}
           <View style={styles.card}>
-            {/* Explorer Name */}
-            <Text style={styles.inputLabel}>Explorer Name</Text>
+            <Text style={styles.inputLabel}>Explorer ID</Text>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>👤</Text>
+              {/* <Text style={styles.inputIcon}>ID</Text> */}
               <TextInput
                 style={styles.input}
-                placeholder="e.g. SuperKid123"
+                placeholder="e.g. JW100"
                 placeholderTextColor="#AABDD4"
                 value={name}
                 onChangeText={setName}
@@ -96,13 +174,12 @@ export default function LoginScreen() {
               />
             </View>
 
-            {/* Secret Code */}
             <Text style={styles.inputLabel}>Secret Code</Text>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>🔒</Text>
+              {/* <Text style={styles.inputIcon}>PW</Text> */}
               <TextInput
                 style={styles.input}
-                placeholder="••••••••"
+                placeholder="Password"
                 placeholderTextColor="#AABDD4"
                 value={code}
                 onChangeText={setCode}
@@ -113,11 +190,10 @@ export default function LoginScreen() {
                 onPress={() => setShowCode(prev => !prev)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={styles.eyeIcon}>{showCode ? '🙈' : '👁️'}</Text>
+                <Text style={styles.eyeIcon}>{showCode ? 'Hide' : 'Show'}</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Let's Go Button */}
             <TouchableOpacity
               style={[
                 styles.loginBtn,
@@ -138,23 +214,6 @@ export default function LoginScreen() {
                 User Name or password incorrect.
               </Text>
             )}
-
-            {/* Forgot Code */}
-            {/* <TouchableOpacity onPress={onForgotCode} style={styles.forgotBtn}>
-              <Text style={styles.forgotText}>Forgot Code?</Text>
-            </TouchableOpacity> */}
-
-            {/* Join Now */}
-            {/* <View style={styles.joinRow}>
-              <Text style={styles.joinPrompt}>New here? </Text>
-              <TouchableOpacity
-                onPress={onJoinNow}
-                style={styles.joinNowBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.joinNowText}>Join Now</Text>
-              </TouchableOpacity>
-            </View> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -162,11 +221,25 @@ export default function LoginScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────
 const styles = StyleSheet.create({
+  splashArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 32,
+  },
+  splashImage: {
+    width: '100%',
+    height: 120,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#EEF2FF',
+  },
+  keyboardAvoiding: {
+    flex: 1,
   },
   scroll: {
     flexGrow: 1,
@@ -180,25 +253,6 @@ const styles = StyleSheet.create({
     width: '110%',
     height: 100,
   },
-
-  // Title
-  title: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#1A2259',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#5A6AA8',
-    fontWeight: '500',
-    marginTop: 4,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-
-  // Avatar
   avatarWrapper: {
     marginBottom: -28,
     zIndex: 10,
@@ -221,8 +275,11 @@ const styles = StyleSheet.create({
   avatarEmoji: {
     fontSize: 36,
   },
-
-  // Card
+  avatarText: {
+    color: '#1A2259',
+    fontSize: 22,
+    fontWeight: '900',
+  },
   card: {
     width: '100%',
     backgroundColor: '#FFFFFF',
@@ -236,8 +293,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
-
-  // Input
   inputLabel: {
     fontSize: 14,
     fontWeight: '700',
@@ -255,7 +310,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   inputIcon: {
-    fontSize: 16,
+    minWidth: 24,
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#5A6AA8',
   },
   input: {
     flex: 1,
@@ -264,10 +322,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   eyeIcon: {
-    fontSize: 16,
+    minWidth: 38,
+    fontSize: 13,
+    color: '#1A3A6B',
+    fontWeight: '800',
+    textAlign: 'right',
   },
-
-  // Login Button
   loginBtn: {
     backgroundColor: '#1A3A6B',
     borderRadius: 50,
@@ -290,50 +350,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-
-  // Forgot / Join
-  forgotBtn: {
-    alignItems: 'center',
-    marginTop: 18,
-  },
   forgotText: {
     fontSize: 14,
     color: color.RED,
     textAlign: 'center',
     marginTop: 10,
-  },
-  joinRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  joinPrompt: {
-    fontSize: 14,
-    color: '#8A96B8',
-    fontWeight: '500',
-  },
-  joinNowBtn: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  joinNowText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A2259',
-  },
-
-  // Bottom dots
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 32,
-  },
-  dot: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
   },
 });

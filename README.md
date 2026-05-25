@@ -3,6 +3,10 @@
 ## Version
 Node: v24.14.0
 
+## Credential
+Admin: JW001
+Password: Welcome123
+
 ## Build
 1. cd android
 2. ./gradlew assembleRelease
