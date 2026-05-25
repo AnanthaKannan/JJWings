@@ -11,7 +11,10 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
-import { useGetStudentsQuery } from '../store/api';
+import {
+  useGetStudentsQuery,
+  useUpdateStudentHorizontalMutation,
+} from '../store/api';
 import { randomNumber } from '../util/fn';
 import { AdminHeader } from '../component';
 
@@ -24,6 +27,7 @@ type Student = {
   assigned: number;
   completed: number;
   new: number;
+  horizontal: boolean;
   success: number;
   failure: number;
 };
@@ -76,10 +80,14 @@ const StudentRow = ({
   item,
   onPerformancePress,
   onAssignPress,
+  onHorizontalPress,
+  isHorizontalUpdating,
 }: {
   item: Student;
   onPerformancePress: () => void;
   onAssignPress: () => void;
+  onHorizontalPress: () => void;
+  isHorizontalUpdating: boolean;
 }) => (
   <View style={styles.row}>
     <View style={styles.studentInfo}>
@@ -116,6 +124,24 @@ const StudentRow = ({
       <TouchableOpacity style={styles.primaryAction} onPress={onAssignPress}>
         <Text style={styles.primaryActionText}>Assign</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.horizontalAction,
+          item.horizontal && styles.horizontalActionActive,
+          isHorizontalUpdating && styles.actionDisabled,
+        ]}
+        onPress={onHorizontalPress}
+        disabled={isHorizontalUpdating}
+      >
+        <Text
+          style={[
+            styles.horizontalActionText,
+            item.horizontal && styles.horizontalActionTextActive,
+          ]}
+        >
+          {item.horizontal ? 'Hor' : 'Ver'}
+        </Text>
+      </TouchableOpacity>
     </View>
   </View>
 );
@@ -145,6 +171,8 @@ export default function StudentDirectoryScreen() {
   const navigation = useNavigation<any>();
 
   const { data: students, refetch } = useGetStudentsQuery(undefined);
+  const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
+    useUpdateStudentHorizontalMutation();
 
   useFocusEffect(
     useCallback(() => {
@@ -174,6 +202,14 @@ export default function StudentDirectoryScreen() {
       studentName: student.name,
       adminReview: true,
     });
+  };
+
+  const handleHorizontalPress = async (student: Student) => {
+    await updateStudentHorizontal({
+      studentId: student.id,
+      horizontal: !student.horizontal,
+    }).unwrap();
+    refetch();
   };
 
   return (
@@ -211,6 +247,8 @@ export default function StudentDirectoryScreen() {
               item={item}
               onPerformancePress={() => handlePerformancePress(item)}
               onAssignPress={() => handleAssignPress(item)}
+              onHorizontalPress={() => handleHorizontalPress(item)}
+              isHorizontalUpdating={isHorizontalUpdating}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -455,6 +493,31 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#fff',
     fontWeight: '800',
+  },
+  horizontalAction: {
+    width: '100%',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  horizontalActionActive: {
+    borderColor: '#0F766E',
+    backgroundColor: '#CCFBF1',
+  },
+  horizontalActionText: {
+    fontSize: 10,
+    color: '#475569',
+    fontWeight: '800',
+  },
+  horizontalActionTextActive: {
+    color: '#0F766E',
+  },
+  actionDisabled: {
+    opacity: 0.5,
   },
 
   // Separator

@@ -12,6 +12,7 @@ import {
   assignHomework,
   getIdGenData,
   getScore,
+  updateStudentHorizontal,
   type Homework,
   type IdGenData,
   type QuestionTask,
@@ -42,6 +43,11 @@ type AddStudentArg = {
   name: string;
   password: string;
   studentLastID: number;
+};
+
+type UpdateStudentHorizontalArg = {
+  studentId: string;
+  horizontal: boolean;
 };
 
 type UpdateHomeworkArg = {
@@ -165,6 +171,21 @@ export const firestoreApi = createApi({
       },
     }),
 
+    updateStudentHorizontal: builder.mutation<
+      string,
+      UpdateStudentHorizontalArg
+    >({
+      queryFn: async ({ studentId, horizontal }) => {
+        try {
+          await updateStudentHorizontal(studentId, horizontal);
+          return { data: 'success' };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
     createQuestion: builder.mutation<string, CreateQuestionArg>({
       queryFn: async ({ taskId, question }) => {
         try {
@@ -227,6 +248,7 @@ export const {
   useGetStudentsQuery,
   useGetQuestionsQuery,
   useAddStudentMutation,
+  useUpdateStudentHorizontalMutation,
   useCreateQuestionMutation,
   useAssignHomeworkMutation,
   useGetIdGenQuery,

@@ -26,6 +26,7 @@ export type Student = {
   id: string;
   name: string;
   studentId?: string;
+  horizontal: boolean;
   assigned: number;
   completed: number;
   new: number;
@@ -115,6 +116,7 @@ const listStudents = async (): Promise<Student[]> => {
       id: docSnap.id,
       name: data.name ?? '',
       studentId: data.studentId,
+      horizontal: data.horizontal ?? false,
       assigned: counts?.assigned ?? data.assigned ?? 0,
       completed: counts?.completed ?? data.completed ?? 0,
       new: counts?.new ?? data.new ?? 0,
@@ -316,10 +318,21 @@ const addStudent = async (
     failure: 0,
     assigned: 0,
     timer: 0,
+    horizontal: false,
   });
 
   await setDoc(doc(db, IDGEN, 'idgen'), {
     studentLastID: studentLastID + 1,
+  });
+};
+
+const updateStudentHorizontal = async (
+  studentId: string,
+  horizontal: boolean,
+) => {
+  await updateDoc(doc(db, STUDENTS, studentId), {
+    horizontal,
+    updatedAt: serverTimestamp(),
   });
 };
 
@@ -335,4 +348,5 @@ export {
   assignHomework,
   getIdGenData,
   getScore,
+  updateStudentHorizontal,
 };
