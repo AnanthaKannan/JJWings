@@ -55,6 +55,17 @@ function HomeworkCard({
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const canUseAction = !isAdminReview || state === HomeworkState.COMPLETED;
+  const correctCount = result.filter(Boolean).length;
+
+  const formatTime = (seconds: number = 0) => {
+    const safeSeconds = Math.max(0, seconds);
+    const minutes = Math.floor(safeSeconds / 60)
+      .toString()
+      .padStart(2, '0');
+    const remainingSeconds = (safeSeconds % 60).toString().padStart(2, '0');
+
+    return `${minutes}:${remainingSeconds}`;
+  };
 
   const handleAttend = () => {
     dispatch(
@@ -95,12 +106,33 @@ function HomeworkCard({
       >
         <View>
           <Text style={styles.cardTitle}>{questionId}</Text>
-          <View style={styles.questionRow}>
-            <Text style={styles.questionIcon}>📋</Text>
-            <Text style={styles.questionCount}>
-              {result.length}/{question.length} questions
-            </Text>
-          </View>
+          {/* <Text style={styles.questionIcon}>
+              {' '}
+              {state === HomeworkState.COMPLETED ? '✅' : '📋'}
+            </Text> */}
+          {state === HomeworkState.COMPLETED ? (
+            <View style={styles.questionRow}>
+              <Text style={styles.questionIcon}>✅</Text>
+              <Text style={styles.questionCount}>
+                {correctCount}/{question.length} correct
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 16 }}> ⏱ </Text>
+                <Text style={styles.timeText}>{formatTime(timer)}</Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.questionRow}>
+              <Text style={styles.questionIcon}>📋</Text>
+              <Text style={styles.questionCount}>
+                {result.length}/{question.length} questions
+              </Text>
+            </View>
+          )}
+          {/* <View style={styles.detailRow}>
+            <Text style={styles.questionIcon}>⏱</Text>
+            <Text style={styles.timeText}>{formatTime(timer)}</Text>
+          </View> */}
         </View>
         <View style={styles.actionRow}>
           {/* Attend button — hidden for COMPLETED */}
@@ -381,6 +413,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   questionCount: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  timeText: {
     fontSize: 13,
     color: '#94A3B8',
     fontWeight: '500',
