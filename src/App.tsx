@@ -1,6 +1,9 @@
 import { StatusBar, Alert, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { createStaticNavigation } from '@react-navigation/native';
+import {
+  CommonActions,
+  createStaticNavigation,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -59,10 +62,22 @@ const MainTabs = createBottomTabNavigator({
       screen: HomeworkStack,
       options: {
         tabBarLabel: 'Homework',
+        unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="book" color={color} size={size} />
         ),
       },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          e.preventDefault();
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: 'Homework',
+              params: { screen: 'HomeworkScreen' },
+            }),
+          );
+        },
+      }),
     },
     Logout: {
       screen: ProfileScreen,

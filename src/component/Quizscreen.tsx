@@ -77,7 +77,12 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const studentId = useSelector((state: RootState) => state.common.studentId);
 
-  console.log('>>>>>>>>>>>>>>>>>>', homeworkId, selResult, selAnswer);
+  console.log(
+    '>>>>>>>>>>>>>>>>>> QuizScreen',
+    homeworkId,
+    selResult,
+    selAnswer,
+  );
 
   const selQuestions = useSelector(
     (state: RootState) => state.common.questions,

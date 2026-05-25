@@ -181,7 +181,7 @@ export default function StudentDirectoryScreen() {
     }, [refetch]),
   );
 
-  console.log('>>>>>>>>>>>>>>>>>', students);
+  console.log('>>>>>>>>>>>>>>>>> Student dir', students);
 
   const filtered = students?.filter(
     s =>
