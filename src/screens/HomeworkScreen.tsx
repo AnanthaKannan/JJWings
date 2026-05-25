@@ -30,6 +30,8 @@ interface HomeworkCardProps {
   answer: number[];
   timer: number;
   isAdminReview?: boolean;
+  studentId?: string;
+  studentName?: string;
 }
 
 const FILTERS: { label: string; value: BadgeType }[] = [
@@ -47,6 +49,8 @@ function HomeworkCard({
   answer,
   timer = 0,
   isAdminReview = false,
+  studentId,
+  studentName,
 }: HomeworkCardProps) {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
@@ -65,7 +69,15 @@ function HomeworkCard({
     );
 
     if (state === HomeworkState.COMPLETED) {
-      navigation.navigate('QuizReview');
+      navigation.navigate('QuizReview', {
+        returnToHomeworkParams: isAdminReview
+          ? {
+              studentId,
+              studentName,
+              adminReview: true,
+            }
+          : undefined,
+      });
     } else {
       navigation.navigate('Calculate');
     }
@@ -214,6 +226,8 @@ export default function HomeworkScreen() {
             homeworkId={task.id}
             question={task?.question?.question ?? []}
             isAdminReview={isAdminReview}
+            studentId={studentId}
+            studentName={studentName}
           />
         ))}
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 interface HeaderProps {
   heading: string;
@@ -10,6 +10,7 @@ interface HeaderProps {
 
 export default function Header({ heading, sideHead, onBack }: HeaderProps) {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -17,9 +18,16 @@ export default function Header({ heading, sideHead, onBack }: HeaderProps) {
     }
 
     if (heading === 'Quiz Review') {
+      const returnToHomeworkParams = route.params?.returnToHomeworkParams;
+
       navigation.reset({
         index: 0,
-        routes: [{ name: 'HomeworkScreen' }],
+        routes: [
+          {
+            name: 'HomeworkScreen',
+            params: returnToHomeworkParams,
+          },
+        ],
       });
       return;
     }

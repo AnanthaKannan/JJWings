@@ -148,6 +148,17 @@ const AdminTabs = createBottomTabNavigator({
           <MaterialIcons name="people" color={color} size={size} />
         ),
       },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          e.preventDefault();
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: 'AdminStudents',
+              params: { screen: 'StudentDirectory' },
+            }),
+          );
+        },
+      }),
     },
 
     AdminAddStudent: {
