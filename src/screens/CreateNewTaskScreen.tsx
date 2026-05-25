@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { useCreateQuestionMutation } from '../store/api';
@@ -24,6 +26,14 @@ type Question = {
   id: string;
   expression: string;
   answer: number | null;
+};
+
+type GenForm = {
+  count: string;
+  min: string;
+  max: string;
+  steps: string;
+  symbols: string[];
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -51,6 +61,11 @@ const evaluateMath = (expr: string): number | null => {
 
 const sanitizeMathInput = (value: string) =>
   value.replace(/[^\d+\-*/().\s]/g, '');
+
+const SYMBOLS = ['+', '-', '*', '/'];
+
+const randomInt = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
 // ─── Question Row ─────────────────────────────────────────────────────────────
 
@@ -115,14 +130,44 @@ const createEmptyQuestion = (): Question => ({
   answer: null,
 });
 
+const createQuestionFromExpression = (expression: string): Question => ({
+  id: String(nextId++),
+  expression,
+  answer: evaluateMath(expression),
+});
+
+const DEFAULT_GEN_FORM: GenForm = {
+  count: '25',
+  min: '',
+  max: '',
+  steps: '4',
+  symbols: ['+'],
+};
+
 export default function CreateNewTaskScreen() {
   const navigation = useNavigation<any>();
   const [taskId, setTaskId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenModalVisible, setIsGenModalVisible] = useState(false);
+  const [genForm, setGenForm] = useState<GenForm>(DEFAULT_GEN_FORM);
   const [createQuestion] = useCreateQuestionMutation();
   const [questions, setQuestions] = useState<Question[]>([
     createEmptyQuestion(),
   ]);
+
+  const resetForm = useCallback(() => {
+    setTaskId('');
+    setIsSaving(false);
+    setIsGenModalVisible(false);
+    setGenForm(DEFAULT_GEN_FORM);
+    setQuestions([createEmptyQuestion()]);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return resetForm;
+    }, [resetForm]),
+  );
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -152,6 +197,76 @@ export default function CreateNewTaskScreen() {
       ...prev,
       { id: String(nextId), expression: '', answer: null },
     ]);
+  };
+
+  const updateGenField = (field: keyof Omit<GenForm, 'symbols'>) => {
+    return (value: string) => {
+      setGenForm(prev => ({
+        ...prev,
+        [field]: value.replace(/[^\d]/g, ''),
+      }));
+    };
+  };
+
+  const toggleSymbol = (symbol: string) => {
+    setGenForm(prev => {
+      const hasSymbol = prev.symbols.includes(symbol);
+      const symbols = hasSymbol
+        ? prev.symbols.filter(item => item !== symbol)
+        : [...prev.symbols, symbol];
+
+      return {
+        ...prev,
+        symbols,
+      };
+    });
+  };
+
+  const handleGenerateQuestions = () => {
+    const count = Number(genForm.count);
+    const min = Number(genForm.min);
+    const max = Number(genForm.max);
+    const steps = Number(genForm.steps);
+
+    if (!count || count < 1) {
+      Alert.alert('Invalid Count', 'No of question should be at least 1.');
+      return;
+    }
+    if (!genForm.min || !genForm.max) {
+      Alert.alert('Invalid Range', 'Min and max are required.');
+      return;
+    }
+    if (min >= max) {
+      Alert.alert('Invalid Range', 'Max should be greater than min.');
+      return;
+    }
+    if (!steps || steps < 2) {
+      Alert.alert('Invalid Steps', 'Steps should be at least 2.');
+      return;
+    }
+    if (genForm.symbols.length === 0) {
+      Alert.alert('Missing Symbol', 'Select at least one symbol.');
+      return;
+    }
+
+    const generated = Array.from({ length: count }, () => {
+      const numbers = Array.from({ length: steps }, () => randomInt(min, max));
+      const expression = numbers.reduce((expr, number, index) => {
+        if (index === 0) return String(number);
+
+        const symbol =
+          genForm.symbols[randomInt(0, genForm.symbols.length - 1)];
+        return `${expr}${symbol}${number}`;
+      }, '');
+
+      return createQuestionFromExpression(expression);
+    });
+
+    setQuestions(prev => {
+      const existing = prev.filter(q => q.expression.trim() !== '');
+      return [...existing, ...generated, createEmptyQuestion()];
+    });
+    setIsGenModalVisible(false);
   };
 
   const handleDelete = (id: string) => {
@@ -236,54 +351,70 @@ export default function CreateNewTaskScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.keyboardAvoiding}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* ── Page Title ── */}
         <AdminHeader header="Create New Task" />
 
         {/* ── Card ── */}
-        <View style={styles.card}>
-          {/* Task ID field */}
-          <View style={styles.taskIdSection}>
-            <Text style={styles.taskIdLabel}>TASK IDENTIFIER</Text>
-            <TextInput
-              style={styles.taskIdInput}
-              value={taskId}
-              onChangeText={setTaskId}
-              placeholder="e.g. 5A-01"
-              placeholderTextColor="#B0B8C8"
-              autoCapitalize="characters"
-              returnKeyType="next"
-            />
-          </View>
-
-          {/* Question List */}
-          <FlatList
-            data={questions}
-            keyExtractor={item => item.id}
-            renderItem={({ item, index }) => (
-              <QuestionRow
-                item={item}
-                index={index}
-                onChange={handleExpressionChange}
-                onDelete={handleDelete}
+        <ScrollView
+          style={styles.contentScroll}
+          contentContainerStyle={styles.contentScrollInner}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            {/* Task ID field */}
+            <View style={styles.taskIdSection}>
+              <Text style={styles.taskIdLabel}>TASK IDENTIFIER</Text>
+              <TextInput
+                style={styles.taskIdInput}
+                value={taskId}
+                onChangeText={setTaskId}
+                placeholder="e.g. 5A-01"
+                placeholderTextColor="#B0B8C8"
+                autoCapitalize="characters"
+                returnKeyType="next"
               />
-            )}
-            scrollEnabled={false}
-            style={styles.questionList}
-          />
+            </View>
 
-          {/* Add Question Button */}
-          <TouchableOpacity
-            style={styles.addQuestionBtn}
-            onPress={handleAddQuestion}
-            activeOpacity={0.75}
-          >
-            <MaterialIcons name="add" size={16} color="#6B7280" />
-            <Text style={styles.addQuestionText}>Add Question</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Question List */}
+            <FlatList
+              data={questions}
+              keyExtractor={item => item.id}
+              renderItem={({ item, index }) => (
+                <QuestionRow
+                  item={item}
+                  index={index}
+                  onChange={handleExpressionChange}
+                  onDelete={handleDelete}
+                />
+              )}
+              scrollEnabled={false}
+              style={styles.questionList}
+            />
+
+            {/* Add Question Button */}
+            <TouchableOpacity
+              style={styles.addQuestionBtn}
+              onPress={handleAddQuestion}
+              activeOpacity={0.75}
+            >
+              <MaterialIcons name="add" size={16} color="#6B7280" />
+              <Text style={styles.addQuestionText}>Add Question</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.generateQuestionBtn}
+              onPress={() => setIsGenModalVisible(true)}
+              activeOpacity={0.75}
+            >
+              <MaterialIcons name="auto-awesome" size={16} color="#FFFFFF" />
+              <Text style={styles.generateQuestionText}>Gen Questions</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
 
         {/* ── Save Task Button ── */}
         <View style={styles.footer}>
@@ -297,13 +428,109 @@ export default function CreateNewTaskScreen() {
               name="check-circle-outline"
               size={20}
               color="#fff"
-              style={{ marginRight: 8 }}
+              style={styles.saveIcon}
             />
             <Text style={styles.saveBtnText}>
               {isSaving ? 'Saving...' : 'Save Task'}
             </Text>
           </TouchableOpacity>
         </View>
+
+        <Modal
+          visible={isGenModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsGenModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Generate Questions</Text>
+                <TouchableOpacity
+                  onPress={() => setIsGenModalVisible(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <MaterialIcons name="close" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.generatorGrid}>
+                <View style={styles.generatorField}>
+                  <Text style={styles.generatorLabel}>NO OF QUESTION</Text>
+                  <TextInput
+                    style={styles.generatorInput}
+                    value={genForm.count}
+                    onChangeText={updateGenField('count')}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.generatorField}>
+                  <Text style={styles.generatorLabel}>MIN</Text>
+                  <TextInput
+                    style={styles.generatorInput}
+                    value={genForm.min}
+                    onChangeText={updateGenField('min')}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.generatorField}>
+                  <Text style={styles.generatorLabel}>MAX</Text>
+                  <TextInput
+                    style={styles.generatorInput}
+                    value={genForm.max}
+                    onChangeText={updateGenField('max')}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.generatorField}>
+                  <Text style={styles.generatorLabel}>STEPS</Text>
+                  <TextInput
+                    style={styles.generatorInput}
+                    value={genForm.steps}
+                    onChangeText={updateGenField('steps')}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.generatorLabel}>SYMBOL</Text>
+              <View style={styles.symbolRow}>
+                {SYMBOLS.map(symbol => {
+                  const isSelected = genForm.symbols.includes(symbol);
+
+                  return (
+                    <TouchableOpacity
+                      key={symbol}
+                      style={[
+                        styles.symbolButton,
+                        isSelected && styles.symbolButtonActive,
+                      ]}
+                      onPress={() => toggleSymbol(symbol)}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.symbolButtonText,
+                          isSelected && styles.symbolButtonTextActive,
+                        ]}
+                      >
+                        {symbol}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={styles.generateSubmitBtn}
+                onPress={handleGenerateQuestions}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.generateSubmitText}>Generate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -315,6 +542,15 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#EEF0F8',
+  },
+  keyboardAvoiding: {
+    flex: 1,
+  },
+  contentScroll: {
+    flex: 1,
+  },
+  contentScrollInner: {
+    paddingBottom: 8,
   },
 
   // Title bar
@@ -336,7 +572,6 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    flex: 1,
     backgroundColor: '#fff',
     marginHorizontal: 16,
     borderRadius: 24,
@@ -438,6 +673,113 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7280',
   },
+  generateQuestionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563EB',
+    borderRadius: 30,
+    paddingVertical: 12,
+    marginTop: 10,
+    gap: 6,
+  },
+  generateQuestionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Generator modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E3A5F',
+  },
+  generatorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 16,
+  },
+  generatorField: {
+    width: '47%',
+    backgroundColor: '#F0F4FA',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  generatorLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  generatorInput: {
+    fontSize: 18,
+    color: '#1E3A5F',
+    fontWeight: '700',
+    padding: 0,
+  },
+  symbolRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 18,
+  },
+  symbolButton: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  symbolButtonActive: {
+    borderColor: '#2563EB',
+    backgroundColor: '#DBEAFE',
+  },
+  symbolButtonText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#64748B',
+  },
+  symbolButtonTextActive: {
+    color: '#2563EB',
+  },
+  generateSubmitBtn: {
+    backgroundColor: '#1E3A8A',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+  },
+  generateSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
 
   // Blobs
   blobsRow: {
@@ -479,5 +821,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  saveIcon: {
+    marginRight: 8,
   },
 });

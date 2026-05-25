@@ -173,6 +173,7 @@ const AdminTabs = createBottomTabNavigator({
       screen: CreateNewTaskScreen,
       options: {
         tabBarLabel: 'new Task',
+        unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="playlist-add" color={color} size={size} />
         ),
