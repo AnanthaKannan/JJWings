@@ -41,6 +41,16 @@ type QuestionCardProps = {
   isWrong: boolean;
 };
 
+const formatTime = (seconds = 0) => {
+  const safeSeconds = Math.max(0, seconds);
+  const minutes = Math.floor(safeSeconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const remainingSeconds = (safeSeconds % 60).toString().padStart(2, '0');
+
+  return `${minutes} : ${remainingSeconds}`;
+};
+
 const QuestionCard = ({
   index,
   question,
@@ -147,8 +157,6 @@ export default function QuizReviewScreen() {
     },
   );
 
-  console.log('---------------------homework', hw, homeworkId);
-
   useEffect(() => {
     Animated.sequence([
       Animated.timing(headerAnim, {
@@ -193,24 +201,47 @@ export default function QuizReviewScreen() {
         >
           <View style={styles.heroLeft}>
             <Text style={styles.heroTitle}>Great Job!</Text>
-            {/* <Text style={styles.heroSub}>
-              You've mastered the 'Big Friend' addition Technique
-            </Text> */}
-            <View style={styles.scorePill}>
-              <Text style={styles.scorePillLabel}>FINAL SCORE</Text>
-            </View>
-            <Animated.View
-              style={{
-                transform: [{ scale: scoreAnim }],
-              }}
+            <View
+              style={{ flexDirection: 'row', justifyContent: 'space-between' }}
             >
-              <View style={styles.scoreRow}>
-                <Text style={styles.scoreNumber}>
-                  {hw?.result?.filter(val => val === true)?.length}
-                </Text>
-                <Text style={styles.scoreTotal}>/{hw?.result?.length}</Text>
+              <View>
+                <View style={styles.scorePill}>
+                  <Text style={styles.scorePillLabel}>FINAL SCORE</Text>
+                </View>
+                <View style={styles.statsRow}>
+                  <Animated.View
+                    style={{
+                      transform: [{ scale: scoreAnim }],
+                    }}
+                  >
+                    <View style={styles.scoreRow}>
+                      <Text style={styles.scoreNumber}>
+                        {hw?.result?.filter(val => val === true)?.length}
+                      </Text>
+                      <Text style={styles.scoreTotal}>
+                        /{hw?.result?.length}
+                      </Text>
+                    </View>
+                  </Animated.View>
+                </View>
               </View>
-            </Animated.View>
+              <View>
+                <View style={styles.scorePill}>
+                  <Text style={styles.scorePillLabel}>TIME TAKEN</Text>
+                </View>
+                <Animated.View
+                  style={{
+                    transform: [{ scale: scoreAnim }],
+                  }}
+                >
+                  <View style={styles.scoreRow}>
+                    <Text style={styles.timerShow}>
+                      {formatTime(hw?.timer)}
+                    </Text>
+                  </View>
+                </Animated.View>
+              </View>
+            </View>
           </View>
           <View style={styles.heroRight}>
             <TrophyIcon />
@@ -245,7 +276,6 @@ const BLUE_LIGHT = '#EFF4FF';
 const RED = '#EF4444';
 const RED_LIGHT = '#FEF2F2';
 const GREEN = '#22C55E';
-const GOLD = '#F59E0B';
 const TEXT = '#1E293B';
 const MUTED = '#64748B';
 
@@ -308,9 +338,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 2,
   },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
   scoreNumber: {
     fontSize: 48,
     fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -2,
+    lineHeight: 54,
+  },
+  timerShow: {
+    fontSize: 28,
+    fontWeight: '600',
     color: '#fff',
     letterSpacing: -2,
     lineHeight: 54,
@@ -320,6 +363,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: 'rgba(255,255,255,0.7)',
     marginBottom: 6,
+  },
+  timeTakenCard: {
+    alignItems: 'flex-end',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  timeTakenLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.78)',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  timeTakenValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
   },
   heroRight: {
     alignItems: 'center',
