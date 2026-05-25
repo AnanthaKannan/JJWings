@@ -5,11 +5,25 @@ import { useNavigation } from '@react-navigation/native';
 interface HeaderProps {
   heading: string;
   sideHead: string;
+  onBack?: () => void;
 }
 
-export default function Header({ heading, sideHead }: HeaderProps) {
+export default function Header({ heading, sideHead, onBack }: HeaderProps) {
   const navigation = useNavigation<any>();
   const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    if (heading === 'Quiz Review') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'HomeworkScreen' }],
+      });
+      return;
+    }
+
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
