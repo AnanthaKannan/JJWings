@@ -14,6 +14,8 @@ import {
   getIdGenData,
   getScore,
   updateStudentHorizontal,
+  updateStudentFcmToken,
+  removeStudentFcmToken,
   type Homework,
   type IdGenData,
   type QuestionTask,
@@ -53,6 +55,11 @@ type AddStudentArg = {
 type UpdateStudentHorizontalArg = {
   studentId: string;
   horizontal: boolean;
+};
+
+type UpdateStudentFcmTokenArg = {
+  studentId: string;
+  fcmToken: string;
 };
 
 type UpdateHomeworkArg = {
@@ -203,6 +210,30 @@ export const firestoreApi = createApi({
       },
     }),
 
+    updateStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
+      queryFn: async ({ studentId, fcmToken }) => {
+        try {
+          await updateStudentFcmToken(studentId, fcmToken);
+          return { data: 'success' };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
+    removeStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
+      queryFn: async ({ studentId, fcmToken }) => {
+        try {
+          await removeStudentFcmToken(studentId, fcmToken);
+          return { data: 'success' };
+        } catch (e: any) {
+          console.error(e);
+          return { error: e.message };
+        }
+      },
+    }),
+
     createQuestion: builder.mutation<string, CreateQuestionArg>({
       queryFn: async ({ taskId, question }) => {
         try {
@@ -218,7 +249,8 @@ export const firestoreApi = createApi({
     assignHomework: builder.mutation<string, AssignHomeworkArg>({
       queryFn: async ({ studentId, questionIds }) => {
         try {
-          await assignHomework(studentId, questionIds);
+          const notificationId = await assignHomework(studentId, questionIds);
+
           return { data: 'success' };
         } catch (e: any) {
           console.error(e);
@@ -267,6 +299,8 @@ export const {
   useGetQuestionsQuery,
   useAddStudentMutation,
   useUpdateStudentHorizontalMutation,
+  useUpdateStudentFcmTokenMutation,
+  useRemoveStudentFcmTokenMutation,
   useCreateQuestionMutation,
   useAssignHomeworkMutation,
   useGetIdGenQuery,

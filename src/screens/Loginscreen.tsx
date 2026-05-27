@@ -26,8 +26,8 @@ import {
 } from '../util/authStorage';
 
 export default function LoginScreen() {
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
+  const [name, setName] = useState('JW001');
+  const [code, setCode] = useState('Welcome123');
   const [showCode, setShowCode] = useState(false);
   const [checkingSavedLogin, setCheckingSavedLogin] = useState(true);
 

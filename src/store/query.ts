@@ -11,6 +11,8 @@ import {
   serverTimestamp,
   writeBatch,
   increment,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 
 import { HomeworkState } from '../util/enum';
@@ -19,6 +21,7 @@ const STUDENTS = 'students';
 const HOMEWORKS = 'homeworks';
 const QUESTIONS = 'questions';
 const SCORES = 'scores';
+const PUSH_NOTIFICATIONS = 'pushNotifications';
 const IDGEN = 'idgen';
 const INITIAL_STUDENT_ID = 101;
 
@@ -231,7 +234,7 @@ const createQuestion = async (taskId: string, question: string[]) => {
 };
 
 const assignHomework = async (studentId: string, questionIds: string[]) => {
-  if (questionIds.length === 0) return;
+  if (questionIds.length === 0) return null;
 
   const homeworkRefs = questionIds.map(questionId => ({
     questionId,
@@ -252,6 +255,7 @@ const assignHomework = async (studentId: string, questionIds: string[]) => {
   }
 
   const batch = writeBatch(db);
+  const pushNotificationRef = doc(collection(db, PUSH_NOTIFICATIONS));
 
   homeworkRefs.forEach(({ ref, questionId }) => {
     batch.set(ref, {
@@ -270,7 +274,22 @@ const assignHomework = async (studentId: string, questionIds: string[]) => {
     assigned: increment(questionIds.length),
   });
 
+  batch.set(pushNotificationRef, {
+    studentId,
+    title: 'New homework assigned',
+    body:
+      questionIds.length === 1
+        ? `You have 1 new homework task: ${questionIds[0]}`
+        : `You have ${questionIds.length} new homework tasks: ${questionIds.join(
+            ', ',
+          )}`,
+    questionIds,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  });
+
   await batch.commit();
+  return pushNotificationRef.id;
 };
 
 type BadgeType = 'PROGRESS' | 'NEW' | 'COMPLETED';
@@ -355,6 +374,24 @@ const updateStudentHorizontal = async (
   });
 };
 
+const updateStudentFcmToken = async (studentId: string, fcmToken: string) => {
+  if (!fcmToken) return;
+
+  await updateDoc(doc(db, STUDENTS, studentId), {
+    fcmTokens: arrayUnion(fcmToken),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+const removeStudentFcmToken = async (studentId: string, fcmToken: string) => {
+  if (!fcmToken) return;
+
+  await updateDoc(doc(db, STUDENTS, studentId), {
+    fcmTokens: arrayRemove(fcmToken),
+    updatedAt: serverTimestamp(),
+  });
+};
+
 export {
   login,
   getHomeworks,
@@ -369,4 +406,6 @@ export {
   getIdGenData,
   getScore,
   updateStudentHorizontal,
+  updateStudentFcmToken,
+  removeStudentFcmToken,
 };

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "983019948643",
+    "project_id": "jjwings-edd5d",
+    "storage_bucket": "jjwings-edd5d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:983019948643:android:c7adc875cc12ca4a790656",
+        "android_client_info": {
+          "package_name": "com.jjwings"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDo2890heX3UVQopgwuyI4oul1yAbCRJ_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
