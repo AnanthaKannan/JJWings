@@ -249,8 +249,7 @@ export const firestoreApi = createApi({
     assignHomework: builder.mutation<string, AssignHomeworkArg>({
       queryFn: async ({ studentId, questionIds }) => {
         try {
-          const notificationId = await assignHomework(studentId, questionIds);
-
+          await assignHomework(studentId, questionIds);
           return { data: 'success' };
         } catch (e: any) {
           console.error(e);
