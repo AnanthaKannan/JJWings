@@ -125,7 +125,7 @@ export default function HomeworkLibraryScreen() {
 
     return questionsData.map((q, index) => ({
       id: q.id,
-      title: q.id,
+      title: q.questionId ?? q.id,
       questions: q.question,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));

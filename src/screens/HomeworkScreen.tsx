@@ -23,6 +23,7 @@ import { HomeworkState } from '../util/enum';
 
 interface HomeworkCardProps {
   questionId: string;
+  questionLabel?: string;
   homeworkId: string;
   question: string[];
   state: BadgeType;
@@ -43,6 +44,7 @@ const FILTERS: { label: string; value: BadgeType }[] = [
 function HomeworkCard({
   homeworkId,
   questionId,
+  questionLabel,
   question,
   state,
   result,
@@ -74,7 +76,7 @@ function HomeworkCard({
         homeworkId,
         result,
         answer,
-        questionId,
+        questionId: questionLabel ?? questionId,
         timer,
       }),
     );
@@ -105,7 +107,7 @@ function HomeworkCard({
         }}
       >
         <View>
-          <Text style={styles.cardTitle}>{questionId}</Text>
+          <Text style={styles.cardTitle}>{questionLabel ?? questionId}</Text>
           {/* <Text style={styles.questionIcon}>
               {' '}
               {state === HomeworkState.COMPLETED ? '✅' : '📋'}
@@ -183,7 +185,7 @@ export default function HomeworkScreen() {
     error,
     refetch,
   } = useGetHomeworksQuery(
-    { studentId: studentId ?? '' },
+    { studentId: studentId ?? '', state: selectedFilter },
     {
       skip: !studentId,
       refetchOnMountOrArgChange: true,
@@ -199,8 +201,7 @@ export default function HomeworkScreen() {
 
   console.log('--------------------', homeworks, error);
 
-  const filteredHomeworks =
-    homeworks?.filter(homework => homework.state === selectedFilter) ?? [];
+  const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
 
   return (

@@ -1,44 +1,159 @@
 // src/store/api.ts
-import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
-import {
-  login,
-  getHomeworks,
-  updateHomework,
-  getHomeworkById,
-  getStudentById,
-  listStudents,
-  listQuestions,
-  addStudent,
-  createQuestion,
-  assignHomework,
-  getIdGenData,
-  getScore,
-  updateStudentHorizontal,
-  updateStudentFcmToken,
-  removeStudentFcmToken,
-  type Homework,
-  type IdGenData,
-  type QuestionTask,
-  type Score,
-  type Student,
-} from './query';
+import { createApi } from '@reduxjs/toolkit/query/react';
+
+import { HomeworkState } from '../util/enum';
+import { baseQuery } from './baseQuery';
+
+const DEFAULT_LIMIT = 15;
+
+type ApiMeta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+type ApiScore = {
+  assigned?: number;
+  new?: number;
+  progress?: number;
+  completed?: number;
+  correct?: number;
+  wrong?: number;
+  timeTaken?: number;
+};
+
+type ApiStudent = {
+  _id: string;
+  studentId?: string;
+  name?: string;
+  vertical?: boolean;
+  fcmTokens?: string[];
+  score?: ApiScore;
+};
+
+type ApiQuestion = {
+  _id: string;
+  questionId?: string;
+  questions?: string[];
+};
+
+type ApiHomework = {
+  _id: string;
+  studentId: string;
+  questionId: ApiQuestion | string;
+  state?: 'PROGRESS' | 'NEW' | 'COMPLETED';
+  results?: boolean[];
+  answers?: Array<number | string>;
+  timer?: number;
+};
+
+type ApiStudentsResponse = {
+  students: ApiStudent[];
+  meta: ApiMeta;
+};
+
+type ApiQuestionsResponse = {
+  questions: ApiQuestion[];
+  meta: ApiMeta;
+};
+
+type ApiHomeworksResponse = {
+  homeworks: ApiHomework[];
+  meta: ApiMeta;
+};
+
+type ApiHomeworkResponse = {
+  homework?: ApiHomework;
+};
+
+export type Student = {
+  id: string;
+  name: string;
+  studentId?: string;
+  horizontal: boolean;
+  assigned: number;
+  completed: number;
+  new: number;
+  success: number;
+  failure: number;
+};
+
+export type Question = {
+  question?: string[];
+};
+
+export type QuestionTask = {
+  id: string;
+  questionId?: string;
+  question: string[];
+};
+
+export type Homework = {
+  id: string;
+  studentId: string;
+  questionId: string;
+  questionLabel?: string;
+  question?: Question;
+  state: 'PROGRESS' | 'NEW' | 'COMPLETED';
+  result: boolean[];
+  answer: number[];
+  timer: number;
+};
+
+export type IdGenData = {
+  studentLastID: number;
+};
+
+export type Score = {
+  studentId: string;
+  assigned: number;
+  new: number;
+  progress: number;
+  success: number;
+  failure: number;
+  timeTaken: number;
+  completed: number;
+};
 
 type LoginArg = {
-  studentId: string;
+  username: string;
   password: string;
+};
+
+type LoginApiResponse = {
+  success: boolean;
+  message: string;
+  token: string;
+  role: 'student' | 'admin';
+  user: {
+    id: string;
+    name: string;
+    studentId?: string;
+    adminId?: string;
+  };
 };
 
 type LoginResult = {
   id: string;
   name: string;
+  role: 'student' | 'admin';
+  token: string;
 };
 
 type HomeworkArg = {
   studentId: string;
+  state: 'PROGRESS' | 'NEW' | 'COMPLETED';
 };
 
 type HomeworkByIdArg = {
   homeworkId: string;
+};
+
+type ScoreArg = {
+  studentId: string;
 };
 
 type StudentByIdArg = {
@@ -79,211 +194,294 @@ type CreateQuestionArg = {
 
 type AssignHomeworkArg = {
   studentId: string;
-  questionIds: string[];
+  questionId: string;
 };
 
-export const firestoreApi = createApi({
-  reducerPath: 'firestoreApi',
-  baseQuery: fakeBaseQuery(), // ← key for non-HTTP apis
+type AvailableQuestionsArg = {
+  studentId: string;
+};
+
+const mapStudent = (student: ApiStudent): Student => ({
+  id: student._id,
+  name: student.name ?? '',
+  studentId: student.studentId,
+  horizontal: !(student.vertical ?? true),
+  assigned: student.score?.assigned ?? 0,
+  completed: student.score?.completed ?? 0,
+  new: student.score?.new ?? 0,
+  success: student.score?.correct ?? 0,
+  failure: student.score?.wrong ?? 0,
+});
+
+const mapQuestion = (question: ApiQuestion): QuestionTask => ({
+  id: question._id,
+  questionId: question.questionId,
+  question: question.questions ?? [],
+});
+
+const mapHomework = (homework: ApiHomework): Homework => {
+  const question =
+    typeof homework.questionId === 'string' ? undefined : homework.questionId;
+  const questionId =
+    typeof homework.questionId === 'string'
+      ? homework.questionId
+      : homework.questionId._id;
+
+  return {
+    id: homework._id,
+    studentId: homework.studentId,
+    questionId,
+    questionLabel: question?.questionId,
+    question: {
+      question: question?.questions ?? [],
+    },
+    state: homework.state ?? HomeworkState.NEW,
+    result: homework.results ?? [],
+    answer: (homework.answers ?? []).map(Number),
+    timer: homework.timer ?? 0,
+  };
+};
+
+const getNextStudentId = (students: Student[]): IdGenData => {
+  const lastId = students.reduce((highest, student) => {
+    const numericId = Number(student.studentId?.replace(/\D/g, '') ?? 0);
+    return Math.max(highest, numericId);
+  }, 100);
+
+  return { studentLastID: lastId + 1 };
+};
+
+export const jjWingsApi = createApi({
+  reducerPath: 'jjWingsApi',
+  baseQuery,
+  tagTypes: [
+    'Student',
+    'Students',
+    'Question',
+    'Questions',
+    'Homework',
+    'Score',
+  ],
   endpoints: builder => ({
-    // GET questions
     getHomeworks: builder.query<Homework[], HomeworkArg>({
-      queryFn: async ({ studentId }) => {
-        try {
-          const data = await getHomeworks(studentId);
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ studentId, state }) => ({
+        url: `/homework/${studentId}/${state}`,
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiHomeworksResponse) =>
+        response.homeworks.map(mapHomework),
+      providesTags: (_result, _error, { studentId, state }) => [
+        { type: 'Homework', id: `${studentId}_${state}` },
+      ],
     }),
 
     getHomeworkById: builder.query<Homework | undefined, HomeworkByIdArg>({
-      queryFn: async ({ homeworkId }) => {
-        try {
-          const data = await getHomeworkById(homeworkId);
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ homeworkId }) => `/homework/${homeworkId}`,
+      transformResponse: (response: ApiHomeworkResponse) =>
+        response.homework ? mapHomework(response.homework) : undefined,
+      providesTags: (_result, _error, { homeworkId }) => [
+        { type: 'Homework', id: homeworkId },
+      ],
     }),
 
     getStudentById: builder.query<Student | undefined, StudentByIdArg>({
-      queryFn: async ({ studentId }) => {
-        try {
-          const data = await getStudentById(studentId);
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: () => ({
+        url: '/admin/students',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (
+        response: ApiStudentsResponse,
+        _meta,
+        { studentId },
+      ) =>
+        response.students
+          .map(mapStudent)
+          .find(student => student.id === studentId),
+      providesTags: (_result, _error, { studentId }) => [
+        { type: 'Student', id: studentId },
+      ],
     }),
 
     getLogin: builder.query<LoginResult, LoginArg>({
-      queryFn: async ({ studentId, password }) => {
-        try {
-          const data = await login(studentId, password);
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ username, password }) => ({
+        url: '/login',
+        method: 'POST',
+        body: {
+          username,
+          password,
+        },
+      }),
+      transformResponse: (response: LoginApiResponse) => ({
+        id: response.user.id,
+        name: response.user.name,
+        role: response.role,
+        token: response.token,
+      }),
     }),
 
     getStudents: builder.query<Student[], void>({
-      queryFn: async () => {
-        try {
-          const data = await listStudents();
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: () => ({
+        url: '/admin/students',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiStudentsResponse) =>
+        response.students.map(mapStudent),
+      providesTags: result => [
+        { type: 'Students', id: 'LIST' },
+        ...(result ?? []).map(student => ({
+          type: 'Student' as const,
+          id: student.id,
+        })),
+      ],
     }),
 
     getQuestions: builder.query<QuestionTask[], void>({
-      queryFn: async () => {
-        try {
-          const data = await listQuestions();
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: () => ({
+        url: '/admin/questions',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiQuestionsResponse) =>
+        response.questions.map(mapQuestion),
+      providesTags: result => [
+        { type: 'Questions', id: 'LIST' },
+        ...(result ?? []).map(question => ({
+          type: 'Question' as const,
+          id: question.id,
+        })),
+      ],
     }),
+
+    getAvailableQuestions: builder.query<QuestionTask[], AvailableQuestionsArg>(
+      {
+        query: ({ studentId }) => ({
+          url: `/admin/questions/available/${studentId}`,
+          params: { page: 1, limit: DEFAULT_LIMIT },
+        }),
+        transformResponse: (response: ApiQuestionsResponse) =>
+          response.questions.map(mapQuestion),
+        providesTags: (_result, _error, { studentId }) => [
+          { type: 'Questions', id: `AVAILABLE_${studentId}` },
+        ],
+      },
+    ),
 
     getIdGen: builder.query<IdGenData, void>({
-      queryFn: async () => {
-        try {
-          const data = await getIdGenData();
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: () => ({
+        url: '/admin/students',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiStudentsResponse) =>
+        getNextStudentId(response.students.map(mapStudent)),
+      providesTags: [{ type: 'Students', id: 'LIST' }],
     }),
 
-    getScore: builder.query<Score, HomeworkArg>({
-      queryFn: async ({ studentId }) => {
-        try {
-          const data = await getScore(studentId);
-          return { data };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+    getScore: builder.query<Score, ScoreArg>({
+      query: ({ studentId }) => `/scores/${studentId}`,
+      transformResponse: (response: ApiScore, _meta, { studentId }) => ({
+        studentId,
+        assigned: response.assigned ?? 0,
+        new: response.new ?? 0,
+        progress: response.progress ?? 0,
+        success: response.correct ?? 0,
+        failure: response.wrong ?? 0,
+        timeTaken: response.timeTaken ?? 0,
+        completed: response.completed ?? 0,
+      }),
+      providesTags: (_result, _error, { studentId }) => [
+        { type: 'Score', id: studentId },
+      ],
     }),
 
     addStudent: builder.mutation<string, AddStudentArg>({
-      queryFn: async ({ studentId, name, password, studentLastID }) => {
-        try {
-          await addStudent(studentId, name, password, studentLastID);
-          return { data: 'success' };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ name }) => ({
+        url: '/admin/students',
+        method: 'POST',
+        body: { name },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Students', id: 'LIST' }],
     }),
 
     updateStudentHorizontal: builder.mutation<
       string,
       UpdateStudentHorizontalArg
     >({
-      queryFn: async ({ studentId, horizontal }) => {
-        try {
-          await updateStudentHorizontal(studentId, horizontal);
-          return { data: 'success' };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ studentId, horizontal }) => ({
+        url: `/admin/students/${studentId}`,
+        method: 'PATCH',
+        body: { vertical: !horizontal },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Student', id: studentId },
+        { type: 'Students', id: 'LIST' },
+      ],
     }),
 
     updateStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
-      queryFn: async ({ studentId, fcmToken }) => {
-        try {
-          await updateStudentFcmToken(studentId, fcmToken);
-          return { data: 'success' };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ studentId, fcmToken }) => ({
+        url: `/admin/students/${studentId}`,
+        method: 'PATCH',
+        body: { fcmToken },
+      }),
+      transformResponse: () => 'success',
     }),
 
     removeStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
-      queryFn: async ({ studentId, fcmToken }) => {
-        try {
-          await removeStudentFcmToken(studentId, fcmToken);
-          return { data: 'success' };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ studentId, fcmToken }) => ({
+        url: `/admin/students/${studentId}`,
+        method: 'PATCH',
+        body: { removeFcmToken: fcmToken },
+      }),
+      transformResponse: () => 'success',
     }),
 
     createQuestion: builder.mutation<string, CreateQuestionArg>({
-      queryFn: async ({ taskId, question }) => {
-        try {
-          await createQuestion(taskId, question);
-          return { data: 'success' };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ taskId, question }) => ({
+        url: '/admin/questions',
+        method: 'POST',
+        body: {
+          questionId: taskId,
+          questions: question,
+        },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Questions', id: 'LIST' }],
     }),
 
     assignHomework: builder.mutation<string, AssignHomeworkArg>({
-      queryFn: async ({ studentId, questionIds }) => {
-        try {
-          await assignHomework(studentId, questionIds);
-          return { data: 'success' };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ studentId, questionId }) => ({
+        url: '/admin/questions/assign',
+        method: 'POST',
+        body: { studentId, questionId },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Homework', id: `${studentId}_${HomeworkState.NEW}` },
+        { type: 'Score', id: studentId },
+        { type: 'Questions', id: `AVAILABLE_${studentId}` },
+        { type: 'Students', id: 'LIST' },
+      ],
     }),
 
     updateHomework: builder.mutation<string, UpdateHomeworkArg>({
-      queryFn: async ({
-        homeworkId,
-        state,
-        result,
-        answer,
-        timer,
-        success,
-        failure,
-      }) => {
-        try {
-          await updateHomework(
-            homeworkId,
-            state,
-            result,
-            answer,
-            timer,
-            success,
-            failure,
-          );
-          return { data: 'success' };
-        } catch (e: any) {
-          console.error(e);
-          return { error: e.message };
-        }
-      },
+      query: ({ homeworkId, state, result, answer, timer }) => ({
+        url: `/homework/${homeworkId}`,
+        method: 'PATCH',
+        body: {
+          state,
+          timer,
+          answers: answer.map(String),
+          results: result,
+        },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { homeworkId }) => [
+        { type: 'Homework', id: homeworkId },
+        'Homework',
+        'Score',
+        { type: 'Students', id: 'LIST' },
+      ],
     }),
   }),
 });
@@ -296,6 +494,7 @@ export const {
   useGetStudentByIdQuery,
   useGetStudentsQuery,
   useGetQuestionsQuery,
+  useGetAvailableQuestionsQuery,
   useAddStudentMutation,
   useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
@@ -304,4 +503,4 @@ export const {
   useAssignHomeworkMutation,
   useGetIdGenQuery,
   useGetScoreQuery,
-} = firestoreApi;
+} = jjWingsApi;

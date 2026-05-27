@@ -12,7 +12,7 @@ import { Provider, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
 import { clearSavedLoginCredentials } from './util/authStorage';
 import { logout } from './store/slices';
-import { firestoreApi, useUpdateStudentFcmTokenMutation } from './store/api';
+import { jjWingsApi, useUpdateStudentFcmTokenMutation } from './store/api';
 import {
   getCurrentStudentPushToken,
   getStudentPushToken,
@@ -263,7 +263,7 @@ const logoutCurrentUser = async () => {
       if (token) {
         await store
           .dispatch(
-            firestoreApi.endpoints.removeStudentFcmToken.initiate({
+            jjWingsApi.endpoints.removeStudentFcmToken.initiate({
               studentId,
               fcmToken: token,
             }),

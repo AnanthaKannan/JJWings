@@ -18,7 +18,10 @@ import { useDispatch } from 'react-redux';
 import bannerImage from '../../assets/images/banner.png';
 import color from '../util/colors';
 import { useLazyGetLoginQuery } from '../store/api';
-import { setCredentials } from '../store/slices';
+import {
+  setAdminCredentials,
+  setStudentCredentials,
+} from '../store/slices';
 import {
   clearSavedLoginCredentials,
   getSavedLoginCredentials,
@@ -39,24 +42,8 @@ export default function LoginScreen() {
     async (studentId: string, password: string, shouldSave: boolean) => {
       const cleanStudentId = studentId.trim();
 
-      if (cleanStudentId === 'JW001' && password === 'Welcome123') {
-        if (shouldSave) {
-          await saveLoginCredentials({ studentId: cleanStudentId, password });
-        }
-
-        dispatch(
-          setCredentials({
-            studentId: cleanStudentId,
-            isStudent: false,
-            name: 'Sobhana',
-          }),
-        );
-        navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
-        return true;
-      }
-
       const result = await login({
-        studentId: cleanStudentId,
+        username: cleanStudentId,
         password,
       });
 
@@ -65,14 +52,29 @@ export default function LoginScreen() {
           await saveLoginCredentials({ studentId: cleanStudentId, password });
         }
 
-        dispatch(
-          setCredentials({
-            studentId: cleanStudentId,
-            isStudent: true,
-            name: result.data.name,
-          }),
-        );
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        if (result.data.role === 'student') {
+          dispatch(
+            setStudentCredentials({
+              studentId: result.data.id,
+              isStudent: true,
+              studentName: result.data.name,
+              token: result.data.token,
+            }),
+          );
+        } else {
+          dispatch(
+            setAdminCredentials({
+              adminId: result.data.id,
+              isAdmin: true,
+              adminName: result.data.name,
+              token: result.data.token,
+            }),
+          );
+        }
+        navigation.reset({
+          index: 0,
+          routes: [{ name: result.data.role === 'student' ? 'Main' : 'Admin' }],
+        });
         return true;
       }
 

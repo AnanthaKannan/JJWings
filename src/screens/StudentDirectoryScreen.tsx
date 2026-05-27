@@ -94,7 +94,7 @@ const StudentRow = ({
       <Avatar color={COLORS[randomNumber(0, 6)]} name={item.name} />
       <View style={styles.nameBlock}>
         <Text style={styles.studentName}>{item.name}</Text>
-        <Text style={styles.studentMeta}>#{item?.id}</Text>
+        <Text style={styles.studentMeta}>#{item.studentId ?? item.id}</Text>
       </View>
     </View>
 
@@ -186,6 +186,7 @@ export default function StudentDirectoryScreen() {
   const filtered = students?.filter(
     s =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.studentId?.toLowerCase().includes(search.toLowerCase()) ||
       s.id.toLowerCase().includes(search.toLowerCase()),
   );
 
