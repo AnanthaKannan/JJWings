@@ -16,7 +16,7 @@ export const baseQuery = fetchBaseQuery({
     headers.set('Content-Type', 'application/json');
 
     if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+      headers.set('x-access-token', token);
     }
 
     return headers;

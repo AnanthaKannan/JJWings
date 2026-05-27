@@ -18,10 +18,7 @@ import { useDispatch } from 'react-redux';
 import bannerImage from '../../assets/images/banner.png';
 import color from '../util/colors';
 import { useLazyGetLoginQuery } from '../store/api';
-import {
-  setAdminCredentials,
-  setStudentCredentials,
-} from '../store/slices';
+import { setAdminCredentials, setStudentCredentials } from '../store/slices';
 import {
   clearSavedLoginCredentials,
   getSavedLoginCredentials,
@@ -52,6 +49,7 @@ export default function LoginScreen() {
           await saveLoginCredentials({ studentId: cleanStudentId, password });
         }
 
+        console.log('result.data.token', result.data.token);
         if (result.data.role === 'student') {
           dispatch(
             setStudentCredentials({
