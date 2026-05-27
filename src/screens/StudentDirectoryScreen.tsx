@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 
 import {
   useGetStudentsQuery,
@@ -170,16 +170,20 @@ export default function StudentDirectoryScreen() {
 
   const navigation = useNavigation<any>();
 
-  const { data: students, refetch } = useGetStudentsQuery(undefined);
+  const { data: students } = useGetStudentsQuery(undefined);
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
 
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Student Directory focused: refetching students');
-      refetch();
-    }, [refetch]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     console.log('Student Directory focused: refetching students');
+  //     refetch();
+  //   }, [refetch]),
+  // );
+
+  useEffect(() => {
+    console.log('-----------------------------------eeeeeeeeeeee-----------');
+  }, []);
 
   console.log('>>>>>>>>>>>>>>>>> Student dir', students);
 
@@ -210,7 +214,7 @@ export default function StudentDirectoryScreen() {
       studentId: student.id,
       horizontal: !student.horizontal,
     }).unwrap();
-    refetch();
+    // refetch();
   };
 
   return (
