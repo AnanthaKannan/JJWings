@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,9 @@ import {
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 
-import { useAddStudentMutation, useGetIdGenQuery } from '../store/api';
+import { useAddStudentMutation } from '../store/api';
 import { AdminHeader } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,64 +24,21 @@ import { AdminHeader } from '../component';
 
 export default function AddStudentScreen() {
   const [fullName, setFullName] = useState('');
-  const [studentId, setStudentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isFormValid = fullName.trim().length > 0 && studentId.trim().length > 0;
+  const isFormValid = fullName.trim().length > 0;
   const navigation = useNavigation<any>();
 
   const [addStudent] = useAddStudentMutation();
-  const { data: idGenData, refetch } = useGetIdGenQuery(undefined);
 
-  console.log('idGenData', idGenData);
-
-  useFocusEffect(
-    useCallback(() => {
-      let isActive = true;
-
-      const refreshStudentId = async () => {
-        const result = await refetch();
-        const studentLastID = result.data?.studentLastID;
-
-        if (isActive && studentLastID) {
-          setStudentId(`JW${studentLastID}`);
-        }
-      };
-
-      refreshStudentId();
-
-      return () => {
-        isActive = false;
-      };
-    }, [refetch]),
-  );
-  // useEffect(() => {
-  //   console.log('eeeeeeeeeeeeeeeeeeeee');
-  // }, []);
-
-  useEffect(() => {
-    if (idGenData?.studentLastID) {
-      setStudentId(`JW${idGenData.studentLastID}`);
-    }
-  }, [idGenData]);
-
-  console.log('idGenData', idGenData);
   const handleAddStudent = async () => {
     if (!isFormValid) return;
 
     setIsSubmitting(true);
     try {
-      const studentLastID =
-        idGenData?.studentLastID ?? Number(studentId.replace(/\D/g, ''));
-
       await addStudent({
-        studentId,
-        name: fullName,
-        password: 'Welcome123',
-        studentLastID,
+        name: fullName.trim(),
       }).unwrap();
-
-      await refetch();
 
       Alert.alert(
         'Student Added',
@@ -143,24 +100,6 @@ export default function AddStudentScreen() {
                 value={fullName}
                 onChangeText={setFullName}
                 autoCapitalize="words"
-                returnKeyType="next"
-              />
-            </View>
-
-            {/* Student ID */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Student ID</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  studentId.length > 0 && styles.inputFilled,
-                ]}
-                placeholder="ID-000000"
-                disableFullscreenUI
-                placeholderTextColor="#A0AEC0"
-                value={studentId}
-                onChangeText={setStudentId}
-                autoCapitalize="characters"
                 returnKeyType="done"
                 onSubmitEditing={handleAddStudent}
               />

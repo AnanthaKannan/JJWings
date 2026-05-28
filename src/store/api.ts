@@ -161,10 +161,7 @@ type StudentByIdArg = {
 };
 
 type AddStudentArg = {
-  studentId: string;
   name: string;
-  password: string;
-  studentLastID: number;
 };
 
 type UpdateStudentHorizontalArg = {

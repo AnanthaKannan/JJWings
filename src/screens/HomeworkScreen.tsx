@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -9,11 +9,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import {
-  useNavigation,
-  useRoute,
-  useFocusEffect,
-} from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
@@ -185,21 +181,19 @@ export default function HomeworkScreen() {
     data: homeworks,
     error,
     isLoading,
-    refetch,
   } = useGetHomeworksQuery(
     { studentId: studentId ?? '', state: selectedFilter },
     {
       skip: !studentId,
-      refetchOnMountOrArgChange: true,
     },
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Student Directory focused: refetching students');
-      refetch();
-    }, [refetch]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     console.log('Student Directory focused: refetching students');
+  //     refetch();
+  //   }, [refetch]),
+  // );
 
   console.log('--------------------', homeworks, error);
 

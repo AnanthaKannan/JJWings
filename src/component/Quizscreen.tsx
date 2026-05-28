@@ -90,7 +90,7 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   const [updateHomework] = useUpdateHomeworkMutation();
   const { data: student } = useGetStudentByIdQuery(
     { studentId: studentId ?? '' },
-    { skip: !studentId, refetchOnMountOrArgChange: true },
+    { skip: !studentId },
   );
 
   const [data, setData] = useState<QuizData>({

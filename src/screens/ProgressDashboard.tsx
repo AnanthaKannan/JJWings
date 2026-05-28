@@ -267,7 +267,7 @@ const ProgressDashboard: React.FC = () => {
 
   const { data: score, refetch: refetchScore } = useGetScoreQuery(
     { studentId: studentId ?? '' },
-    { skip: !studentId, refetchOnMountOrArgChange: true },
+    { skip: !studentId },
   );
 
   const assigned = score?.assigned ?? 0;
