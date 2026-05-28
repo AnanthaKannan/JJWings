@@ -30,6 +30,7 @@ type ApiStudent = {
   studentId?: string;
   name?: string;
   vertical?: boolean;
+  fcmToken?: string;
   fcmTokens?: string[];
   score?: ApiScore;
 };
@@ -245,7 +246,10 @@ const mapStudent = (student: ApiStudent): Student => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
-  fcmTokens: student.fcmTokens ?? [],
+  fcmTokens: [
+    ...(student.fcmTokens ?? []),
+    ...(student.fcmToken ? [student.fcmToken] : []),
+  ],
   horizontal: !(student.vertical ?? true),
   assigned: student.score?.assigned ?? 0,
   completed: student.score?.completed ?? 0,

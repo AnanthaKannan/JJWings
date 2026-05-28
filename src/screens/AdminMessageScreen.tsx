@@ -83,8 +83,11 @@ export default function AdminMessageScreen() {
   }, [search, students]);
 
   const selectedStudents = students.filter(student => selectedIds.has(student.id));
+  const selectedStudentsWithTokens = selectedStudents.filter(
+    student => student.fcmTokens.length > 0,
+  );
   const isFormValid =
-    selectedStudents.length > 0 &&
+    selectedStudentsWithTokens.length > 0 &&
     messageHeader.trim().length > 0 &&
     messageBody.trim().length > 0;
 
@@ -101,7 +104,7 @@ export default function AdminMessageScreen() {
 
     try {
       await sendNotification({
-        studentIds: selectedStudents.map(student => ({
+        studentIds: selectedStudentsWithTokens.map(student => ({
           id: student.id,
           tokens: student.fcmTokens,
         })),
