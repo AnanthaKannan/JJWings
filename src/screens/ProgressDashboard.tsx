@@ -259,6 +259,9 @@ const ProgressDashboard: React.FC = () => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const studentId = useSelector((state: RootState) => state.common.studentId);
+  const studentName = useSelector(
+    (state: RootState) => state.common.studentName,
+  );
   const headerAnim = useRef(new Animated.Value(-60)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(80)).current;
@@ -287,6 +290,7 @@ const ProgressDashboard: React.FC = () => {
   const accuracy =
     totalSolved > 0 ? Math.round((correct / totalSolved) * 1000) / 10 : 0;
   const learningHours = formatDuration(score?.timeTaken ?? 0);
+  const dashboardTitle = `${studentName.trim() || 'Your'}'s Progress Dashboard`;
 
   // ── Pull-to-refresh handler ──────────────────────────────────────────
   const onRefresh = useCallback(async () => {
@@ -417,9 +421,14 @@ const ProgressDashboard: React.FC = () => {
 
           <View style={styles.headerContent}>
             <Text style={styles.headerEmoji}>🚀</Text>
-            <View>
-              <Text style={styles.headerTitle}>
-                Your Progress{'\n'}Dashboard
+            <View style={styles.headerTextWrap}>
+              <Text
+                style={styles.headerTitle}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+              >
+                {dashboardTitle}
               </Text>
               {/* <Text style={styles.headerSubtitle}>
                 🌟 You're making amazing progress this week!
@@ -434,119 +443,119 @@ const ProgressDashboard: React.FC = () => {
             <LoadingState label="Loading progress..." />
           </View>
         ) : (
-        <Animated.View
-          style={{
-            transform: [{ translateY: cardSlide }],
-            opacity: cardOpacity,
-          }}
-        >
-          {/* Homework Status Card */}
-          <View style={styles.card}>
-            <View style={styles.cardTitleRow}>
-              <Text style={styles.cardEmoji}>📚</Text>
-              <Text style={styles.cardTitle}>Homework Status</Text>
-            </View>
-            <View style={styles.circleRow}>
-              <StatCircle
-                value={assigned}
-                label="ASSIGNED"
-                color="#6366F1"
-                bgColor="#EEF2FF"
-                delay={200}
-              />
-
-              <StatCircle
-                value={newHomework}
-                label="NEW"
-                color="#2563EB"
-                bgColor="#DBEAFE"
-                delay={400}
-              />
-
-              <StatCircle
-                value={working}
-                label="WORKING"
-                color="#D97706"
-                bgColor="#FEF3C7"
-                delay={600}
-              />
-              <StatCircle
-                value={done}
-                label="DONE"
-                color="#059669"
-                bgColor="#D1FAE5"
-                delay={800}
-              />
-            </View>
-          </View>
-
-          {/* Performance Stats Card */}
-          <View style={styles.card}>
-            <View style={styles.cardTitleRow}>
-              <Text style={styles.cardEmoji}>📊</Text>
-              <Text style={styles.cardTitle}>Performance Stats</Text>
-            </View>
-
-            <View style={styles.statsTopRow}>
-              <View>
-                <Text style={styles.statsSmallLabel}>Accuracy</Text>
-                <Text style={styles.accuracyValue}>{accuracy}%</Text>
+          <Animated.View
+            style={{
+              transform: [{ translateY: cardSlide }],
+              opacity: cardOpacity,
+            }}
+          >
+            {/* Homework Status Card */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardEmoji}>📚</Text>
+                <Text style={styles.cardTitle}>Homework Status</Text>
               </View>
-              <View style={styles.statsRight}>
-                <Text style={styles.statsSmallLabel}>Total Solved</Text>
-                <Text style={styles.totalSolvedValue}>
-                  {countUp.toLocaleString()}
-                </Text>
+              <View style={styles.circleRow}>
+                <StatCircle
+                  value={assigned}
+                  label="ASSIGNED"
+                  color="#6366F1"
+                  bgColor="#EEF2FF"
+                  delay={200}
+                />
+
+                <StatCircle
+                  value={newHomework}
+                  label="NEW"
+                  color="#2563EB"
+                  bgColor="#DBEAFE"
+                  delay={400}
+                />
+
+                <StatCircle
+                  value={working}
+                  label="WORKING"
+                  color="#D97706"
+                  bgColor="#FEF3C7"
+                  delay={600}
+                />
+                <StatCircle
+                  value={done}
+                  label="DONE"
+                  color="#059669"
+                  bgColor="#D1FAE5"
+                  delay={800}
+                />
               </View>
             </View>
 
-            <AccuracyBar percent={accuracy} />
+            {/* Performance Stats Card */}
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardEmoji}>📊</Text>
+                <Text style={styles.cardTitle}>Performance Stats</Text>
+              </View>
 
-            <View style={styles.badgeRow}>
-              <PulseBadge
-                icon="✅"
-                value={correct}
-                label="CORRECT"
-                correct={true}
-              />
-              <PulseBadge
-                icon="❌"
-                value={wrong}
-                label="WRONG"
-                correct={false}
-              />
-            </View>
-          </View>
+              <View style={styles.statsTopRow}>
+                <View>
+                  <Text style={styles.statsSmallLabel}>Accuracy</Text>
+                  <Text style={styles.accuracyValue}>{accuracy}%</Text>
+                </View>
+                <View style={styles.statsRight}>
+                  <Text style={styles.statsSmallLabel}>Total Solved</Text>
+                  <Text style={styles.totalSolvedValue}>
+                    {countUp.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
 
-          {/* Learning Time Card */}
-          <View style={[styles.card, styles.timeCard]}>
-            <View style={styles.timeCardInner}>
-              <Text style={styles.timeIcon}>⏳</Text>
-              <View style={styles.timeInfo}>
-                <Text style={styles.timeLabel}>LEARNING TIME</Text>
-                <Text style={styles.timeValue}>{learningHours} Hours</Text>
+              <AccuracyBar percent={accuracy} />
+
+              <View style={styles.badgeRow}>
+                <PulseBadge
+                  icon="✅"
+                  value={correct}
+                  label="CORRECT"
+                  correct={true}
+                />
+                <PulseBadge
+                  icon="❌"
+                  value={wrong}
+                  label="WRONG"
+                  correct={false}
+                />
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.viewLogBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('Homework')}
-            >
-              <Text style={styles.viewLogText}>📋 View Homework</Text>
-            </TouchableOpacity>
-          </View>
 
-          {/* Fun motivational card */}
-          <View style={[styles.card, styles.cheerCard]}>
-            <Text style={styles.cheerEmoji}>🎉</Text>
-            <Text style={styles.cheerText}>Fantastic work this week!</Text>
-            <Text style={styles.cheerSub}>
-              Keep it up and earn your next badge 🏅
-            </Text>
-          </View>
+            {/* Learning Time Card */}
+            <View style={[styles.card, styles.timeCard]}>
+              <View style={styles.timeCardInner}>
+                <Text style={styles.timeIcon}>⏳</Text>
+                <View style={styles.timeInfo}>
+                  <Text style={styles.timeLabel}>LEARNING TIME</Text>
+                  <Text style={styles.timeValue}>{learningHours} Hours</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.viewLogBtn}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('Homework')}
+              >
+                <Text style={styles.viewLogText}>📋 View Homework</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={{ height: 32 }} />
-        </Animated.View>
+            {/* Fun motivational card */}
+            <View style={[styles.card, styles.cheerCard]}>
+              <Text style={styles.cheerEmoji}>🎉</Text>
+              <Text style={styles.cheerText}>Fantastic work this week!</Text>
+              <Text style={styles.cheerSub}>
+                Keep it up and earn your next badge 🏅
+              </Text>
+            </View>
+
+            <View style={{ height: 32 }} />
+          </Animated.View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -596,11 +605,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
+  headerTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
   headerEmoji: {
     fontSize: 48,
     marginRight: 6,
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 26,
     fontWeight: '900',
     color: '#FFFFFF',

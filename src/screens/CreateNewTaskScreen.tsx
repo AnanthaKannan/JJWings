@@ -18,7 +18,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { useCreateQuestionMutation } from '../store/api';
-import { AdminHeader } from '../component';
+import { AdminHeader, LoadingOverlay } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -532,6 +532,7 @@ export default function CreateNewTaskScreen() {
           </View>
         </Modal>
       </KeyboardAvoidingView>
+      <LoadingOverlay visible={isSaving} label="Saving task..." />
     </SafeAreaView>
   );
 }

@@ -16,7 +16,7 @@ import {
   useUpdateStudentHorizontalMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
-import { AdminHeader, LoadingState } from '../component';
+import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -267,6 +267,10 @@ export default function StudentDirectoryScreen() {
       {/* <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
         <Text style={styles.fabIcon}>＋</Text>
       </TouchableOpacity> */}
+      <LoadingOverlay
+        visible={isHorizontalUpdating}
+        label="Updating student..."
+      />
     </SafeAreaView>
   );
 }

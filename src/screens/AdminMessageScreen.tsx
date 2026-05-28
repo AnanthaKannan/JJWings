@@ -15,7 +15,7 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import { AdminHeader, LoadingState } from '../component';
+import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
   Student,
   useGetStudentsQuery,
@@ -214,6 +214,7 @@ export default function AdminMessageScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <LoadingOverlay visible={isSending} label="Sending notification..." />
     </SafeAreaView>
   );
 }

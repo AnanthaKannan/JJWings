@@ -16,7 +16,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 import { useAddStudentMutation } from '../store/api';
-import { AdminHeader } from '../component';
+import { AdminHeader, LoadingOverlay } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,6 +130,7 @@ export default function AddStudentScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <LoadingOverlay visible={isSubmitting} label="Adding student..." />
     </SafeAreaView>
   );
 }

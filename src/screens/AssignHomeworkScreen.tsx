@@ -19,7 +19,7 @@ import {
 } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import { AdminHeader, LoadingState } from '../component';
+import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
   useAssignHomeworkMutation,
   useGetAvailableQuestionsQuery,
@@ -112,7 +112,8 @@ export default function AssignHomeworkScreen() {
   );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
-  const [sendNotification] = useSendNotificationMutation();
+  const [sendNotification, { isLoading: isSendingNotification }] =
+    useSendNotificationMutation();
   const showLoader = isFocused && isLoading;
 
   const filtered = tasks
@@ -307,6 +308,10 @@ export default function AssignHomeworkScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+      <LoadingOverlay
+        visible={isAssigning || isSendingNotification}
+        label="Assigning homework..."
+      />
     </SafeAreaView>
   );
 }
