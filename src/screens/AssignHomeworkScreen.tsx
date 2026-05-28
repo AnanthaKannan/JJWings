@@ -19,7 +19,7 @@ import {
 } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import { LoadingState } from '../component';
+import { AdminHeader, LoadingState } from '../component';
 import {
   useAssignHomeworkMutation,
   useGetAvailableQuestionsQuery,
@@ -198,17 +198,7 @@ export default function AssignHomeworkScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-        >
-          <MaterialIcons name="arrow-back" size={22} color="#1A202C" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Homework Lab</Text>
-        <View style={styles.avatar} />
-      </View>
+      <AdminHeader header="Homework Lab" showBackButton={true} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

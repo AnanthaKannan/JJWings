@@ -169,6 +169,7 @@ function HomeworkCard({
 }
 
 export default function HomeworkScreen() {
+  const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const isFocused = useIsFocused();
   const routeStudentId = route?.params?.studentId;
@@ -192,6 +193,12 @@ export default function HomeworkScreen() {
   const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
   const showLoader = isFocused && isLoading && filteredHomeworks.length === 0;
+  const handleAdminBack = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'StudentDirectory' }],
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -203,11 +210,22 @@ export default function HomeworkScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>
-            {isAdminReview
-              ? `${studentName ?? 'Student'} Performance`
-              : 'Homework'}
-          </Text>
+          <View style={styles.headerTitleRow}>
+            {isAdminReview && (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleAdminBack}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.backButtonText}>‹</Text>
+              </TouchableOpacity>
+            )}
+            <Text style={styles.headerTitle}>
+              {isAdminReview
+                ? `${studentName ?? 'Student'} Performance`
+                : 'Homework'}
+            </Text>
+          </View>
           {/* <Text style={styles.headerSubtitle}>
             You have {tasks.length} tasks to explore today
           </Text> */}
@@ -283,7 +301,27 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 20,
   },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    fontSize: 30,
+    color: '#2563EB',
+    lineHeight: 32,
+    marginTop: -2,
+  },
   headerTitle: {
+    flex: 1,
     fontSize: 28,
     fontWeight: '800',
     color: '#2563EB',

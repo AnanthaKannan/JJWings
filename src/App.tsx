@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   CommonActions,
   createStaticNavigation,
+  getFocusedRouteNameFromRoute,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -71,12 +72,26 @@ const MainTabs = createBottomTabNavigator({
     },
     Homework: {
       screen: HomeworkStack,
-      options: {
-        tabBarLabel: 'Homework',
-        unmountOnBlur: true,
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="book" color={color} size={size} />
-        ),
+      options: ({ route }) => {
+        const routeName =
+          getFocusedRouteNameFromRoute(route) ?? 'HomeworkScreen';
+        const shouldHideTabBar =
+          routeName === 'Calculate' || routeName === 'QuizReview';
+
+        return {
+          tabBarLabel: 'Homework',
+          unmountOnBlur: true,
+          tabBarStyle:
+            shouldHideTabBar
+              ? { display: 'none' }
+              : {
+                  backgroundColor: '#FFFFFF',
+                  borderTopColor: '#E5E7EB',
+                },
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="book" color={color} size={size} />
+          ),
+        };
       },
       listeners: ({ navigation }) => ({
         tabPress: e => {
@@ -164,11 +179,23 @@ const AdminTabs = createBottomTabNavigator({
     // Tab 1 — Students (with nested stack)
     AdminStudents: {
       screen: AdminStudentsStack,
-      options: {
-        tabBarLabel: 'Students',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="people" color={color} size={size} />
-        ),
+      options: ({ route }) => {
+        const routeName =
+          getFocusedRouteNameFromRoute(route) ?? 'StudentDirectory';
+        const shouldHideTabBar = routeName === 'AssignHomework';
+
+        return {
+          tabBarLabel: 'Students',
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="people" color={color} size={size} />
+          ),
+        };
       },
       listeners: ({ navigation }) => ({
         tabPress: e => {
