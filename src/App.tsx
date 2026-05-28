@@ -11,8 +11,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Provider, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
-import { clearSavedLoginCredentials } from './util/authStorage';
-import { logout } from './store/slices';
 import { useUpdateStudentFcmTokenMutation } from './store/api';
 import {
   getStudentPushToken,
@@ -201,27 +199,6 @@ const MainTabs = createBottomTabNavigator({
           />
         ),
       },
-      listeners: ({ navigation }) => ({
-        tabPress: e => {
-          e.preventDefault();
-          Alert.alert(
-            'Logout',
-            'Are you sure you want to logout?',
-            [
-              { text: 'No', style: 'cancel' },
-              {
-                text: 'Yes',
-                style: 'destructive',
-                onPress: async () => {
-                  await logoutCurrentUser();
-                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-                },
-              },
-            ],
-            { cancelable: true },
-          );
-        },
-      }),
     },
   },
 });
@@ -337,27 +314,6 @@ const AdminTabs = createBottomTabNavigator({
           <MaterialIcons name="logout" color={color} size={size} />
         ),
       },
-      listeners: ({ navigation }) => ({
-        tabPress: e => {
-          e.preventDefault();
-          Alert.alert(
-            'Logout',
-            'Are you sure you want to logout?',
-            [
-              { text: 'No', style: 'cancel' },
-              {
-                text: 'Yes',
-                style: 'destructive',
-                onPress: async () => {
-                  await logoutCurrentUser();
-                  navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-                },
-              },
-            ],
-            { cancelable: true },
-          );
-        },
-      }),
     },
   },
 });
@@ -378,11 +334,6 @@ const RootStack = createNativeStackNavigator({
 });
 
 const Navigation = createStaticNavigation(RootStack);
-
-const logoutCurrentUser = async () => {
-  await clearSavedLoginCredentials();
-  store.dispatch(logout());
-};
 
 function PushNotificationRegistrar() {
   const studentId = useSelector((state: RootState) => state.common.studentId);
