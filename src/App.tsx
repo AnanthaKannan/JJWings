@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { StatusBar, Alert, useColorScheme } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, StatusBar, Alert, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   CommonActions,
@@ -38,6 +38,50 @@ import {
   TopExplorerScreen,
 } from './screens';
 
+type AnimatedTabIconProps = {
+  name: string;
+  color: string;
+  size: number;
+  focused: boolean;
+};
+
+function AnimatedTabIcon({
+  name,
+  color,
+  size,
+  focused,
+}: AnimatedTabIconProps) {
+  const progress = useRef(new Animated.Value(focused ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(progress, {
+      toValue: focused ? 1 : 0,
+      friction: 4,
+      tension: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [focused, progress]);
+
+  const scale = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.18],
+  });
+  const translateY = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -4],
+  });
+  const rotate = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '-7deg'],
+  });
+
+  return (
+    <Animated.View style={{ transform: [{ translateY }, { scale }, { rotate }] }}>
+      <MaterialIcons name={name} color={color} size={size} />
+    </Animated.View>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // STUDENT NAVIGATOR
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,8 +110,13 @@ const MainTabs = createBottomTabNavigator({
       screen: ProgressDashboard,
       options: {
         tabBarLabel: 'Progress',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="insights" color={color} size={size} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="insights"
+            color={color}
+            size={size}
+            focused={focused}
+          />
         ),
       },
     },
@@ -89,8 +138,13 @@ const MainTabs = createBottomTabNavigator({
                   backgroundColor: '#FFFFFF',
                   borderTopColor: '#E5E7EB',
                 },
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="book" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon
+              name="book"
+              color={color}
+              size={size}
+              focused={focused}
+            />
           ),
         };
       },
@@ -110,8 +164,13 @@ const MainTabs = createBottomTabNavigator({
       screen: TopExplorerScreen,
       options: {
         tabBarLabel: 'Top',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="emoji-events" color={color} size={size} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="emoji-events"
+            color={color}
+            size={size}
+            focused={focused}
+          />
         ),
       },
     },
@@ -119,8 +178,13 @@ const MainTabs = createBottomTabNavigator({
       screen: NotificationsScreen,
       options: {
         tabBarLabel: 'Notifications',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="notifications" color={color} size={size} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="notifications"
+            color={color}
+            size={size}
+            focused={focused}
+          />
         ),
       },
     },
@@ -128,8 +192,13 @@ const MainTabs = createBottomTabNavigator({
       screen: ProfileScreen,
       options: {
         tabBarLabel: 'Logout',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="logout" color={color} size={size} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="logout"
+            color={color}
+            size={size}
+            focused={focused}
+          />
         ),
       },
       listeners: ({ navigation }) => ({
