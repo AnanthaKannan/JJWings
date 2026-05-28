@@ -179,7 +179,7 @@ export default function QuizReviewScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
       <Header
         heading="Quiz Review"
-        sideHead={`⭐ Level ${hw?.questionLabel}`}
+        sideHead={`⭐ Level ${hw?.questionLabel ?? ''}`}
       />
 
       {isFocused && isLoading && !hw ? (
