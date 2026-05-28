@@ -33,6 +33,7 @@ import {
   AssignHomeworkScreen,
   ProgressDashboard,
   NotificationsScreen,
+  AdminMessageScreen,
 } from './screens';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,6 +209,16 @@ const AdminTabs = createBottomTabNavigator({
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="playlist-add" color={color} size={size} />
+        ),
+      },
+    },
+    AdminMessages: {
+      screen: AdminMessageScreen,
+      options: {
+        tabBarLabel: 'Message',
+        unmountOnBlur: true,
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="mail" color={color} size={size} />
         ),
       },
     },

@@ -87,6 +87,7 @@ export type Student = {
   id: string;
   name: string;
   studentId?: string;
+  fcmTokens: string[];
   horizontal: boolean;
   assigned: number;
   completed: number;
@@ -231,10 +232,20 @@ type NotificationsArg = {
   studentId: string;
 };
 
+type SendNotificationArg = {
+  studentIds: Array<{
+    id: string;
+    tokens: string[];
+  }>;
+  messageHeader: string;
+  messageBody: string;
+};
+
 const mapStudent = (student: ApiStudent): Student => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
+  fcmTokens: student.fcmTokens ?? [],
   horizontal: !(student.vertical ?? true),
   assigned: student.score?.assigned ?? 0,
   completed: student.score?.completed ?? 0,
@@ -445,6 +456,20 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    sendNotification: builder.mutation<string, SendNotificationArg>({
+      query: body => ({
+        url: '/admin/notifications',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentIds }) =>
+        studentIds.map(student => ({
+          type: 'Notifications' as const,
+          id: student.id,
+        })),
+    }),
+
     addStudent: builder.mutation<string, AddStudentArg>({
       query: ({ name }) => ({
         url: '/admin/students',
@@ -557,4 +582,5 @@ export const {
   useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
+  useSendNotificationMutation,
 } = jjWingsApi;
