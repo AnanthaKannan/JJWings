@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 
 import {
   useGetStudentsQuery,
@@ -169,8 +169,11 @@ export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
 
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
 
-  const { data: students, isLoading } = useGetStudentsQuery(undefined);
+  const { data: students, isLoading } = useGetStudentsQuery(undefined, {
+    skip: !isFocused,
+  });
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
 
@@ -193,7 +196,7 @@ export default function StudentDirectoryScreen() {
       s.studentId?.toLowerCase().includes(search.toLowerCase()) ||
       s.id.toLowerCase().includes(search.toLowerCase()),
   );
-  const showLoader = isLoading && !students;
+  const showLoader = isFocused && isLoading && !students;
 
   const handleAssignPress = (student: Student) => {
     navigation.navigate('AssignHomework', {

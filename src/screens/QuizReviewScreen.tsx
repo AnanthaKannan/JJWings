@@ -8,6 +8,7 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 import { useGetHomeworkByIdQuery } from '../store/api';
@@ -145,6 +146,7 @@ const QuestionCard = ({
 export default function QuizReviewScreen() {
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
+  const isFocused = useIsFocused();
 
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const questions = useSelector((state: RootState) => state.common.questions);
@@ -152,8 +154,7 @@ export default function QuizReviewScreen() {
   const { data: hw, isLoading } = useGetHomeworkByIdQuery(
     { homeworkId: homeworkId ?? '' },
     {
-      skip: !homeworkId,
-      refetchOnMountOrArgChange: true,
+      skip: !isFocused || !homeworkId,
     },
   );
 
@@ -178,100 +179,103 @@ export default function QuizReviewScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
       <Header heading="Quiz Review" sideHead={`⭐ Level ${hw?.questionId}`} />
 
-      {isLoading && !hw ? (
+      {isFocused && isLoading && !hw ? (
         <View style={styles.loaderWrap}>
           <LoadingState label="Loading quiz review..." />
         </View>
       ) : (
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Hero Score Card */}
-        <Animated.View
-          style={[
-            styles.heroCard,
-            {
-              opacity: headerAnim,
-              transform: [
-                {
-                  translateY: headerAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.heroLeft}>
-            <Text style={styles.heroTitle}>Great Job!</Text>
-            <View
-              style={{ flexDirection: 'row', justifyContent: 'space-between' }}
-            >
-              <View>
-                <View style={styles.scorePill}>
-                  <Text style={styles.scorePillLabel}>FINAL SCORE</Text>
+          {/* Hero Score Card */}
+          <Animated.View
+            style={[
+              styles.heroCard,
+              {
+                opacity: headerAnim,
+                transform: [
+                  {
+                    translateY: headerAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.heroLeft}>
+              <Text style={styles.heroTitle}>Great Job!</Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View>
+                  <View style={styles.scorePill}>
+                    <Text style={styles.scorePillLabel}>FINAL SCORE</Text>
+                  </View>
+                  <View style={styles.statsRow}>
+                    <Animated.View
+                      style={{
+                        transform: [{ scale: scoreAnim }],
+                      }}
+                    >
+                      <View style={styles.scoreRow}>
+                        <Text style={styles.scoreNumber}>
+                          {hw?.result?.filter(val => val === true)?.length}
+                        </Text>
+                        <Text style={styles.scoreTotal}>
+                          /{hw?.result?.length}
+                        </Text>
+                      </View>
+                    </Animated.View>
+                  </View>
                 </View>
-                <View style={styles.statsRow}>
+                <View>
+                  <View style={styles.scorePill}>
+                    <Text style={styles.scorePillLabel}>TIME TAKEN</Text>
+                  </View>
                   <Animated.View
                     style={{
                       transform: [{ scale: scoreAnim }],
                     }}
                   >
                     <View style={styles.scoreRow}>
-                      <Text style={styles.scoreNumber}>
-                        {hw?.result?.filter(val => val === true)?.length}
-                      </Text>
-                      <Text style={styles.scoreTotal}>
-                        /{hw?.result?.length}
+                      <Text style={styles.timerShow}>
+                        {formatTime(hw?.timer)}
                       </Text>
                     </View>
                   </Animated.View>
                 </View>
               </View>
-              <View>
-                <View style={styles.scorePill}>
-                  <Text style={styles.scorePillLabel}>TIME TAKEN</Text>
-                </View>
-                <Animated.View
-                  style={{
-                    transform: [{ scale: scoreAnim }],
-                  }}
-                >
-                  <View style={styles.scoreRow}>
-                    <Text style={styles.timerShow}>
-                      {formatTime(hw?.timer)}
-                    </Text>
-                  </View>
-                </Animated.View>
-              </View>
             </View>
-          </View>
-          <View style={styles.heroRight}>
-            <TrophyIcon />
-          </View>
-        </Animated.View>
+            <View style={styles.heroRight}>
+              <TrophyIcon />
+            </View>
+          </Animated.View>
 
-        {/* Section Title */}
-        <Text style={styles.sectionTitle}>Detailed Results</Text>
+          {/* Section Title */}
+          <Text style={styles.sectionTitle}>Detailed Results</Text>
 
-        {/* Question Cards */}
-        {hw &&
-          questions &&
-          questions.map((question, index) => (
-            <QuestionCard
-              key={question}
-              index={index}
-              question={question}
-              answer={hw?.answer[index]}
-              correctAnswer={evaluateExpression(question)}
-              isWrong={!hw?.result[index]}
-            />
-          ))}
+          {/* Question Cards */}
+          {hw &&
+            questions &&
+            questions.map((question, index) => (
+              <QuestionCard
+                key={question}
+                index={index}
+                question={question}
+                answer={hw?.answer[index]}
+                correctAnswer={evaluateExpression(question)}
+                isWrong={!hw?.result[index]}
+              />
+            ))}
 
-        <View style={{ height: 32 }} />
-      </ScrollView>
+          <View style={{ height: 32 }} />
+        </ScrollView>
       )}
     </SafeAreaView>
   );

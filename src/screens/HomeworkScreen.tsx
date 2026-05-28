@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
@@ -166,6 +166,7 @@ function HomeworkCard({
 
 export default function HomeworkScreen() {
   const route = useRoute<any>();
+  const isFocused = useIsFocused();
   const routeStudentId = route?.params?.studentId;
   const studentName = route?.params?.studentName;
   const isAdminReview = route?.params?.adminReview === true;
@@ -184,7 +185,7 @@ export default function HomeworkScreen() {
   } = useGetHomeworksQuery(
     { studentId: studentId ?? '', state: selectedFilter },
     {
-      skip: !studentId,
+      skip: !isFocused || !studentId,
     },
   );
 
@@ -199,7 +200,7 @@ export default function HomeworkScreen() {
 
   const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
-  const showLoader = isLoading && filteredHomeworks.length === 0;
+  const showLoader = isFocused && isLoading && filteredHomeworks.length === 0;
 
   return (
     <SafeAreaView style={styles.safe}>

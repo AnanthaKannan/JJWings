@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useIsFocused } from '@react-navigation/native';
 import { AdminHeader, LoadingState } from '../component';
 import { useGetQuestionsQuery } from '../store/api';
 
@@ -113,7 +114,10 @@ const ModuleCard = ({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeworkLibraryScreen() {
-  const { data: questionsData, isLoading } = useGetQuestionsQuery(undefined);
+  const isFocused = useIsFocused();
+  const { data: questionsData, isLoading } = useGetQuestionsQuery(undefined, {
+    skip: !isFocused,
+  });
 
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -156,7 +160,7 @@ export default function HomeworkLibraryScreen() {
           <ModuleCard item={item} onPress={() => handleModulePress(item)} />
         )}
         ListEmptyComponent={
-          isLoading ? (
+          isFocused && isLoading ? (
             <LoadingState label="Loading questions..." />
           ) : (
             <View style={styles.emptyState}>

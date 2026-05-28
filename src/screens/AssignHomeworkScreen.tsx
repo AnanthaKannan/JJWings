@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { LoadingState } from '../component';
@@ -96,6 +96,7 @@ const TaskRow = ({
 export default function AssignHomeworkScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const isFocused = useIsFocused();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const studentName = route?.params?.studentName ?? 'Student';
@@ -103,13 +104,14 @@ export default function AssignHomeworkScreen() {
   const showAssignedOnly = route?.params?.showAssigned === true;
   const { data: allTasks = [], isLoading: isLoadingAllTasks } =
     useGetQuestionsQuery(undefined, {
+      skip: !isFocused || !showAssignedOnly,
       refetchOnMountOrArgChange: true,
     });
   const { data: availableTasks = [], isLoading: isLoadingAvailableTasks } =
     useGetAvailableQuestionsQuery(
       { studentId: studentId ?? '' },
       {
-        skip: !studentId || showAssignedOnly,
+        skip: !isFocused || !studentId || showAssignedOnly,
         refetchOnMountOrArgChange: true,
       },
     );
@@ -125,7 +127,7 @@ export default function AssignHomeworkScreen() {
     useGetHomeworksQuery(
       { studentId: studentId ?? '', state: HomeworkState.NEW },
       {
-        skip: !studentId,
+        skip: !isFocused || !studentId,
         refetchOnMountOrArgChange: true,
       },
     );
@@ -137,7 +139,7 @@ export default function AssignHomeworkScreen() {
     useGetHomeworksQuery(
       { studentId: studentId ?? '', state: HomeworkState.PROGRESS },
       {
-        skip: !studentId,
+        skip: !isFocused || !studentId,
         refetchOnMountOrArgChange: true,
       },
     );
@@ -149,7 +151,7 @@ export default function AssignHomeworkScreen() {
     useGetHomeworksQuery(
       { studentId: studentId ?? '', state: HomeworkState.COMPLETED },
       {
-        skip: !studentId,
+        skip: !isFocused || !studentId,
         refetchOnMountOrArgChange: true,
       },
     );
@@ -159,7 +161,7 @@ export default function AssignHomeworkScreen() {
     isLoadingNewHomeworks ||
     isLoadingProgressHomeworks ||
     isLoadingCompletedHomeworks;
-  const showLoader = isLoading || isLoadingAssignments;
+  const showLoader = isFocused && (isLoading || isLoadingAssignments);
   const assignedQuestionIds = new Set(
     [...newHomeworks, ...progressHomeworks, ...completedHomeworks].map(
       homework => homework.questionId,

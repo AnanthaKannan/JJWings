@@ -12,7 +12,7 @@ import {
   StatusBar,
   RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 import { useGetScoreQuery } from '../store/api';
@@ -257,6 +257,7 @@ const PulseBadge: React.FC<PulseBadgeProps> = ({
 // ── Main Dashboard ─────────────────────────────────────────────────────
 const ProgressDashboard: React.FC = () => {
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const studentId = useSelector((state: RootState) => state.common.studentId);
   const headerAnim = useRef(new Animated.Value(-60)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -272,9 +273,9 @@ const ProgressDashboard: React.FC = () => {
     refetch: refetchScore,
   } = useGetScoreQuery(
     { studentId: studentId ?? '' },
-    { skip: !studentId },
+    { skip: !isFocused || !studentId },
   );
-  const showLoader = isLoading && !score;
+  const showLoader = isFocused && isLoading && !score;
 
   const assigned = score?.assigned ?? 0;
   const done = score?.completed ?? 0;
