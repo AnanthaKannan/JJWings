@@ -4,7 +4,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { HomeworkState } from '../util/enum';
 import { baseQuery } from './baseQuery';
 
-const DEFAULT_LIMIT = 100;
+const DEFAULT_LIMIT = 500;
 
 type ApiMeta = {
   total: number;
@@ -69,6 +69,20 @@ type ApiHomeworkResponse = {
   homework?: ApiHomework;
 };
 
+type ApiNotification = {
+  _id: string;
+  messageHeader?: string;
+  messageBody?: string;
+  sentBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ApiNotificationsResponse = {
+  data: ApiNotification[];
+  meta: ApiMeta;
+};
+
 export type Student = {
   id: string;
   name: string;
@@ -101,6 +115,15 @@ export type Homework = {
   result: boolean[];
   answer: number[];
   timer: number;
+};
+
+export type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  sender?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type IdGenData = {
@@ -204,6 +227,10 @@ type AvailableQuestionsArg = {
   studentId: string;
 };
 
+type NotificationsArg = {
+  studentId: string;
+};
+
 const mapStudent = (student: ApiStudent): Student => ({
   id: student._id,
   name: student.name ?? '',
@@ -245,6 +272,15 @@ const mapHomework = (homework: ApiHomework): Homework => {
   };
 };
 
+const mapNotification = (notification: ApiNotification): Notification => ({
+  id: notification._id,
+  title: notification.messageHeader ?? '',
+  message: notification.messageBody ?? '',
+  sender: notification.sentBy,
+  createdAt: notification.createdAt,
+  updatedAt: notification.updatedAt,
+});
+
 const getNextStudentId = (students: Student[]): IdGenData => {
   const lastId = students.reduce((highest, student) => {
     const numericId = Number(student.studentId?.replace(/\D/g, '') ?? 0);
@@ -264,6 +300,7 @@ export const jjWingsApi = createApi({
     'Questions',
     'Homework',
     'Score',
+    'Notifications',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<Homework[], HomeworkArg>({
@@ -396,6 +433,18 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    getNotifications: builder.query<Notification[], NotificationsArg>({
+      query: ({ studentId }) => ({
+        url: `/notifications/${studentId}`,
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiNotificationsResponse) =>
+        response.data.map(mapNotification),
+      providesTags: (_result, _error, { studentId }) => [
+        { type: 'Notifications', id: studentId },
+      ],
+    }),
+
     addStudent: builder.mutation<string, AddStudentArg>({
       query: ({ name }) => ({
         url: '/admin/students',
@@ -507,4 +556,5 @@ export const {
   useAssignHomeworkMutation,
   useGetIdGenQuery,
   useGetScoreQuery,
+  useGetNotificationsQuery,
 } = jjWingsApi;

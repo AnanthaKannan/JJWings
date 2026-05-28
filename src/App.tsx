@@ -32,6 +32,7 @@ import {
   CreateNewTaskScreen,
   AssignHomeworkScreen,
   ProgressDashboard,
+  NotificationsScreen,
 } from './screens';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,6 +88,15 @@ const MainTabs = createBottomTabNavigator({
           );
         },
       }),
+    },
+    Notifications: {
+      screen: NotificationsScreen,
+      options: {
+        tabBarLabel: 'Notifications',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="notifications" color={color} size={size} />
+        ),
+      },
     },
     Logout: {
       screen: ProfileScreen,
