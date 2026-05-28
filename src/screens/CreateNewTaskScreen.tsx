@@ -323,7 +323,17 @@ export default function CreateNewTaskScreen() {
     } catch (err) {
       console.log(err);
 
-      Alert.alert('Error', err?.data?.err || 'Failed to save task');
+      const errorMessage =
+        err &&
+        typeof err === 'object' &&
+        'data' in err &&
+        err.data &&
+        typeof err.data === 'object' &&
+        'err' in err.data
+          ? String(err.data.err)
+          : 'Failed to save task';
+
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSaving(false);
     }

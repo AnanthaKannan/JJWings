@@ -35,6 +35,7 @@ import {
   ProgressDashboard,
   NotificationsScreen,
   AdminMessageScreen,
+  TopExplorerScreen,
 } from './screens';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -104,6 +105,15 @@ const MainTabs = createBottomTabNavigator({
           );
         },
       }),
+    },
+    TopExplorer: {
+      screen: TopExplorerScreen,
+      options: {
+        tabBarLabel: 'Top',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
+        ),
+      },
     },
     Notifications: {
       screen: NotificationsScreen,
