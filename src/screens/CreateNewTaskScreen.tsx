@@ -322,17 +322,8 @@ export default function CreateNewTaskScreen() {
       );
     } catch (err) {
       console.log(err);
-      const rawError =
-        typeof err === 'string'
-          ? err
-          : err && typeof err === 'object' && 'error' in err
-          ? String(err.error)
-          : '';
-      const errorMessage = rawError.includes('Task identifier already exists')
-        ? 'Task identifier already exists'
-        : 'Failed to save task. Please try again.';
 
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', err?.data?.err || 'Failed to save task');
     } finally {
       setIsSaving(false);
     }
