@@ -12,7 +12,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useIsFocused,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { LoadingState } from '../component';
@@ -98,14 +102,12 @@ export default function AssignHomeworkScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const studentName = route?.params?.studentName ?? 'Student';
   const studentId = route?.params?.studentId;
-  const { data: tasks = [], isLoading } =
-    useGetAvailableQuestionsQuery(
-      { studentId: studentId ?? '' },
-      {
-        skip: !isFocused || !studentId,
-        refetchOnMountOrArgChange: true,
-      },
-    );
+  const { data: tasks = [], isLoading } = useGetAvailableQuestionsQuery(
+    { studentId: studentId ?? '' },
+    {
+      skip: !isFocused || !studentId,
+    },
+  );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
   const showLoader = isFocused && isLoading;
@@ -153,14 +155,10 @@ export default function AssignHomeworkScreen() {
       .join(', ');
 
     try {
-      await Promise.all(
-        questionIds.map(questionId =>
-          assignHomework({
-            studentId,
-            questionId,
-          }).unwrap(),
-        ),
-      );
+      await assignHomework({
+        studentId,
+        questionIds,
+      }).unwrap();
       setSelectedIds(new Set());
 
       Alert.alert(
@@ -243,9 +241,7 @@ export default function AssignHomeworkScreen() {
                   disabled={!hasAvailableTasks}
                 >
                   <Text style={styles.selectAllText}>
-                    {allAvailableSelected
-                      ? 'Deselect All'
-                      : 'Select All'}
+                    {allAvailableSelected ? 'Deselect All' : 'Select All'}
                   </Text>
                 </TouchableOpacity>
               </View>

@@ -49,7 +49,6 @@ export default function LoginScreen() {
           await saveLoginCredentials({ studentId: cleanStudentId, password });
         }
 
-        console.log('result.data.token', result.data.token);
         if (result.data.role === 'student') {
           dispatch(
             setStudentCredentials({

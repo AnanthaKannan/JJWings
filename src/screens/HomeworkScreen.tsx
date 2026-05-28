@@ -8,7 +8,11 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useIsFocused,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
@@ -178,25 +182,12 @@ export default function HomeworkScreen() {
   );
   const studentId = isAdminReview ? routeStudentId : loggedInStudentId;
 
-  const {
-    data: homeworks,
-    error,
-    isLoading,
-  } = useGetHomeworksQuery(
+  const { data: homeworks, isLoading } = useGetHomeworksQuery(
     { studentId: studentId ?? '', state: selectedFilter },
     {
       skip: !isFocused || !studentId,
     },
   );
-
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     console.log('Student Directory focused: refetching students');
-  //     refetch();
-  //   }, [refetch]),
-  // );
-
-  console.log('--------------------', homeworks, error);
 
   const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
@@ -249,9 +240,7 @@ export default function HomeworkScreen() {
           })}
         </View>
 
-        {showLoader && (
-          <LoadingState label="Loading homework..." />
-        )}
+        {showLoader && <LoadingState label="Loading homework..." />}
 
         {!showLoader &&
           filteredHomeworks.map(task => (

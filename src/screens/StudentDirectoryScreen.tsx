@@ -177,19 +177,6 @@ export default function StudentDirectoryScreen() {
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     console.log('Student Directory focused: refetching students');
-  //     refetch();
-  //   }, [refetch]),
-  // );
-
-  useEffect(() => {
-    console.log('-----------------------------------eeeeeeeeeeee-----------');
-  }, []);
-
-  console.log('>>>>>>>>>>>>>>>>> Student dir', students);
-
   const filtered = students?.filter(
     s =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -264,11 +251,12 @@ export default function StudentDirectoryScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            showLoader ? null :
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>🔍</Text>
-              <Text style={styles.emptyText}>No students found</Text>
-            </View>
+            showLoader ? null : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>🔍</Text>
+                <Text style={styles.emptyText}>No students found</Text>
+              </View>
+            )
           }
         />
       </View>

@@ -222,7 +222,7 @@ type CreateQuestionArg = {
 
 type AssignHomeworkArg = {
   studentId: string;
-  questionId: string;
+  questionIds: string[];
 };
 
 type AvailableQuestionsArg = {
@@ -532,10 +532,10 @@ export const jjWingsApi = createApi({
     }),
 
     assignHomework: builder.mutation<string, AssignHomeworkArg>({
-      query: ({ studentId, questionId }) => ({
+      query: ({ studentId, questionIds }) => ({
         url: '/admin/questions/assign',
         method: 'POST',
-        body: { studentId, questionId },
+        body: { studentId, questionIds },
       }),
       transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { studentId }) => [
