@@ -12,9 +12,8 @@ import { Provider, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
 import { clearSavedLoginCredentials } from './util/authStorage';
 import { logout } from './store/slices';
-import { jjWingsApi, useUpdateStudentFcmTokenMutation } from './store/api';
+import { useUpdateStudentFcmTokenMutation } from './store/api';
 import {
-  getCurrentStudentPushToken,
   getStudentPushToken,
   onStudentPushMessage,
   onStudentPushTokenRefresh,
@@ -254,27 +253,6 @@ const RootStack = createNativeStackNavigator({
 const Navigation = createStaticNavigation(RootStack);
 
 const logoutCurrentUser = async () => {
-  const { studentId, isStudent } = store.getState().common;
-
-  if (studentId && isStudent) {
-    try {
-      const token = await getCurrentStudentPushToken();
-
-      if (token) {
-        await store
-          .dispatch(
-            jjWingsApi.endpoints.removeStudentFcmToken.initiate({
-              studentId,
-              fcmToken: token,
-            }),
-          )
-          .unwrap();
-      }
-    } catch (error) {
-      console.warn('Failed to remove push token during logout', error);
-    }
-  }
-
   await clearSavedLoginCredentials();
   store.dispatch(logout());
 };
@@ -295,7 +273,7 @@ function PushNotificationRegistrar() {
 
         if (!token || !isActive) return;
 
-        await updateStudentFcmToken({ studentId, fcmToken: token }).unwrap();
+        await updateStudentFcmToken({ fcmToken: token }).unwrap();
       } catch (error) {
         console.error('Failed to register push token', error);
       }
@@ -304,7 +282,7 @@ function PushNotificationRegistrar() {
     registerToken();
 
     const unsubscribe = onStudentPushTokenRefresh(token => {
-      updateStudentFcmToken({ studentId, fcmToken: token }).catch(error => {
+      updateStudentFcmToken({ fcmToken: token }).catch(error => {
         console.error('Failed to refresh push token', error);
       });
     });

@@ -16,6 +16,7 @@ interface AuthState {
   adminId: string;
   adminName: string;
   isAdmin: boolean;
+  vertical: boolean;
 }
 
 const initialState: AuthState = {
@@ -33,6 +34,7 @@ const initialState: AuthState = {
   adminId: '',
   adminName: '',
   isAdmin: false,
+  vertical: false,
 };
 
 const commonSlice = createSlice({
@@ -46,16 +48,16 @@ const commonSlice = createSlice({
         isStudent: boolean;
         studentName: string;
         token?: string;
+        vertical: boolean;
       }>,
     ) => {
       state.studentId = action.payload.studentId;
       state.studentName = action.payload.studentName;
       state.isStudent = action.payload.isStudent;
-      state.adminId = '';
-      state.adminName = '';
       state.isAdmin = false;
       state.isAuthenticated = true;
       state.token = action.payload.token ?? null;
+      state.vertical = action.payload.vertical;
     },
     setAdminCredentials: (
       state,
@@ -69,8 +71,6 @@ const commonSlice = createSlice({
       state.adminId = action.payload.adminId;
       state.adminName = action.payload.adminName;
       state.isAdmin = true;
-      state.studentId = null;
-      state.studentName = '';
       state.isStudent = false;
       state.isAuthenticated = true;
       state.token = action.payload.token ?? null;

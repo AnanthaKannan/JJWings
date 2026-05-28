@@ -6,10 +6,7 @@ import { useSelector } from 'react-redux';
 
 import { NumPad, QuizSuccessModal } from './index';
 import { RootState } from '../store/store';
-import {
-  useGetStudentByIdQuery,
-  useUpdateHomeworkMutation,
-} from '../store/api';
+import { useUpdateHomeworkMutation } from '../store/api';
 import { HomeworkState } from '../util/enum';
 import { evaluateExpression } from '../util/fn';
 
@@ -75,23 +72,12 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
-  const studentId = useSelector((state: RootState) => state.common.studentId);
-
-  console.log(
-    '>>>>>>>>>>>>>>>>>> QuizScreen',
-    homeworkId,
-    selResult,
-    selAnswer,
-  );
+  const isHorizontal = useSelector((state: RootState) => state.common.vertical);
 
   const selQuestions = useSelector(
     (state: RootState) => state.common.questions,
   );
   const [updateHomework] = useUpdateHomeworkMutation();
-  const { data: student } = useGetStudentByIdQuery(
-    { studentId: studentId ?? '' },
-    { skip: !studentId },
-  );
 
   const [data, setData] = useState<QuizData>({
     questions: [],
@@ -117,7 +103,6 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   const navigation = useNavigation<NavigationProp>();
   const { questions, answer, result } = data;
   const currentQuestion = questions[result.length] ?? '';
-  const isHorizontal = student?.horizontal ?? false;
   const verticalQuestionParts = getVerticalQuestionParts(currentQuestion);
   const horizontalQuestion = formatHorizontalQuestion(currentQuestion);
 

@@ -54,6 +54,7 @@ export default function LoginScreen() {
           dispatch(
             setStudentCredentials({
               studentId: result.data.id,
+              vertical: result.data.vertical,
               isStudent: true,
               studentName: result.data.name,
               token: result.data.token,

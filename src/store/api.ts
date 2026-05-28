@@ -133,6 +133,7 @@ type LoginApiResponse = {
     name: string;
     studentId?: string;
     adminId?: string;
+    vertical: boolean;
   };
 };
 
@@ -141,6 +142,7 @@ type LoginResult = {
   name: string;
   role: 'student' | 'admin';
   token: string;
+  vertical: boolean;
 };
 
 type HomeworkArg = {
@@ -170,6 +172,10 @@ type UpdateStudentHorizontalArg = {
 };
 
 type UpdateStudentFcmTokenArg = {
+  fcmToken: string;
+};
+
+type RemoveStudentFcmTokenArg = {
   studentId: string;
   fcmToken: string;
 };
@@ -313,6 +319,7 @@ export const jjWingsApi = createApi({
         name: response.user.name,
         role: response.role,
         token: response.token,
+        vertical: response.user.vertical,
       }),
     }),
 
@@ -416,15 +423,15 @@ export const jjWingsApi = createApi({
     }),
 
     updateStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
-      query: ({ studentId, fcmToken }) => ({
-        url: `/admin/students/${studentId}`,
+      query: ({ fcmToken }) => ({
+        url: '/student/fcm-token',
         method: 'PATCH',
         body: { fcmToken },
       }),
       transformResponse: () => 'success',
     }),
 
-    removeStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
+    removeStudentFcmToken: builder.mutation<string, RemoveStudentFcmTokenArg>({
       query: ({ studentId, fcmToken }) => ({
         url: `/admin/students/${studentId}`,
         method: 'PATCH',

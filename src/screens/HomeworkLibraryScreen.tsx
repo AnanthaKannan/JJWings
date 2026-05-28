@@ -207,17 +207,6 @@ export default function HomeworkLibraryScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* ── FAB ── */}
-      <TouchableOpacity
-        style={styles.fab}
-        activeOpacity={0.85}
-        onPress={() =>
-          Alert.alert('Add Module', 'Navigate to add module screen')
-        }
-      >
-        <MaterialIcons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
