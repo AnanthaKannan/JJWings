@@ -28,13 +28,10 @@ export default function AddStudentScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFormValid = fullName.trim().length > 0 && studentId.trim().length > 0;
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
 
   const [addStudent] = useAddStudentMutation();
-  const { data: idGenData, refetch } = useGetIdGenQuery(undefined, {
-    refetchOnFocus: true,
-    refetchOnMountOrArgChange: true,
-  });
+  const { data: idGenData, refetch } = useGetIdGenQuery(undefined);
 
   console.log('idGenData', idGenData);
 
@@ -94,7 +91,9 @@ export default function AddStudentScreen() {
             text: 'OK',
             onPress: () => {
               setFullName('');
-              navigation.goBack();
+              navigation.navigate('AdminStudents', {
+                screen: 'StudentDirectory',
+              });
             },
           },
         ],

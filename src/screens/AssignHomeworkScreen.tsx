@@ -17,12 +17,15 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import {
   useAssignHomeworkMutation,
+  useGetAvailableQuestionsQuery,
   useGetHomeworksQuery,
   useGetQuestionsQuery,
 } from '../store/api';
+import { HomeworkState } from '../util/enum';
 
 type Task = {
   id: string;
+  questionId?: string;
   question: string[];
 };
 
@@ -56,7 +59,7 @@ const TaskRow = ({
     <View style={styles.taskContent}>
       <View style={styles.taskTitleRow}>
         <Text style={[styles.taskId, disabled && styles.taskTextDisabled]}>
-          {item.id}
+          {item.questionId ?? item.id}
         </Text>
         {disabled && (
           <View style={styles.assignedBadge}>
@@ -97,12 +100,41 @@ export default function AssignHomeworkScreen() {
   const studentName = route?.params?.studentName ?? 'Student';
   const studentId = route?.params?.studentId;
   const showAssignedOnly = route?.params?.showAssigned === true;
-  const { data: tasks = [], isLoading } = useGetQuestionsQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-  });
-  const { data: assignedHomeworks = [], refetch: refetchAssignedHomeworks } =
-    useGetHomeworksQuery(
+  const { data: allTasks = [], isLoading: isLoadingAllTasks } =
+    useGetQuestionsQuery(undefined, {
+      refetchOnMountOrArgChange: true,
+    });
+  const { data: availableTasks = [], isLoading: isLoadingAvailableTasks } =
+    useGetAvailableQuestionsQuery(
       { studentId: studentId ?? '' },
+      {
+        skip: !studentId || showAssignedOnly,
+        refetchOnMountOrArgChange: true,
+      },
+    );
+  const tasks = showAssignedOnly ? allTasks : availableTasks;
+  const isLoading = showAssignedOnly
+    ? isLoadingAllTasks
+    : isLoadingAvailableTasks;
+  const { data: newHomeworks = [], refetch: refetchNewHomeworks } =
+    useGetHomeworksQuery(
+      { studentId: studentId ?? '', state: HomeworkState.NEW },
+      {
+        skip: !studentId,
+        refetchOnMountOrArgChange: true,
+      },
+    );
+  const { data: progressHomeworks = [], refetch: refetchProgressHomeworks } =
+    useGetHomeworksQuery(
+      { studentId: studentId ?? '', state: HomeworkState.PROGRESS },
+      {
+        skip: !studentId,
+        refetchOnMountOrArgChange: true,
+      },
+    );
+  const { data: completedHomeworks = [], refetch: refetchCompletedHomeworks } =
+    useGetHomeworksQuery(
+      { studentId: studentId ?? '', state: HomeworkState.COMPLETED },
       {
         skip: !studentId,
         refetchOnMountOrArgChange: true,
@@ -111,7 +143,9 @@ export default function AssignHomeworkScreen() {
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
   const assignedQuestionIds = new Set(
-    assignedHomeworks.map(homework => homework.questionId),
+    [...newHomeworks, ...progressHomeworks, ...completedHomeworks].map(
+      homework => homework.questionId,
+    ),
   );
 
   const filtered = tasks
@@ -120,6 +154,7 @@ export default function AssignHomeworkScreen() {
 
       return (
         task.id.toLowerCase().includes(search.toLowerCase()) ||
+        task.questionId?.toLowerCase().includes(search.toLowerCase()) ||
         task.question.some(question =>
           question.toLowerCase().includes(search.toLowerCase()),
         )
@@ -169,15 +204,23 @@ export default function AssignHomeworkScreen() {
     const questionIds = Array.from(selectedIds);
     const names = tasks
       .filter(task => selectedIds.has(task.id))
-      .map(task => task.id)
+      .map(task => task.questionId ?? task.id)
       .join(', ');
 
     try {
-      await assignHomework({
-        studentId,
-        questionIds,
-      }).unwrap();
-      await refetchAssignedHomeworks();
+      await Promise.all(
+        questionIds.map(questionId =>
+          assignHomework({
+            studentId,
+            questionId,
+          }).unwrap(),
+        ),
+      );
+      await Promise.all([
+        refetchNewHomeworks(),
+        refetchProgressHomeworks(),
+        refetchCompletedHomeworks(),
+      ]);
       setSelectedIds(new Set());
 
       Alert.alert(

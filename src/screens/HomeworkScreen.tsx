@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -23,6 +24,7 @@ import { HomeworkState } from '../util/enum';
 
 interface HomeworkCardProps {
   questionId: string;
+  questionLabel?: string;
   homeworkId: string;
   question: string[];
   state: BadgeType;
@@ -43,6 +45,7 @@ const FILTERS: { label: string; value: BadgeType }[] = [
 function HomeworkCard({
   homeworkId,
   questionId,
+  questionLabel,
   question,
   state,
   result,
@@ -74,7 +77,7 @@ function HomeworkCard({
         homeworkId,
         result,
         answer,
-        questionId,
+        questionId: questionLabel ?? questionId,
         timer,
       }),
     );
@@ -105,7 +108,7 @@ function HomeworkCard({
         }}
       >
         <View>
-          <Text style={styles.cardTitle}>{questionId}</Text>
+          <Text style={styles.cardTitle}>{questionLabel ?? questionId}</Text>
           {/* <Text style={styles.questionIcon}>
               {' '}
               {state === HomeworkState.COMPLETED ? '✅' : '📋'}
@@ -181,9 +184,10 @@ export default function HomeworkScreen() {
   const {
     data: homeworks,
     error,
+    isLoading,
     refetch,
   } = useGetHomeworksQuery(
-    { studentId: studentId ?? '' },
+    { studentId: studentId ?? '', state: selectedFilter },
     {
       skip: !studentId,
       refetchOnMountOrArgChange: true,
@@ -199,9 +203,9 @@ export default function HomeworkScreen() {
 
   console.log('--------------------', homeworks, error);
 
-  const filteredHomeworks =
-    homeworks?.filter(homework => homework.state === selectedFilter) ?? [];
+  const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
+  const showLoader = isLoading && filteredHomeworks.length === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -250,20 +254,27 @@ export default function HomeworkScreen() {
           })}
         </View>
 
-        {/* Cards */}
-        {filteredHomeworks.map(task => (
-          <HomeworkCard
-            key={task.id}
-            {...task}
-            homeworkId={task.id}
-            question={task?.question?.question ?? []}
-            isAdminReview={isAdminReview}
-            studentId={studentId}
-            studentName={studentName}
-          />
-        ))}
+        {showLoader && (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color="#2563EB" />
+            <Text style={styles.loadingText}>Loading homework...</Text>
+          </View>
+        )}
 
-        {filteredHomeworks.length === 0 && (
+        {!showLoader &&
+          filteredHomeworks.map(task => (
+            <HomeworkCard
+              key={task.id}
+              {...task}
+              homeworkId={task.id}
+              question={task?.question?.question ?? []}
+              isAdminReview={isAdminReview}
+              studentId={studentId}
+              studentName={studentName}
+            />
+          ))}
+
+        {!showLoader && filteredHomeworks.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No {emptyStateLabel} homework</Text>
           </View>
@@ -344,6 +355,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     fontWeight: '600',
+  },
+  loadingState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 32,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '700',
   },
 
   /* Card */

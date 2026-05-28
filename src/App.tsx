@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { StatusBar, Alert, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -7,10 +8,17 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { Provider } from 'react-redux';
-import { store } from '../src/store/store';
+import { Provider, useSelector } from 'react-redux';
+import { store, RootState } from '../src/store/store';
 import { clearSavedLoginCredentials } from './util/authStorage';
 import { logout } from './store/slices';
+import { jjWingsApi, useUpdateStudentFcmTokenMutation } from './store/api';
+import {
+  getCurrentStudentPushToken,
+  getStudentPushToken,
+  onStudentPushMessage,
+  onStudentPushTokenRefresh,
+} from './services/pushNotifications';
 
 import {
   Calculate,
@@ -101,8 +109,7 @@ const MainTabs = createBottomTabNavigator({
                 text: 'Yes',
                 style: 'destructive',
                 onPress: async () => {
-                  await clearSavedLoginCredentials();
-                  store.dispatch(logout());
+                  await logoutCurrentUser();
                   navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
                 },
               },
@@ -216,8 +223,7 @@ const AdminTabs = createBottomTabNavigator({
                 text: 'Yes',
                 style: 'destructive',
                 onPress: async () => {
-                  await clearSavedLoginCredentials();
-                  store.dispatch(logout());
+                  await logoutCurrentUser();
                   navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
                 },
               },
@@ -247,6 +253,86 @@ const RootStack = createNativeStackNavigator({
 
 const Navigation = createStaticNavigation(RootStack);
 
+const logoutCurrentUser = async () => {
+  const { studentId, isStudent } = store.getState().common;
+
+  if (studentId && isStudent) {
+    try {
+      const token = await getCurrentStudentPushToken();
+
+      if (token) {
+        await store
+          .dispatch(
+            jjWingsApi.endpoints.removeStudentFcmToken.initiate({
+              studentId,
+              fcmToken: token,
+            }),
+          )
+          .unwrap();
+      }
+    } catch (error) {
+      console.warn('Failed to remove push token during logout', error);
+    }
+  }
+
+  await clearSavedLoginCredentials();
+  store.dispatch(logout());
+};
+
+function PushNotificationRegistrar() {
+  const studentId = useSelector((state: RootState) => state.common.studentId);
+  const isStudent = useSelector((state: RootState) => state.common.isStudent);
+  const [updateStudentFcmToken] = useUpdateStudentFcmTokenMutation();
+
+  useEffect(() => {
+    if (!studentId || !isStudent) return;
+
+    let isActive = true;
+
+    const registerToken = async () => {
+      try {
+        const token = await getStudentPushToken();
+
+        if (!token || !isActive) return;
+
+        await updateStudentFcmToken({ studentId, fcmToken: token }).unwrap();
+      } catch (error) {
+        console.error('Failed to register push token', error);
+      }
+    };
+
+    registerToken();
+
+    const unsubscribe = onStudentPushTokenRefresh(token => {
+      updateStudentFcmToken({ studentId, fcmToken: token }).catch(error => {
+        console.error('Failed to refresh push token', error);
+      });
+    });
+
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, [isStudent, studentId, updateStudentFcmToken]);
+
+  return null;
+}
+
+function PushNotificationListener() {
+  useEffect(() => {
+    const unsubscribeMessage = onStudentPushMessage(message => {
+      Alert.alert(
+        message.title ?? 'New homework assigned',
+        message.body ?? 'You have new homework to attend.',
+      );
+    });
+
+    return unsubscribeMessage;
+  }, []);
+
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────────────────────────────────────
@@ -257,6 +343,8 @@ function App() {
     <Provider store={store}>
       <SafeAreaProvider>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <PushNotificationRegistrar />
+        <PushNotificationListener />
         <Navigation />
       </SafeAreaProvider>
     </Provider>

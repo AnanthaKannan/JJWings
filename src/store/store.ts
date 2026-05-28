@@ -1,14 +1,14 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { firestoreApi } from './api';
+import { jjWingsApi } from './api';
 import commonReducer from './slices';
 
 export const store = configureStore({
   reducer: {
     common: commonReducer,
-    [firestoreApi.reducerPath]: firestoreApi.reducer,
+    [jjWingsApi.reducerPath]: jjWingsApi.reducer,
   },
   middleware: getDefaultMiddleware =>
-    getDefaultMiddleware().concat(firestoreApi.middleware),
+    getDefaultMiddleware().concat(jjWingsApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

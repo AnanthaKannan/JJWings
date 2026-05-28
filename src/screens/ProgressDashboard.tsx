@@ -15,9 +15,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
-import { useGetHomeworksQuery, useGetScoreQuery } from '../store/api';
+import { useGetScoreQuery } from '../store/api';
 import { RootState } from '../store/store';
-import { HomeworkState } from '../util/enum';
 import { formatDuration } from '../util/fn';
 
 const { width } = Dimensions.get('window');
@@ -258,7 +257,6 @@ const PulseBadge: React.FC<PulseBadgeProps> = ({
 const ProgressDashboard: React.FC = () => {
   const navigation = useNavigation<any>();
   const studentId = useSelector((state: RootState) => state.common.studentId);
-  const studentName = useSelector((state: RootState) => state.common.name);
   const headerAnim = useRef(new Animated.Value(-60)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(80)).current;
@@ -272,22 +270,10 @@ const ProgressDashboard: React.FC = () => {
     { skip: !studentId, refetchOnMountOrArgChange: true },
   );
 
-  const { data: homeworks = [], refetch: refetchHomeworks } =
-    useGetHomeworksQuery(
-      { studentId: studentId ?? '' },
-      { skip: !studentId, refetchOnMountOrArgChange: true },
-    );
-
-  const assigned = homeworks.length;
-  const done = homeworks.filter(
-    hw => hw.state === HomeworkState.COMPLETED,
-  ).length;
-  const newHomework = homeworks.filter(
-    hw => hw.state === HomeworkState.NEW,
-  ).length;
-  const working = homeworks.filter(
-    hw => hw.state === HomeworkState.PROGRESS,
-  ).length;
+  const assigned = score?.assigned ?? 0;
+  const done = score?.completed ?? 0;
+  const newHomework = score?.new ?? 0;
+  const working = score?.progress ?? 0;
   const correct = score?.success ?? 0;
   const wrong = score?.failure ?? 0;
   const totalSolved = correct + wrong;
@@ -299,11 +285,11 @@ const ProgressDashboard: React.FC = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([refetchScore(), refetchHomeworks()]);
+      await refetchScore();
     } finally {
       setRefreshing(false);
     }
-  }, [refetchScore, refetchHomeworks]);
+  }, [refetchScore]);
 
   // ── Count-up effect — re-runs when totalSolved changes after refresh ─
   useEffect(() => {

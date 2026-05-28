@@ -113,9 +113,7 @@ const ModuleCard = ({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeworkLibraryScreen() {
-  const { data: questionsData } = useGetQuestionsQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-  });
+  const { data: questionsData } = useGetQuestionsQuery(undefined);
 
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -125,7 +123,7 @@ export default function HomeworkLibraryScreen() {
 
     return questionsData.map((q, index) => ({
       id: q.id,
-      title: q.id,
+      title: q.questionId ?? q.id,
       questions: q.question,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 
 import {
   useGetStudentsQuery,
@@ -94,7 +94,7 @@ const StudentRow = ({
       <Avatar color={COLORS[randomNumber(0, 6)]} name={item.name} />
       <View style={styles.nameBlock}>
         <Text style={styles.studentName}>{item.name}</Text>
-        <Text style={styles.studentMeta}>#{item?.id}</Text>
+        <Text style={styles.studentMeta}>#{item.studentId ?? item.id}</Text>
       </View>
     </View>
 
@@ -170,22 +170,27 @@ export default function StudentDirectoryScreen() {
 
   const navigation = useNavigation<any>();
 
-  const { data: students, refetch } = useGetStudentsQuery(undefined);
+  const { data: students } = useGetStudentsQuery(undefined);
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
 
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Student Directory focused: refetching students');
-      refetch();
-    }, [refetch]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     console.log('Student Directory focused: refetching students');
+  //     refetch();
+  //   }, [refetch]),
+  // );
+
+  useEffect(() => {
+    console.log('-----------------------------------eeeeeeeeeeee-----------');
+  }, []);
 
   console.log('>>>>>>>>>>>>>>>>> Student dir', students);
 
   const filtered = students?.filter(
     s =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.studentId?.toLowerCase().includes(search.toLowerCase()) ||
       s.id.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -209,7 +214,7 @@ export default function StudentDirectoryScreen() {
       studentId: student.id,
       horizontal: !student.horizontal,
     }).unwrap();
-    refetch();
+    // refetch();
   };
 
   return (
