@@ -66,6 +66,7 @@ export default function AdminMessageScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { data: students = [], isLoading } = useGetStudentsQuery(undefined, {
     skip: !isFocused,
+    refetchOnMountOrArgChange: true,
   });
   const [sendNotification, { isLoading: isSending }] =
     useSendNotificationMutation();
@@ -82,12 +83,12 @@ export default function AdminMessageScreen() {
     );
   }, [search, students]);
 
-  const selectedStudents = students.filter(student => selectedIds.has(student.id));
-  const selectedStudentsWithTokens = selectedStudents.filter(
-    student => student.fcmTokens.length > 0,
+  const selectedStudents = students.filter(student =>
+    selectedIds.has(student.id),
   );
+
   const isFormValid =
-    selectedStudentsWithTokens.length > 0 &&
+    selectedStudents.length > 0 &&
     messageHeader.trim().length > 0 &&
     messageBody.trim().length > 0;
 
@@ -104,7 +105,7 @@ export default function AdminMessageScreen() {
 
     try {
       await sendNotification({
-        studentIds: selectedStudentsWithTokens.map(student => ({
+        studentIds: selectedStudents.map(student => ({
           id: student.id,
           tokens: student.fcmTokens,
         })),
@@ -209,9 +210,7 @@ export default function AdminMessageScreen() {
             <Text style={styles.sendText}>
               {isSending ? 'Sending...' : 'Send Notification'}
             </Text>
-            {!isSending && (
-              <MaterialIcons name="send" size={18} color="#fff" />
-            )}
+            {!isSending && <MaterialIcons name="send" size={18} color="#fff" />}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -277,6 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 11,
+    marginTop: 8,
     gap: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

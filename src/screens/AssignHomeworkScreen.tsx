@@ -23,6 +23,7 @@ import { LoadingState } from '../component';
 import {
   useAssignHomeworkMutation,
   useGetAvailableQuestionsQuery,
+  useSendNotificationMutation,
 } from '../store/api';
 
 type Task = {
@@ -102,6 +103,7 @@ export default function AssignHomeworkScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const studentName = route?.params?.studentName ?? 'Student';
   const studentId = route?.params?.studentId;
+  const studentTokens = route?.params?.studentTokens ?? [];
   const { data: tasks = [], isLoading } = useGetAvailableQuestionsQuery(
     { studentId: studentId ?? '' },
     {
@@ -110,6 +112,7 @@ export default function AssignHomeworkScreen() {
   );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
+  const [sendNotification] = useSendNotificationMutation();
   const showLoader = isFocused && isLoading;
 
   const filtered = tasks
@@ -149,16 +152,33 @@ export default function AssignHomeworkScreen() {
     }
 
     const questionIds = Array.from(selectedIds);
-    const names = tasks
+    const selectedHomeworkNames = tasks
       .filter(task => selectedIds.has(task.id))
-      .map(task => task.questionId ?? task.id)
-      .join(', ');
+      .map(task => task.questionId ?? task.id);
+    const names = selectedHomeworkNames.join(', ');
 
     try {
       await assignHomework({
         studentId,
         questionIds,
       }).unwrap();
+
+      // if (studentTokens.length > 0) {
+      await sendNotification({
+        studentIds: [
+          {
+            id: studentId,
+            tokens: studentTokens,
+          },
+        ],
+        messageHeader: 'New homework assigned',
+        messageBody:
+          questionIds.length === 1
+            ? `You have 1 new homework task: ${names}.`
+            : `You have ${questionIds.length} new homework tasks: ${names}.`,
+      }).unwrap();
+      // }
+
       setSelectedIds(new Set());
 
       Alert.alert(

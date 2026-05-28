@@ -24,6 +24,7 @@ type Student = {
   id: string;
   name: string;
   studentId?: string;
+  fcmTokens: string[];
   assigned: number;
   completed: number;
   new: number;
@@ -189,6 +190,7 @@ export default function StudentDirectoryScreen() {
     navigation.navigate('AssignHomework', {
       studentId: student.id,
       studentName: student.name,
+      studentTokens: student.fcmTokens,
     });
   };
 
