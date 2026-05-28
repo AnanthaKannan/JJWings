@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -17,6 +16,7 @@ import { useGetHomeworksQuery } from '../store/api';
 import { setQuestions } from '../store/slices';
 import { BadgeType } from '../util/types';
 import { HomeworkState } from '../util/enum';
+import { LoadingState } from '../component';
 
 interface HomeworkCardProps {
   questionId: string;
@@ -249,10 +249,7 @@ export default function HomeworkScreen() {
         </View>
 
         {showLoader && (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#2563EB" />
-            <Text style={styles.loadingText}>Loading homework...</Text>
-          </View>
+          <LoadingState label="Loading homework..." />
         )}
 
         {!showLoader &&
@@ -350,21 +347,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '600',
   },
-  loadingState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 32,
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '700',
-  },
-
   /* Card */
   card: {
     backgroundColor: '#FFFFFF',

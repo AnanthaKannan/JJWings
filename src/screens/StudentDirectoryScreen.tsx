@@ -16,7 +16,7 @@ import {
   useUpdateStudentHorizontalMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
-import { AdminHeader } from '../component';
+import { AdminHeader, LoadingState } from '../component';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -170,7 +170,7 @@ export default function StudentDirectoryScreen() {
 
   const navigation = useNavigation<any>();
 
-  const { data: students } = useGetStudentsQuery(undefined);
+  const { data: students, isLoading } = useGetStudentsQuery(undefined);
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
 
@@ -193,6 +193,7 @@ export default function StudentDirectoryScreen() {
       s.studentId?.toLowerCase().includes(search.toLowerCase()) ||
       s.id.toLowerCase().includes(search.toLowerCase()),
   );
+  const showLoader = isLoading && !students;
 
   const handleAssignPress = (student: Student) => {
     navigation.navigate('AssignHomework', {
@@ -244,8 +245,9 @@ export default function StudentDirectoryScreen() {
       {/* Table */}
       <View style={styles.tableCard}>
         <TableHeader />
+        {showLoader && <LoadingState label="Loading students..." />}
         <FlatList
-          data={filtered}
+          data={showLoader ? [] : filtered}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <StudentRow
@@ -259,6 +261,7 @@ export default function StudentDirectoryScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
+            showLoader ? null :
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>🔍</Text>
               <Text style={styles.emptyText}>No students found</Text>

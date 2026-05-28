@@ -18,6 +18,7 @@ import { useSelector } from 'react-redux';
 import { useGetScoreQuery } from '../store/api';
 import { RootState } from '../store/store';
 import { formatDuration } from '../util/fn';
+import { LoadingState } from '../component';
 
 const { width } = Dimensions.get('window');
 
@@ -265,10 +266,15 @@ const ProgressDashboard: React.FC = () => {
   const [countUp, setCountUp] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: score, refetch: refetchScore } = useGetScoreQuery(
+  const {
+    data: score,
+    isLoading,
+    refetch: refetchScore,
+  } = useGetScoreQuery(
     { studentId: studentId ?? '' },
     { skip: !studentId },
   );
+  const showLoader = isLoading && !score;
 
   const assigned = score?.assigned ?? 0;
   const done = score?.completed ?? 0;
@@ -422,6 +428,11 @@ const ProgressDashboard: React.FC = () => {
         </Animated.View>
 
         {/* Cards */}
+        {showLoader ? (
+          <View style={styles.loaderWrap}>
+            <LoadingState label="Loading progress..." />
+          </View>
+        ) : (
         <Animated.View
           style={{
             transform: [{ translateY: cardSlide }],
@@ -535,6 +546,7 @@ const ProgressDashboard: React.FC = () => {
 
           <View style={{ height: 32 }} />
         </Animated.View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -615,6 +627,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
+  },
+  loaderWrap: {
+    marginHorizontal: 16,
   },
   cardTitleRow: {
     flexDirection: 'row',

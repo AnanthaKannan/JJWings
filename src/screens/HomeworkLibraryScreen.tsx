@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { AdminHeader } from '../component';
+import { AdminHeader, LoadingState } from '../component';
 import { useGetQuestionsQuery } from '../store/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ const ModuleCard = ({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeworkLibraryScreen() {
-  const { data: questionsData } = useGetQuestionsQuery(undefined);
+  const { data: questionsData, isLoading } = useGetQuestionsQuery(undefined);
 
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -156,13 +156,17 @@ export default function HomeworkLibraryScreen() {
           <ModuleCard item={item} onPress={() => handleModulePress(item)} />
         )}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
-            <Text style={styles.emptyText}>No questions yet</Text>
-            <Text style={styles.emptySubText}>
-              Questions will appear here when created
-            </Text>
-          </View>
+          isLoading ? (
+            <LoadingState label="Loading questions..." />
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
+              <Text style={styles.emptyText}>No questions yet</Text>
+              <Text style={styles.emptySubText}>
+                Questions will appear here when created
+              </Text>
+            </View>
+          )
         }
       />
 

@@ -12,7 +12,7 @@ import { useSelector } from 'react-redux';
 
 import { useGetHomeworkByIdQuery } from '../store/api';
 import { RootState } from '../store/store';
-import { Header } from '../component';
+import { Header, LoadingState } from '../component';
 import { evaluateExpression } from '../util/fn';
 
 const CheckIcon = () => (
@@ -149,7 +149,7 @@ export default function QuizReviewScreen() {
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const questions = useSelector((state: RootState) => state.common.questions);
 
-  const { data: hw } = useGetHomeworkByIdQuery(
+  const { data: hw, isLoading } = useGetHomeworkByIdQuery(
     { homeworkId: homeworkId ?? '' },
     {
       skip: !homeworkId,
@@ -178,6 +178,11 @@ export default function QuizReviewScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
       <Header heading="Quiz Review" sideHead={`⭐ Level ${hw?.questionId}`} />
 
+      {isLoading && !hw ? (
+        <View style={styles.loaderWrap}>
+          <LoadingState label="Loading quiz review..." />
+        </View>
+      ) : (
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -267,6 +272,7 @@ export default function QuizReviewScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -287,6 +293,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  loaderWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
 
   // Hero Card

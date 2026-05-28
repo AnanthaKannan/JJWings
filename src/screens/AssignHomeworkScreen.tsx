@@ -15,6 +15,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
+import { LoadingState } from '../component';
 import {
   useAssignHomeworkMutation,
   useGetAvailableQuestionsQuery,
@@ -116,7 +117,11 @@ export default function AssignHomeworkScreen() {
   const isLoading = showAssignedOnly
     ? isLoadingAllTasks
     : isLoadingAvailableTasks;
-  const { data: newHomeworks = [], refetch: refetchNewHomeworks } =
+  const {
+    data: newHomeworks = [],
+    isLoading: isLoadingNewHomeworks,
+    refetch: refetchNewHomeworks,
+  } =
     useGetHomeworksQuery(
       { studentId: studentId ?? '', state: HomeworkState.NEW },
       {
@@ -124,7 +129,11 @@ export default function AssignHomeworkScreen() {
         refetchOnMountOrArgChange: true,
       },
     );
-  const { data: progressHomeworks = [], refetch: refetchProgressHomeworks } =
+  const {
+    data: progressHomeworks = [],
+    isLoading: isLoadingProgressHomeworks,
+    refetch: refetchProgressHomeworks,
+  } =
     useGetHomeworksQuery(
       { studentId: studentId ?? '', state: HomeworkState.PROGRESS },
       {
@@ -132,7 +141,11 @@ export default function AssignHomeworkScreen() {
         refetchOnMountOrArgChange: true,
       },
     );
-  const { data: completedHomeworks = [], refetch: refetchCompletedHomeworks } =
+  const {
+    data: completedHomeworks = [],
+    isLoading: isLoadingCompletedHomeworks,
+    refetch: refetchCompletedHomeworks,
+  } =
     useGetHomeworksQuery(
       { studentId: studentId ?? '', state: HomeworkState.COMPLETED },
       {
@@ -142,6 +155,11 @@ export default function AssignHomeworkScreen() {
     );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
+  const isLoadingAssignments =
+    isLoadingNewHomeworks ||
+    isLoadingProgressHomeworks ||
+    isLoadingCompletedHomeworks;
+  const showLoader = isLoading || isLoadingAssignments;
   const assignedQuestionIds = new Set(
     [...newHomeworks, ...progressHomeworks, ...completedHomeworks].map(
       homework => homework.questionId,
@@ -257,7 +275,7 @@ export default function AssignHomeworkScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <FlatList
-          data={filtered}
+          data={showLoader ? [] : filtered}
           keyExtractor={item => item.id}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -326,16 +344,16 @@ export default function AssignHomeworkScreen() {
             />
           )}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <MaterialIcons name="search-off" size={40} color="#CBD5E0" />
-              <Text style={styles.emptyText}>
-                {isLoading
-                  ? 'Loading tasks...'
-                  : showAssignedOnly
-                  ? 'No assigned homework found'
-                  : 'No tasks found'}
-              </Text>
-            </View>
+            showLoader ? (
+              <LoadingState label="Loading tasks..." />
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialIcons name="search-off" size={40} color="#CBD5E0" />
+                <Text style={styles.emptyText}>
+                  {showAssignedOnly ? 'No assigned homework found' : 'No tasks found'}
+                </Text>
+              </View>
+            )
           }
         />
 
