@@ -177,7 +177,10 @@ export default function QuizReviewScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#F0F4FF" />
-      <Header heading="Quiz Review" sideHead={`⭐ Level ${hw?.questionId}`} />
+      <Header
+        heading="Quiz Review"
+        sideHead={`⭐ Level ${hw?.questionLabel}`}
+      />
 
       {isFocused && isLoading && !hw ? (
         <View style={styles.loaderWrap}>

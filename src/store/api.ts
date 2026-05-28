@@ -4,7 +4,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { HomeworkState } from '../util/enum';
 import { baseQuery } from './baseQuery';
 
-const DEFAULT_LIMIT = 15;
+const DEFAULT_LIMIT = 100;
 
 type ApiMeta = {
   total: number;
