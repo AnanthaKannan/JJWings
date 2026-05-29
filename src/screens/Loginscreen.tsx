@@ -26,8 +26,8 @@ import {
 } from '../util/authStorage';
 
 export default function LoginScreen() {
-  const [name, setName] = useState('JW001');
-  const [code, setCode] = useState('Welcome123');
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [showCode, setShowCode] = useState(false);
   const [checkingSavedLogin, setCheckingSavedLogin] = useState(true);
 
@@ -166,7 +166,7 @@ export default function LoginScreen() {
               {/* <Text style={styles.inputIcon}>ID</Text> */}
               <TextInput
                 style={styles.input}
-                placeholder="e.g. JW100"
+                placeholder="e.g. JJ099"
                 placeholderTextColor="#AABDD4"
                 value={name}
                 onChangeText={setName}
