@@ -107,7 +107,6 @@ export default function AdminMessageScreen() {
       await sendNotification({
         studentIds: selectedStudents.map(student => ({
           id: student.id,
-          tokens: student.fcmTokens,
         })),
         messageHeader: messageHeader.trim(),
         messageBody: messageBody.trim(),

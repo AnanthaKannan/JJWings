@@ -190,7 +190,6 @@ export default function StudentDirectoryScreen() {
     navigation.navigate('AssignHomework', {
       studentId: student.id,
       studentName: student.name,
-      studentTokens: student.fcmTokens,
     });
   };
 

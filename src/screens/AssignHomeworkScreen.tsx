@@ -103,7 +103,6 @@ export default function AssignHomeworkScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const studentName = route?.params?.studentName ?? 'Student';
   const studentId = route?.params?.studentId;
-  const studentTokens = route?.params?.studentTokens ?? [];
   const { data: tasks = [], isLoading } = useGetAvailableQuestionsQuery(
     { studentId: studentId ?? '' },
     {
@@ -164,21 +163,15 @@ export default function AssignHomeworkScreen() {
         questionIds,
       }).unwrap();
 
-      // if (studentTokens.length > 0) {
       await sendNotification({
         studentIds: [
           {
             id: studentId,
-            tokens: studentTokens,
           },
         ],
         messageHeader: 'New homework assigned',
-        messageBody:
-          questionIds.length === 1
-            ? `You have 1 new homework task: ${names}.`
-            : `You have ${questionIds.length} new homework tasks: ${names}.`,
+        messageBody: `You've got  ${questionIds.length} assignments — let's crush them! : ${names}`,
       }).unwrap();
-      // }
 
       setSelectedIds(new Set());
 

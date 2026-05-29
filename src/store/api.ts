@@ -236,7 +236,6 @@ type NotificationsArg = {
 type SendNotificationArg = {
   studentIds: Array<{
     id: string;
-    tokens: string[];
   }>;
   messageHeader: string;
   messageBody: string;
