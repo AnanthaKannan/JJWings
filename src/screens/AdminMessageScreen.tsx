@@ -66,7 +66,6 @@ export default function AdminMessageScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { data: students = [], isLoading } = useGetStudentsQuery(undefined, {
     skip: !isFocused,
-    refetchOnMountOrArgChange: true,
   });
   const [sendNotification, { isLoading: isSending }] =
     useSendNotificationMutation();

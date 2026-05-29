@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import {
   useIsFocused,
@@ -178,12 +179,17 @@ export default function HomeworkScreen() {
   const [selectedFilter, setSelectedFilter] = useState<BadgeType>(
     isAdminReview ? HomeworkState.COMPLETED : HomeworkState.NEW,
   );
+  const [refreshing, setRefreshing] = useState(false);
   const loggedInStudentId = useSelector(
     (state: RootState) => state.common.studentId,
   );
   const studentId = isAdminReview ? routeStudentId : loggedInStudentId;
 
-  const { data: homeworks, isLoading } = useGetHomeworksQuery(
+  const {
+    data: homeworks,
+    isLoading,
+    refetch,
+  } = useGetHomeworksQuery(
     { studentId: studentId ?? '', state: selectedFilter },
     {
       skip: !isFocused || !studentId,
@@ -200,6 +206,17 @@ export default function HomeworkScreen() {
     });
   };
 
+  const onRefresh = useCallback(async () => {
+    if (!studentId) return;
+
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch, studentId]);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF2FF" />
@@ -207,6 +224,15 @@ export default function HomeworkScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#2563EB"
+            colors={['#2563EB']}
+            progressBackgroundColor="#EEF2FF"
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>

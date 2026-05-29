@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 
@@ -140,7 +141,7 @@ const StudentRow = ({
             item.horizontal && styles.horizontalActionTextActive,
           ]}
         >
-          {item.horizontal ? 'Hor' : 'Ver'}
+          {item.horizontal ? 'Vertical' : 'Horizontal'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -168,11 +169,16 @@ export const EmptyState = () => (
 
 export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
 
-  const { data: students, isLoading } = useGetStudentsQuery(undefined, {
+  const {
+    data: students,
+    isLoading,
+    refetch,
+  } = useGetStudentsQuery(undefined, {
     skip: !isFocused,
   });
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
@@ -185,6 +191,15 @@ export default function StudentDirectoryScreen() {
       s.id.toLowerCase().includes(search.toLowerCase()),
   );
   const showLoader = isFocused && isLoading && !students;
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const handleAssignPress = (student: Student) => {
     navigation.navigate('AssignHomework', {
@@ -240,6 +255,15 @@ export default function StudentDirectoryScreen() {
         <FlatList
           data={showLoader ? [] : filtered}
           keyExtractor={item => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#4F46E5"
+              colors={['#4F46E5']}
+              progressBackgroundColor="#EEF2FF"
+            />
+          }
           renderItem={({ item }) => (
             <StudentRow
               item={item}
