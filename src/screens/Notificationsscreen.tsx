@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   FlatList,
+  RefreshControl,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -51,12 +52,27 @@ const NotificationCard = ({ item }: { item: Notification }) => (
 export default function NotificationsScreen() {
   const isFocused = useIsFocused();
   const studentId = useSelector((state: RootState) => state.common.studentId);
-  const { data: notifications = [], isLoading } = useGetNotificationsQuery(
+  const [refreshing, setRefreshing] = useState(false);
+  const {
+    data: notifications = [],
+    isLoading,
+    refetch,
+  } = useGetNotificationsQuery(
     { studentId: studentId ?? '' },
     { skip: !isFocused || !studentId },
   );
 
   const showLoader = isFocused && isLoading && notifications.length === 0;
+  const onRefresh = useCallback(async () => {
+    if (!studentId) return;
+
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch, studentId]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -79,6 +95,15 @@ export default function NotificationsScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#2563EB"
+            colors={['#2563EB']}
+            progressBackgroundColor="#EEF2FF"
+          />
+        }
         renderItem={({ item }) => <NotificationCard item={item} />}
         ListEmptyComponent={
           showLoader ? (

@@ -84,6 +84,22 @@ type ApiNotificationsResponse = {
   meta: ApiMeta;
 };
 
+type ApiRankingStudent = {
+  totalCorrect?: number;
+  totalQuestions?: number;
+  totalTimer?: number;
+  completedCount?: number;
+  accuracy?: number;
+  rank: number;
+  studentId: string;
+  name?: string;
+  studentCode?: string;
+};
+
+type ApiRankingResponse = {
+  data: ApiRankingStudent[];
+};
+
 export type Student = {
   id: string;
   name: string;
@@ -141,6 +157,18 @@ export type Score = {
   failure: number;
   timeTaken: number;
   completed: number;
+};
+
+export type RankingStudent = {
+  id: string;
+  rank: number;
+  name: string;
+  studentCode?: string;
+  totalCorrect: number;
+  totalQuestions: number;
+  totalTimer: number;
+  completedCount: number;
+  accuracy: number;
 };
 
 type LoginArg = {
@@ -295,6 +323,18 @@ const mapNotification = (notification: ApiNotification): Notification => ({
   updatedAt: notification.updatedAt,
 });
 
+const mapRankingStudent = (student: ApiRankingStudent): RankingStudent => ({
+  id: student.studentId,
+  rank: student.rank,
+  name: student.name ?? 'Student',
+  studentCode: student.studentCode,
+  totalCorrect: student.totalCorrect ?? 0,
+  totalQuestions: student.totalQuestions ?? 0,
+  totalTimer: student.totalTimer ?? 0,
+  completedCount: student.completedCount ?? 0,
+  accuracy: student.accuracy ?? 0,
+});
+
 const getNextStudentId = (students: Student[]): IdGenData => {
   const lastId = students.reduce((highest, student) => {
     const numericId = Number(student.studentId?.replace(/\D/g, '') ?? 0);
@@ -315,6 +355,7 @@ export const jjWingsApi = createApi({
     'Homework',
     'Score',
     'Notifications',
+    'Ranking',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<Homework[], HomeworkArg>({
@@ -459,6 +500,13 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    getRanking: builder.query<RankingStudent[], void>({
+      query: () => '/ranking',
+      transformResponse: (response: ApiRankingResponse) =>
+        response.data.map(mapRankingStudent),
+      providesTags: [{ type: 'Ranking', id: 'LIST' }],
+    }),
+
     sendNotification: builder.mutation<string, SendNotificationArg>({
       query: body => ({
         url: '/admin/notifications',
@@ -562,6 +610,7 @@ export const jjWingsApi = createApi({
         'Homework',
         'Score',
         { type: 'Students', id: 'LIST' },
+        { type: 'Ranking', id: 'LIST' },
       ],
     }),
   }),
@@ -585,5 +634,6 @@ export const {
   useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
+  useGetRankingQuery,
   useSendNotificationMutation,
 } = jjWingsApi;

@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -9,7 +15,12 @@ import {
   StatusBar,
   TouchableOpacity,
   Easing,
+  RefreshControl,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
+
+import { LoadingState } from '../component';
+import { RankingStudent, useGetRankingQuery } from '../store/api';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +59,25 @@ const AvatarCircle: React.FC<{
     </Text>
   </View>
 );
+
+const getInitials = (name: string) =>
+  name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+const getAvatarColor = (rank: number) =>
+  AVATAR_COLORS[(Math.max(rank, 1) - 1) % AVATAR_COLORS.length];
+
+const formatAccuracy = (accuracy: number) =>
+  `${Number.isInteger(accuracy) ? accuracy.toFixed(0) : accuracy.toFixed(1)}%`;
+
+const formatLevel = (student: RankingStudent) =>
+  `${student.studentCode ?? 'Explorer'} • ${student.completedCount}/${
+    student.totalQuestions
+  } Solved`;
 
 // ── Floating particles ─────────────────────────────────────────────────────
 const Particle: React.FC<{
@@ -104,7 +134,7 @@ const Particle: React.FC<{
         Animated.delay(1200),
       ]),
     ).start();
-  }, []);
+  }, [delay, opacity, rotate, y]);
 
   const spin = rotate.interpolate({
     inputRange: [0, 1],
@@ -166,7 +196,7 @@ const BouncingCrown: React.FC = () => {
         }),
       ]),
     ).start();
-  }, []);
+  }, [bounce, glow]);
 
   const glowColor = glow.interpolate({
     inputRange: [0, 1],
@@ -210,7 +240,7 @@ const RankBadge: React.FC<{ rank: number; color: string }> = ({
         Animated.delay(2200),
       ]),
     ).start();
-  }, []);
+  }, [rank, scale]);
 
   return (
     <Animated.View
@@ -227,7 +257,7 @@ const RankBadge: React.FC<{ rank: number; color: string }> = ({
 // ── Top 3 Podium Card ──────────────────────────────────────────────────────
 const PodiumCard: React.FC<{
   name: string;
-  score: number;
+  score: string;
   rank: number;
   avatarColor: string;
   isFirst: boolean;
@@ -270,17 +300,14 @@ const PodiumCard: React.FC<{
         ]),
       ).start();
     }
-  }, []);
+  }, [delay, isFirst, opacity, shimmer, slideUp]);
 
   const borderColor = shimmer.interpolate({
     inputRange: [0, 1],
     outputRange: ['#F5A623', '#FFD700'],
   });
 
-  const initials = name
-    .split(' ')
-    .map(n => n[0])
-    .join('');
+  const initials = getInitials(name);
 
   return (
     <Animated.View
@@ -407,7 +434,7 @@ const StatsCard: React.FC<{
     ).start();
 
     return () => countAnim.removeAllListeners();
-  }, []);
+  }, [countAnim, delay, numericVal, opacity, pulse, scaleIn, value]);
 
   return (
     <Animated.View
@@ -437,10 +464,7 @@ const RisingStarRow: React.FC<{
   const slideLeft = useRef(new Animated.Value(width)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
-  const initials = name
-    .split(' ')
-    .map(n => n[0])
-    .join('');
+  const initials = getInitials(name);
 
   useEffect(() => {
     Animated.parallel([
@@ -475,7 +499,7 @@ const RisingStarRow: React.FC<{
         Animated.delay(3000),
       ]),
     ).start();
-  }, []);
+  }, [index, opacity, shimmer, slideLeft]);
 
   const accuracyColor = shimmer.interpolate({
     inputRange: [0, 1],
@@ -515,9 +539,20 @@ const RisingStarRow: React.FC<{
 
 // ── Main Screen ────────────────────────────────────────────────────────────
 const TopExplorerScreen: React.FC = () => {
+  const isFocused = useIsFocused();
   const headerFade = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-30)).current;
   const bgScale = useRef(new Animated.Value(1)).current;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const {
+    data: ranking = [],
+    isLoading,
+    refetch,
+  } = useGetRankingQuery(undefined, {
+    skip: !isFocused,
+    refetchOnMountOrArgChange: true,
+  });
 
   useEffect(() => {
     Animated.parallel([
@@ -550,38 +585,35 @@ const TopExplorerScreen: React.FC = () => {
         }),
       ]),
     ).start();
-  }, []);
+  }, [bgScale, headerFade, headerSlide]);
 
-  const RISING_STARS = [
-    {
-      rank: 4,
-      name: 'Sophie R.',
-      level: 'Level 12 Explorer',
-      accuracy: '98.5%',
-      color: AVATAR_COLORS[3],
-    },
-    {
-      rank: 5,
-      name: 'Felix W.',
-      level: 'Level 11 Explorer',
-      accuracy: '97.8%',
-      color: AVATAR_COLORS[4],
-    },
-    {
-      rank: 6,
-      name: 'Elena P.',
-      level: 'Level 11 Explorer',
-      accuracy: '96.9%',
-      color: AVATAR_COLORS[5],
-    },
-    {
-      rank: 7,
-      name: 'Ravi M.',
-      level: 'Level 10 Explorer',
-      accuracy: '95.4%',
-      color: AVATAR_COLORS[6],
-    },
-  ];
+  const sortedRanking = useMemo(
+    () => [...ranking].sort((a, b) => a.rank - b.rank),
+    [ranking],
+  );
+  const firstPlace = sortedRanking.find(student => student.rank === 1);
+  const secondPlace = sortedRanking.find(student => student.rank === 2);
+  const thirdPlace = sortedRanking.find(student => student.rank === 3);
+  const risingStars = sortedRanking.filter(student => student.rank > 3);
+  const averageAccuracy =
+    sortedRanking.length > 0
+      ? sortedRanking.reduce((total, student) => total + student.accuracy, 0) /
+        sortedRanking.length
+      : 0;
+  const highAccuracy = sortedRanking.reduce(
+    (highest, student) => Math.max(highest, student.accuracy),
+    0,
+  );
+  const hasRanking = sortedRanking.length > 0;
+  const showLoader = isFocused && isLoading && !hasRanking;
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   return (
     <View style={styles.screen}>
@@ -598,6 +630,15 @@ const TopExplorerScreen: React.FC = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#4A90D9"
+            colors={['#4A90D9']}
+            progressBackgroundColor="#EEF4FF"
+          />
+        }
       >
         {/* Header */}
         <Animated.View
@@ -607,7 +648,7 @@ const TopExplorerScreen: React.FC = () => {
           ]}
         >
           <View>
-            <Text style={styles.headerSub}>🏅 This Week</Text>
+            <Text style={styles.headerSub}>🏅 Last 7 days</Text>
             <Text style={styles.headerTitle}>Top Explorers</Text>
           </View>
           <TouchableOpacity style={styles.filterBtn}>
@@ -615,8 +656,25 @@ const TopExplorerScreen: React.FC = () => {
           </TouchableOpacity>
         </Animated.View>
 
+        {showLoader && (
+          <View style={styles.loaderWrap}>
+            <LoadingState label="Loading rankings..." />
+          </View>
+        )}
+
+        {!showLoader && !hasRanking && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No rankings yet</Text>
+            <Text style={styles.emptyText}>
+              Completed homework will appear here once rankings are available.
+            </Text>
+          </View>
+        )}
+
         {/* Podium */}
-        <View style={styles.podium}>
+        <View
+          style={[styles.podium, (!hasRanking || showLoader) && styles.hidden]}
+        >
           {/* Floating particles above podium */}
           <Particle x={30} delay={0} emoji="⭐" size={14} />
           <Particle x={width - 60} delay={700} emoji="✨" size={12} />
@@ -625,69 +683,90 @@ const TopExplorerScreen: React.FC = () => {
           <Particle x={width - 100} delay={300} emoji="🎊" size={11} />
 
           {/* Rank 2 - Left */}
-          <PodiumCard
-            name="Leo V."
-            score={1215}
-            rank={2}
-            avatarColor={AVATAR_COLORS[1]}
-            isFirst={false}
-            delay={200}
-          />
+          {secondPlace && (
+            <PodiumCard
+              name={secondPlace.name}
+              score={`${secondPlace.totalCorrect}/${secondPlace.totalQuestions}`}
+              rank={secondPlace.rank}
+              avatarColor={getAvatarColor(secondPlace.rank)}
+              isFirst={false}
+              delay={200}
+            />
+          )}
           {/* Rank 1 - Center */}
-          <PodiumCard
-            name="Maya S."
-            score={1240}
-            rank={1}
-            avatarColor={AVATAR_COLORS[0]}
-            isFirst={true}
-            delay={0}
-          />
+          {firstPlace && (
+            <PodiumCard
+              name={firstPlace.name}
+              score={`${firstPlace.totalCorrect}/${firstPlace.totalQuestions}`}
+              rank={firstPlace.rank}
+              avatarColor={getAvatarColor(firstPlace.rank)}
+              isFirst={true}
+              delay={0}
+            />
+          )}
           {/* Rank 3 - Right */}
-          <PodiumCard
-            name="Arjun K."
-            score={1180}
-            rank={3}
-            avatarColor={AVATAR_COLORS[2]}
-            isFirst={false}
-            delay={400}
-          />
+          {thirdPlace && (
+            <PodiumCard
+              name={thirdPlace.name}
+              score={`${thirdPlace.totalCorrect}/${thirdPlace.totalQuestions}`}
+              rank={thirdPlace.rank}
+              avatarColor={getAvatarColor(thirdPlace.rank)}
+              isFirst={false}
+              delay={400}
+            />
+          )}
         </View>
 
         {/* Stats Row */}
-        <View style={styles.statsRow}>
+        <View
+          style={[
+            styles.statsRow,
+            (!hasRanking || showLoader) && styles.hidden,
+          ]}
+        >
           <StatsCard
             icon="👥"
-            label="AVG CLASS"
-            value="92%"
+            label="AVG ACCURACY"
+            value={formatAccuracy(averageAccuracy)}
             color="#4A90D9"
             delay={300}
           />
           <StatsCard
             icon="🎯"
             label="HIGH ACCURACY"
-            value="99.2%"
+            value={formatAccuracy(highAccuracy)}
             color="#4CAF50"
             delay={500}
           />
         </View>
 
         {/* Rising Stars */}
-        <View style={styles.sectionHeader}>
+        <View
+          style={[
+            styles.sectionHeader,
+            (!hasRanking || showLoader) && styles.hidden,
+          ]}
+        >
           <Text style={styles.sectionTitle}>🚀 Rising Stars</Text>
           <View style={styles.rankBadgeWrap}>
             <Text style={styles.rankBadgeLabel}>4 – 10 Rank</Text>
           </View>
         </View>
 
-        <View style={styles.starsList}>
-          {RISING_STARS.map((s, i) => (
+        <View
+          style={[
+            styles.starsList,
+            (!hasRanking || showLoader) && styles.hidden,
+          ]}
+        >
+          {risingStars.map((student, i) => (
             <RisingStarRow
-              key={s.rank}
-              rank={s.rank}
-              name={s.name}
-              level={s.level}
-              accuracy={s.accuracy}
-              avatarColor={s.color}
+              key={student.id}
+              rank={student.rank}
+              name={student.name}
+              level={formatLevel(student)}
+              accuracy={formatAccuracy(student.accuracy)}
+              avatarColor={getAvatarColor(student.rank)}
               index={i}
             />
           ))}
@@ -704,6 +783,37 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#EEF4FF',
+  },
+  hidden: {
+    display: 'none',
+  },
+  loaderWrap: {
+    marginTop: 32,
+  },
+  emptyState: {
+    backgroundColor: '#FFF',
+    borderRadius: 18,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 28,
+    shadowColor: '#A0B4D6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    color: '#1A3558',
+    fontWeight: '900',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#7A90B0',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 18,
   },
   bgBlob: {
     position: 'absolute',
