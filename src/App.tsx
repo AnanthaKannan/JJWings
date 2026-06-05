@@ -13,9 +13,9 @@ import { Provider, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
 import { useUpdateStudentFcmTokenMutation } from './store/api';
 import {
-  getStudentPushToken,
-  onStudentPushMessage,
-  onStudentPushTokenRefresh,
+  getStudentPushToken as getPushToken,
+  onStudentPushMessage as onPushMessage,
+  onStudentPushTokenRefresh as onPushTokenRefresh,
 } from './services/pushNotifications';
 
 import {
@@ -43,12 +43,7 @@ type AnimatedTabIconProps = {
   focused: boolean;
 };
 
-function AnimatedTabIcon({
-  name,
-  color,
-  size,
-  focused,
-}: AnimatedTabIconProps) {
+function AnimatedTabIcon({ name, color, size, focused }: AnimatedTabIconProps) {
   const progress = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
   useEffect(() => {
@@ -74,7 +69,9 @@ function AnimatedTabIcon({
   });
 
   return (
-    <Animated.View style={{ transform: [{ translateY }, { scale }, { rotate }] }}>
+    <Animated.View
+      style={{ transform: [{ translateY }, { scale }, { rotate }] }}
+    >
       <MaterialIcons name={name} color={color} size={size} />
     </Animated.View>
   );
@@ -129,13 +126,12 @@ const MainTabs = createBottomTabNavigator({
         return {
           tabBarLabel: 'Homework',
           unmountOnBlur: true,
-          tabBarStyle:
-            shouldHideTabBar
-              ? { display: 'none' }
-              : {
-                  backgroundColor: '#FFFFFF',
-                  borderTopColor: '#E5E7EB',
-                },
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon
               name="book"
@@ -361,16 +357,20 @@ const Navigation = createStaticNavigation(RootStack);
 function PushNotificationRegistrar() {
   const studentId = useSelector((state: RootState) => state.common.studentId);
   const isStudent = useSelector((state: RootState) => state.common.isStudent);
+  const adminId = useSelector((state: RootState) => state.common.adminId);
+  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+
   const [updateStudentFcmToken] = useUpdateStudentFcmTokenMutation();
 
   useEffect(() => {
-    if (!studentId || !isStudent) return;
+    const canRegisterToken = (isStudent && studentId) || (isAdmin && adminId);
+    if (!canRegisterToken) return;
 
     let isActive = true;
 
     const registerToken = async () => {
       try {
-        const token = await getStudentPushToken();
+        const token = await getPushToken();
 
         if (!token || !isActive) return;
 
@@ -382,7 +382,7 @@ function PushNotificationRegistrar() {
 
     registerToken();
 
-    const unsubscribe = onStudentPushTokenRefresh(token => {
+    const unsubscribe = onPushTokenRefresh(token => {
       updateStudentFcmToken({ fcmToken: token }).catch(error => {
         console.error('Failed to refresh push token', error);
       });
@@ -392,14 +392,14 @@ function PushNotificationRegistrar() {
       isActive = false;
       unsubscribe();
     };
-  }, [isStudent, studentId, updateStudentFcmToken]);
+  }, [adminId, isAdmin, isStudent, studentId, updateStudentFcmToken]);
 
   return null;
 }
 
 function PushNotificationListener() {
   useEffect(() => {
-    const unsubscribeMessage = onStudentPushMessage(message => {
+    const unsubscribeMessage = onPushMessage(message => {
       Alert.alert(
         message.title ?? 'New homework assigned',
         message.body ?? 'You have new homework to attend.',
