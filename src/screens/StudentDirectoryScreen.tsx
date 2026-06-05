@@ -4,6 +4,8 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  Modal,
+  Pressable,
   TextInput,
   TouchableOpacity,
   SafeAreaView,
@@ -80,16 +82,10 @@ const ProgressStat = ({
 
 const StudentRow = ({
   item,
-  onPerformancePress,
-  onAssignPress,
-  onHorizontalPress,
-  isHorizontalUpdating,
+  onViewPress,
 }: {
   item: Student;
-  onPerformancePress: () => void;
-  onAssignPress: () => void;
-  onHorizontalPress: () => void;
-  isHorizontalUpdating: boolean;
+  onViewPress: () => void;
 }) => (
   <View style={styles.row}>
     <View style={styles.studentInfo}>
@@ -117,32 +113,8 @@ const StudentRow = ({
     </View>
 
     <View style={styles.actions}>
-      <TouchableOpacity
-        style={styles.secondaryAction}
-        onPress={onPerformancePress}
-      >
-        <Text style={styles.secondaryActionText}>Performance</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.primaryAction} onPress={onAssignPress}>
-        <Text style={styles.primaryActionText}>Assign</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[
-          styles.horizontalAction,
-          item.horizontal && styles.horizontalActionActive,
-          isHorizontalUpdating && styles.actionDisabled,
-        ]}
-        onPress={onHorizontalPress}
-        disabled={isHorizontalUpdating}
-      >
-        <Text
-          style={[
-            styles.horizontalActionText,
-            item.horizontal && styles.horizontalActionTextActive,
-          ]}
-        >
-          {item.horizontal ? 'Vertical' : 'Horizontal'}
-        </Text>
+      <TouchableOpacity style={styles.viewAction} onPress={onViewPress}>
+        <Text style={styles.viewActionText}>View</Text>
       </TouchableOpacity>
     </View>
   </View>
@@ -170,6 +142,7 @@ export const EmptyState = () => (
 export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
@@ -224,6 +197,29 @@ export default function StudentDirectoryScreen() {
     // refetch();
   };
 
+  const closeActionsModal = () => setSelectedStudent(null);
+
+  const handleModalPerformancePress = () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+    handlePerformancePress(selectedStudent);
+  };
+
+  const handleModalAssignPress = () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+    handleAssignPress(selectedStudent);
+  };
+
+  const handleModalHorizontalPress = async () => {
+    if (!selectedStudent) return;
+
+    await handleHorizontalPress(selectedStudent);
+    closeActionsModal();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
@@ -267,10 +263,7 @@ export default function StudentDirectoryScreen() {
           renderItem={({ item }) => (
             <StudentRow
               item={item}
-              onPerformancePress={() => handlePerformancePress(item)}
-              onAssignPress={() => handleAssignPress(item)}
-              onHorizontalPress={() => handleHorizontalPress(item)}
-              isHorizontalUpdating={isHorizontalUpdating}
+              onViewPress={() => setSelectedStudent(item)}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -294,6 +287,65 @@ export default function StudentDirectoryScreen() {
         visible={isHorizontalUpdating}
         label="Updating student..."
       />
+      <Modal
+        visible={selectedStudent !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeActionsModal}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={closeActionsModal}>
+          <Pressable style={styles.actionsModal}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>
+                  {selectedStudent?.name ?? 'Student'}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  #{selectedStudent?.studentId ?? selectedStudent?.id ?? ''}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={closeActionsModal}
+              >
+                <Text style={styles.modalCloseText}>X</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleModalPerformancePress}
+            >
+              <Text style={styles.modalSecondaryActionText}>Performance</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalPrimaryAction}
+              onPress={handleModalAssignPress}
+            >
+              <Text style={styles.modalPrimaryActionText}>Assign</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalHorizontalAction,
+                selectedStudent?.horizontal && styles.horizontalActionActive,
+                isHorizontalUpdating && styles.actionDisabled,
+              ]}
+              onPress={handleModalHorizontalPress}
+              disabled={isHorizontalUpdating}
+            >
+              <Text
+                style={[
+                  styles.modalHorizontalActionText,
+                  selectedStudent?.horizontal &&
+                    styles.horizontalActionTextActive,
+                ]}
+              >
+                {selectedStudent?.horizontal ? 'Vertical' : 'Horizontal'}
+              </Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -496,56 +548,117 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
   },
-  secondaryAction: {
-    width: '100%',
-    borderRadius: 8,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-  },
-  secondaryActionText: {
-    fontSize: 10,
-    color: '#4F46E5',
-    fontWeight: '800',
-  },
-  primaryAction: {
+  viewAction: {
     width: '100%',
     borderRadius: 8,
     backgroundColor: '#4F46E5',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
-  primaryActionText: {
-    fontSize: 10,
+  viewActionText: {
+    fontSize: 11,
     color: '#fff',
     fontWeight: '800',
-  },
-  horizontalAction: {
-    width: '100%',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
   },
   horizontalActionActive: {
     borderColor: '#0F766E',
     backgroundColor: '#CCFBF1',
-  },
-  horizontalActionText: {
-    fontSize: 10,
-    color: '#475569',
-    fontWeight: '800',
   },
   horizontalActionTextActive: {
     color: '#0F766E',
   },
   actionDisabled: {
     opacity: 0.5,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.46)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  actionsModal: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 22,
+    elevation: 10,
+    gap: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 4,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1A202C',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '900',
+  },
+  modalSecondaryAction: {
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  modalSecondaryActionText: {
+    fontSize: 14,
+    color: '#4F46E5',
+    fontWeight: '800',
+  },
+  modalPrimaryAction: {
+    borderRadius: 10,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  modalPrimaryActionText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  modalHorizontalAction: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  modalHorizontalActionText: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '800',
   },
 
   // Separator

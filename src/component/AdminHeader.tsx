@@ -29,7 +29,8 @@ const adminNavItems = [
   {
     label: 'Add Student',
     icon: 'person-add',
-    routeName: 'AdminAddStudent',
+    routeName: 'AdminStudents',
+    params: { screen: 'AddStudent' },
   },
   {
     label: 'Homework',
@@ -45,6 +46,11 @@ const adminNavItems = [
     label: 'Messages',
     icon: 'mail',
     routeName: 'AdminMessages',
+  },
+  {
+    label: 'Notifications',
+    icon: 'notifications',
+    routeName: 'AdminNotifications',
   },
   {
     label: 'Profile',

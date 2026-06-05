@@ -500,6 +500,16 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    getAdminNotifications: builder.query<Notification[], void>({
+      query: () => ({
+        url: '/admin/notifications',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiNotificationsResponse) =>
+        response.data.map(mapNotification),
+      providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
+    }),
+
     getRanking: builder.query<RankingStudent[], void>({
       query: () => '/ranking',
       transformResponse: (response: ApiRankingResponse) =>
@@ -515,10 +525,13 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { studentIds }) =>
-        studentIds.map(student => ({
-          type: 'Notifications' as const,
-          id: student.id,
-        })),
+        [
+          ...studentIds.map(student => ({
+            type: 'Notifications' as const,
+            id: student.id,
+          })),
+          { type: 'Notifications' as const, id: 'ADMIN' },
+        ],
     }),
 
     addStudent: builder.mutation<string, AddStudentArg>({
@@ -634,6 +647,7 @@ export const {
   useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
+  useGetAdminNotificationsQuery,
   useGetRankingQuery,
   useSendNotificationMutation,
 } = jjWingsApi;

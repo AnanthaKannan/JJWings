@@ -12,8 +12,12 @@ import { useIsFocused } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
 
-import { LoadingState } from '../component';
-import { useGetNotificationsQuery, Notification } from '../store/api';
+import { AdminHeader, LoadingState } from '../component';
+import {
+  useGetAdminNotificationsQuery,
+  useGetNotificationsQuery,
+  Notification,
+} from '../store/api';
 import { RootState } from '../store/store';
 
 const formatNotificationTime = (dateValue?: string) => {
@@ -52,19 +56,36 @@ const NotificationCard = ({ item }: { item: Notification }) => (
 export default function NotificationsScreen() {
   const isFocused = useIsFocused();
   const studentId = useSelector((state: RootState) => state.common.studentId);
+  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const [refreshing, setRefreshing] = useState(false);
+  const studentNotificationsQuery = useGetNotificationsQuery(
+    { studentId: studentId ?? '' },
+    { skip: !isFocused || isAdmin || !studentId },
+  );
+  const adminNotificationsQuery = useGetAdminNotificationsQuery(undefined, {
+    skip: !isFocused || !isAdmin,
+  });
+  const activeQuery = isAdmin
+    ? adminNotificationsQuery
+    : studentNotificationsQuery;
   const {
     data: notifications = [],
     isLoading,
     refetch,
-  } = useGetNotificationsQuery(
-    { studentId: studentId ?? '' },
-    { skip: !isFocused || !studentId },
-  );
+  } = activeQuery;
+
+  const headerSubtitle = isAdmin
+    ? 'Notifications sent to students'
+    : 'Updates from your homework team';
+  const emptyText = isAdmin
+    ? 'Sent notifications will appear here.'
+    : 'New homework updates will appear here.';
+
+  const canRefresh = isAdmin || Boolean(studentId);
 
   const showLoader = isFocused && isLoading && notifications.length === 0;
   const onRefresh = useCallback(async () => {
-    if (!studentId) return;
+    if (!canRefresh) return;
 
     setRefreshing(true);
     try {
@@ -72,23 +93,27 @@ export default function NotificationsScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [refetch, studentId]);
+  }, [canRefresh, refetch]);
+
+  const header = isAdmin ? (
+    <AdminHeader header="Notifications" />
+  ) : (
+    <View style={styles.header}>
+      <View>
+        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
+      </View>
+      <View style={styles.headerIcon}>
+        <MaterialIcons name="notifications-none" size={24} color="#2563EB" />
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF2FF" />
 
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          <Text style={styles.headerSubtitle}>
-            Updates from your homework team
-          </Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons name="notifications-none" size={24} color="#2563EB" />
-        </View>
-      </View>
+      {header}
 
       <FlatList
         data={showLoader ? [] : notifications}
@@ -112,9 +137,7 @@ export default function NotificationsScreen() {
             <View style={styles.emptyState}>
               <MaterialIcons name="notifications-off" size={42} color="#94A3B8" />
               <Text style={styles.emptyTitle}>No notifications yet</Text>
-              <Text style={styles.emptyText}>
-                New homework updates will appear here.
-              </Text>
+              <Text style={styles.emptyText}>{emptyText}</Text>
             </View>
           )
         }

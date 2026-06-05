@@ -269,6 +269,8 @@ const AdminTabs = createBottomTabNavigator({
     AdminAddStudent: {
       screen: AddStudentScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Add Student',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="person-add" color={color} size={size} />
@@ -302,6 +304,15 @@ const AdminTabs = createBottomTabNavigator({
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="mail" color={color} size={size} />
+        ),
+      },
+    },
+    AdminNotifications: {
+      screen: NotificationsScreen,
+      options: {
+        tabBarLabel: 'Notifications',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="notifications" color={color} size={size} />
         ),
       },
     },
