@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useIsFocused, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { AdminHeader, LoadingState } from '../component';
 import {
@@ -19,6 +19,7 @@ import {
   Notification,
 } from '../store/api';
 import { RootState } from '../store/store';
+import { clearNotificationAttention } from '../store/slices';
 
 const formatNotificationTime = (dateValue?: string) => {
   if (!dateValue) return '';
@@ -56,6 +57,7 @@ const NotificationCard = ({ item }: { item: Notification }) => (
 export default function NotificationsScreen() {
   const isFocused = useIsFocused();
   const route = useRoute<any>();
+  const dispatch = useDispatch();
   const studentId = useSelector((state: RootState) => state.common.studentId);
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const routeStudentId = route.params?.studentId as string | undefined;
@@ -98,6 +100,13 @@ export default function NotificationsScreen() {
   const canRefresh = (isAdmin && !isStudentNotificationReview) || Boolean(targetStudentId);
 
   const showLoader = isFocused && isLoading && notifications.length === 0;
+
+  useEffect(() => {
+    if (isFocused) {
+      dispatch(clearNotificationAttention());
+    }
+  }, [dispatch, isFocused]);
+
   const onRefresh = useCallback(async () => {
     if (!canRefresh) return;
 

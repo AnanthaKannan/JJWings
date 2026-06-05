@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StatusBar, Alert, useColorScheme } from 'react-native';
+import { Animated, StatusBar, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   CommonActions,
@@ -9,9 +9,10 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { Provider, useSelector } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
 import { useUpdateStudentFcmTokenMutation } from './store/api';
+import { showNotificationAttention } from './store/slices';
 import {
   getStudentPushToken as getPushToken,
   onStudentPushMessage as onPushMessage,
@@ -41,6 +42,12 @@ type AnimatedTabIconProps = {
   color: string;
   size: number;
   focused: boolean;
+};
+
+type NotificationTabIconProps = {
+  color: string;
+  size: number;
+  focused?: boolean;
 };
 
 function AnimatedTabIcon({ name, color, size, focused }: AnimatedTabIconProps) {
@@ -74,6 +81,83 @@ function AnimatedTabIcon({ name, color, size, focused }: AnimatedTabIconProps) {
     >
       <MaterialIcons name={name} color={color} size={size} />
     </Animated.View>
+  );
+}
+
+function NotificationTabIcon({
+  color,
+  size,
+  focused = false,
+}: NotificationTabIconProps) {
+  const hasNotificationAttention = useSelector(
+    (state: RootState) => state.common.hasNotificationAttention,
+  );
+  const ring = useRef(new Animated.Value(0)).current;
+  const shouldRing = hasNotificationAttention && !focused;
+
+  useEffect(() => {
+    if (!shouldRing) {
+      ring.stopAnimation();
+      ring.setValue(0);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ring, {
+          toValue: 1,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: -1,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: 0.7,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: 0,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [ring, shouldRing]);
+
+  const rotate = ring.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-16deg', '16deg'],
+  });
+
+  return (
+    <View>
+      <Animated.View style={{ transform: [{ rotate }] }}>
+        <MaterialIcons name="notifications" color={color} size={size} />
+      </Animated.View>
+      {shouldRing && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -2,
+            right: -3,
+            width: 9,
+            height: 9,
+            borderRadius: 5,
+            backgroundColor: '#EF4444',
+            borderWidth: 1,
+            borderColor: '#FFFFFF',
+          }}
+        />
+      )}
+    </View>
   );
 }
 
@@ -173,12 +257,7 @@ const MainTabs = createBottomTabNavigator({
       options: {
         tabBarLabel: 'Notifications',
         tabBarIcon: ({ color, size, focused }) => (
-          <AnimatedTabIcon
-            name="notifications"
-            color={color}
-            size={size}
-            focused={focused}
-          />
+          <NotificationTabIcon color={color} size={size} focused={focused} />
         ),
       },
     },
@@ -308,8 +387,8 @@ const AdminTabs = createBottomTabNavigator({
       screen: NotificationsScreen,
       options: {
         tabBarLabel: 'Notifications',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="notifications" color={color} size={size} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <NotificationTabIcon color={color} size={size} focused={focused} />
         ),
       },
     },
@@ -398,13 +477,15 @@ function PushNotificationRegistrar() {
 }
 
 function PushNotificationListener() {
+  const dispatch = useDispatch();
+
   useEffect(() => {
-    const unsubscribeMessage = onPushMessage(message => {
-      Alert.alert(message.title || '', message.body);
+    const unsubscribeMessage = onPushMessage(() => {
+      dispatch(showNotificationAttention());
     });
 
     return unsubscribeMessage;
-  }, []);
+  }, [dispatch]);
 
   return null;
 }

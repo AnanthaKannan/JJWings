@@ -17,6 +17,7 @@ interface AuthState {
   adminName: string;
   isAdmin: boolean;
   vertical: boolean;
+  hasNotificationAttention: boolean;
 }
 
 const initialState: AuthState = {
@@ -35,6 +36,7 @@ const initialState: AuthState = {
   adminName: '',
   isAdmin: false,
   vertical: false,
+  hasNotificationAttention: false,
 };
 
 const commonSlice = createSlice({
@@ -102,6 +104,13 @@ const commonSlice = createSlice({
       state.isAdmin = false;
       state.isAuthenticated = false;
       state.token = null;
+      state.hasNotificationAttention = false;
+    },
+    showNotificationAttention: state => {
+      state.hasNotificationAttention = true;
+    },
+    clearNotificationAttention: state => {
+      state.hasNotificationAttention = false;
     },
   },
 });
@@ -111,5 +120,7 @@ export const {
   setAdminCredentials,
   logout,
   setQuestions,
+  showNotificationAttention,
+  clearNotificationAttention,
 } = commonSlice.actions;
 export default commonSlice.reducer;
