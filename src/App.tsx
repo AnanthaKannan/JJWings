@@ -400,10 +400,7 @@ function PushNotificationRegistrar() {
 function PushNotificationListener() {
   useEffect(() => {
     const unsubscribeMessage = onPushMessage(message => {
-      Alert.alert(
-        message.title ?? 'New homework assigned',
-        message.body ?? 'You have new homework to attend.',
-      );
+      Alert.alert(message.title || '', message.body);
     });
 
     return unsubscribeMessage;
