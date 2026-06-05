@@ -213,6 +213,16 @@ export default function StudentDirectoryScreen() {
     handleAssignPress(selectedStudent);
   };
 
+  const handleModalNotificationsPress = () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+    navigation.navigate('StudentNotifications', {
+      studentId: selectedStudent.id,
+      studentName: selectedStudent.name,
+    });
+  };
+
   const handleModalHorizontalPress = async () => {
     if (!selectedStudent) return;
 
@@ -323,6 +333,14 @@ export default function StudentDirectoryScreen() {
               onPress={handleModalAssignPress}
             >
               <Text style={styles.modalPrimaryActionText}>Assign</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalNotificationAction}
+              onPress={handleModalNotificationsPress}
+            >
+              <Text style={styles.modalNotificationActionText}>
+                Notifications
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -644,6 +662,18 @@ const styles = StyleSheet.create({
   modalPrimaryActionText: {
     fontSize: 14,
     color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  modalNotificationAction: {
+    borderRadius: 10,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  modalNotificationActionText: {
+    fontSize: 14,
+    color: '#2563EB',
     fontWeight: '800',
   },
   modalHorizontalAction: {

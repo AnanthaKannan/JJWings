@@ -218,6 +218,7 @@ const AdminStudentsStack = createNativeStackNavigator({
     AssignHomework: { screen: AssignHomeworkScreen },
     HomeworkScreen: { screen: HomeworkScreen },
     QuizReview: { screen: QuizReviewScreen },
+    StudentNotifications: { screen: NotificationsScreen },
   },
 });
 
@@ -313,6 +314,17 @@ const AdminTabs = createBottomTabNavigator({
         tabBarLabel: 'Notifications',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="notifications" color={color} size={size} />
+        ),
+      },
+    },
+    AdminRanking: {
+      screen: TopExplorerScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Rank',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="leaderboard" color={color} size={size} />
         ),
       },
     },

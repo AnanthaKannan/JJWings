@@ -21,41 +21,15 @@ type AdminHeaderProps = {
 
 const adminNavItems = [
   {
-    label: 'Students',
-    icon: 'people',
-    routeName: 'AdminStudents',
-    params: { screen: 'StudentDirectory' },
-  },
-  {
     label: 'Add Student',
     icon: 'person-add',
     routeName: 'AdminStudents',
     params: { screen: 'AddStudent' },
   },
   {
-    label: 'Homework',
-    icon: 'library-books',
-    routeName: 'HomeworkLibrary',
-  },
-  {
-    label: 'New Task',
-    icon: 'playlist-add',
-    routeName: 'CreateNewTask',
-  },
-  {
-    label: 'Messages',
-    icon: 'mail',
-    routeName: 'AdminMessages',
-  },
-  {
-    label: 'Notifications',
-    icon: 'notifications',
-    routeName: 'AdminNotifications',
-  },
-  {
-    label: 'Profile',
-    icon: 'account-circle',
-    routeName: 'Logout',
+    label: 'Rank',
+    icon: 'leaderboard',
+    routeName: 'AdminRanking',
   },
 ];
 

@@ -18,9 +18,11 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 
-import { LoadingState } from '../component';
+import { AdminHeader, LoadingState } from '../component';
 import { RankingStudent, useGetRankingQuery } from '../store/api';
+import { RootState } from '../store/store';
 
 const { width } = Dimensions.get('window');
 
@@ -540,6 +542,7 @@ const RisingStarRow: React.FC<{
 // ── Main Screen ────────────────────────────────────────────────────────────
 const TopExplorerScreen: React.FC = () => {
   const isFocused = useIsFocused();
+  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const headerFade = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-30)).current;
   const bgScale = useRef(new Animated.Value(1)).current;
@@ -618,12 +621,19 @@ const TopExplorerScreen: React.FC = () => {
   return (
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF4FF" />
+      {isAdmin && (
+        <View style={styles.adminHeaderWrap}>
+          <AdminHeader header="Rank" showBackButton={true} />
+        </View>
+      )}
 
       {/* Animated background blob */}
       <Animated.View
+        pointerEvents="none"
         style={[styles.bgBlob, { transform: [{ scale: bgScale }] }]}
       />
       <Animated.View
+        pointerEvents="none"
         style={[styles.bgBlob2, { transform: [{ scale: bgScale }] }]}
       />
 
@@ -783,6 +793,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#EEF4FF',
+  },
+  adminHeaderWrap: {
+    zIndex: 20,
+    elevation: 20,
   },
   hidden: {
     display: 'none',
