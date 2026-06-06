@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
   FlatList,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
 } from 'react-native';
 import {
   useIsFocused,
@@ -30,6 +32,7 @@ type Task = {
   id: string;
   questionId?: string;
   question: string[];
+  level?: number;
 };
 
 const TaskRow = ({
@@ -70,6 +73,12 @@ const TaskRow = ({
           </View>
         )}
       </View>
+      <View style={styles.taskMetaRow}>
+        <MaterialIcons name="school" size={13} color="#4F46E5" />
+        <Text style={styles.taskLevelText}>
+          Level {typeof item.level === 'number' ? item.level : '-'}
+        </Text>
+      </View>
       {/* <Text style={styles.taskDesc} numberOfLines={2}>
         {item.question.join(', ')}
       </Text> */}
@@ -99,12 +108,21 @@ export default function AssignHomeworkScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const isFocused = useIsFocused();
-  const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const studentName = route?.params?.studentName ?? 'Student';
   const studentId = route?.params?.studentId;
+  const studentLevel =
+    typeof route?.params?.level === 'number' ? route.params.level : null;
+  const [search, setSearch] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(
+    studentLevel,
+  );
+  const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { data: tasks = [], isLoading } = useGetAvailableQuestionsQuery(
-    { studentId: studentId ?? '' },
+    {
+      studentId: studentId ?? '',
+      ...(selectedLevel === null ? {} : { level: selectedLevel }),
+    },
     {
       skip: !isFocused || !studentId,
     },
@@ -114,6 +132,11 @@ export default function AssignHomeworkScreen() {
   const [sendNotification, { isLoading: isSendingNotification }] =
     useSendNotificationMutation();
   const showLoader = isFocused && isLoading;
+
+  useEffect(() => {
+    setSelectedLevel(studentLevel);
+    setSelectedIds(new Set());
+  }, [studentId, studentLevel]);
 
   const filtered = tasks
     .filter(task => {
@@ -141,6 +164,12 @@ export default function AssignHomeworkScreen() {
   const selectAll = () => {
     const allIds = new Set(filtered.map(task => task.id));
     setSelectedIds(allAvailableSelected ? new Set() : allIds);
+  };
+
+  const handleLevelFilterChange = (level: number | null) => {
+    setSelectedLevel(level);
+    setSelectedIds(new Set());
+    setIsLevelPickerOpen(false);
   };
 
   const handleConfirm = async () => {
@@ -195,7 +224,7 @@ export default function AssignHomeworkScreen() {
       <AdminHeader header="Homework Lab" showBackButton={true} />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.keyboardAvoiding}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <FlatList
@@ -213,21 +242,45 @@ export default function AssignHomeworkScreen() {
                 </Text>
               </View>
 
-              <View style={styles.searchBar}>
-                <MaterialIcons name="search" size={18} color="#94A3B8" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search tasks or questions"
-                  placeholderTextColor="#B0B8C8"
-                  value={search}
-                  onChangeText={setSearch}
-                  returnKeyType="search"
-                />
-                {search.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearch('')}>
-                    <MaterialIcons name="close" size={16} color="#94A3B8" />
-                  </TouchableOpacity>
-                )}
+              <View style={styles.searchFilterRow}>
+                <View style={styles.searchBar}>
+                  <MaterialIcons name="search" size={18} color="#94A3B8" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search tasks or questions"
+                    placeholderTextColor="#B0B8C8"
+                    value={search}
+                    onChangeText={setSearch}
+                    returnKeyType="search"
+                  />
+                  {search.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearch('')}>
+                      <MaterialIcons name="close" size={16} color="#94A3B8" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.levelFilterButton,
+                    selectedLevel !== null && styles.levelFilterButtonActive,
+                  ]}
+                  onPress={() => setIsLevelPickerOpen(true)}
+                  activeOpacity={0.82}
+                >
+                  <MaterialIcons
+                    name="filter-list"
+                    size={18}
+                    color={selectedLevel === null ? '#64748B' : '#4F46E5'}
+                  />
+                  <Text
+                    style={[
+                      styles.levelFilterText,
+                      selectedLevel !== null && styles.levelFilterTextActive,
+                    ]}
+                  >
+                    {selectedLevel === null ? 'All' : `L${selectedLevel}`}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.sectionHeader}>
@@ -294,13 +347,75 @@ export default function AssignHomeworkScreen() {
                   name="arrow-forward"
                   size={18}
                   color="#fff"
-                  style={{ marginLeft: 6 }}
+                  style={styles.confirmIcon}
                 />
               )}
             </TouchableOpacity>
           </View>
         )}
       </KeyboardAvoidingView>
+      <Modal
+        visible={isLevelPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLevelPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.levelModalBackdrop}
+          onPress={() => setIsLevelPickerOpen(false)}
+        >
+          <Pressable style={styles.levelModal}>
+            <View style={styles.levelModalHeader}>
+              <Text style={styles.levelModalTitle}>Filter Level</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setIsLevelPickerOpen(false)}
+              >
+                <MaterialIcons name="close" size={20} color="#334155" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.levelAllOption,
+                selectedLevel === null && styles.levelOptionActive,
+              ]}
+              onPress={() => handleLevelFilterChange(null)}
+              activeOpacity={0.82}
+            >
+              <Text
+                style={[
+                  styles.levelOptionText,
+                  selectedLevel === null && styles.levelOptionTextActive,
+                ]}
+              >
+                All Levels
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.levelGrid}>
+              {Array.from({ length: 11 }, (_, value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.levelOption,
+                    selectedLevel === value && styles.levelOptionActive,
+                  ]}
+                  onPress={() => handleLevelFilterChange(value)}
+                  activeOpacity={0.82}
+                >
+                  <Text
+                    style={[
+                      styles.levelOptionText,
+                      selectedLevel === value && styles.levelOptionTextActive,
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
       <LoadingOverlay
         visible={isAssigning || isSendingNotification}
         label="Assigning homework..."
@@ -313,6 +428,9 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#EEF0F8',
+  },
+  keyboardAvoiding: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -348,7 +466,14 @@ const styles = StyleSheet.create({
   pageTitleAccent: {
     color: '#4F46E5',
   },
+  searchFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 18,
+  },
   searchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -356,12 +481,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
     gap: 8,
-    marginBottom: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  levelFilterButton: {
+    height: 44,
+    minWidth: 78,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  levelFilterButtonActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+  },
+  levelFilterText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  levelFilterTextActive: {
+    color: '#4F46E5',
   },
   searchInput: {
     flex: 1,
@@ -480,6 +634,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  taskMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  taskLevelText: {
+    fontSize: 11,
+    color: '#4F46E5',
+    fontWeight: '700',
+  },
   taskDesc: {
     fontSize: 12,
     color: '#64748B',
@@ -572,5 +736,83 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  confirmIcon: {
+    marginLeft: 6,
+  },
+  levelModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  levelModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  levelModalTitle: {
+    color: '#1A202C',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  modalCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  levelAllOption: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  levelOption: {
+    width: 48,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelOptionActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  levelOptionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  levelOptionTextActive: {
+    color: '#FFFFFF',
   },
 });

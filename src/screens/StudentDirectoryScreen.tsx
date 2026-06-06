@@ -38,6 +38,8 @@ type Student = {
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
+const StudentSeparator = () => <View style={styles.separator} />;
+
 const COLORS = [
   '#E8A87C',
   '#7EB8D4',
@@ -182,6 +184,7 @@ export default function StudentDirectoryScreen() {
     navigation.navigate('AssignHomework', {
       studentId: student.id,
       studentName: student.name,
+      level: student.level,
     });
   };
 
@@ -291,7 +294,7 @@ export default function StudentDirectoryScreen() {
               onViewPress={() => setSelectedStudent(item)}
             />
           )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={StudentSeparator}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             showLoader ? null : (

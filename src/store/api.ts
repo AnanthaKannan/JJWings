@@ -41,6 +41,7 @@ type ApiQuestion = {
   _id: string;
   questionId?: string;
   questions?: string[];
+  level?: number;
   updatedAt?: string;
 };
 
@@ -139,6 +140,7 @@ export type QuestionTask = {
   id: string;
   questionId?: string;
   question: string[];
+  level?: number;
   updatedAt?: string;
 };
 
@@ -287,10 +289,21 @@ type UpdateHomeworkArg = {
 type CreateQuestionArg = {
   taskId: string;
   question: string[];
+  level: number;
 };
 
 type DeleteQuestionArg = {
   questionId: string;
+};
+
+type QuestionsArg = {
+  level?: number;
+};
+
+type UpdateQuestionArg = {
+  id: string;
+  questionId: string;
+  level: number;
 };
 
 type AssignHomeworkArg = {
@@ -300,6 +313,7 @@ type AssignHomeworkArg = {
 
 type AvailableQuestionsArg = {
   studentId: string;
+  level?: number;
 };
 
 type NotificationsArg = {
@@ -343,6 +357,7 @@ const mapQuestion = (question: ApiQuestion): QuestionTask => ({
   id: question._id,
   questionId: question.questionId,
   question: question.questions ?? [],
+  level: question.level,
   updatedAt: question.updatedAt,
 });
 
@@ -508,10 +523,14 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Students', id: 'SAME_DEVICE' }],
     }),
 
-    getQuestions: builder.query<QuestionTask[], void>({
-      query: () => ({
+    getQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+      query: arg => ({
         url: '/admin/questions',
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+        },
       }),
       transformResponse: (response: ApiQuestionsResponse) =>
         response.questions.map(mapQuestion),
@@ -526,9 +545,13 @@ export const jjWingsApi = createApi({
 
     getAvailableQuestions: builder.query<QuestionTask[], AvailableQuestionsArg>(
       {
-        query: ({ studentId }) => ({
+        query: ({ studentId, level }) => ({
           url: `/admin/questions/available/${studentId}`,
-          params: { page: 1, limit: DEFAULT_LIMIT },
+          params: {
+            page: 1,
+            limit: DEFAULT_LIMIT,
+            ...(typeof level === 'number' ? { level } : {}),
+          },
         }),
         transformResponse: (response: ApiQuestionsResponse) =>
           response.questions.map(mapQuestion),
@@ -689,12 +712,13 @@ export const jjWingsApi = createApi({
     }),
 
     createQuestion: builder.mutation<string, CreateQuestionArg>({
-      query: ({ taskId, question }) => ({
+      query: ({ taskId, question, level }) => ({
         url: '/admin/questions',
         method: 'POST',
         body: {
           questionId: taskId,
           questions: question,
+          level,
         },
       }),
       transformResponse: () => 'success',
@@ -709,6 +733,19 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { questionId }) => [
         { type: 'Question', id: questionId },
+        'Questions',
+      ],
+    }),
+
+    updateQuestion: builder.mutation<string, UpdateQuestionArg>({
+      query: ({ id, questionId, level }) => ({
+        url: `/admin/questions/${id}`,
+        method: 'PATCH',
+        body: { questionId, level },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Question', id },
         'Questions',
       ],
     }),
@@ -771,6 +808,7 @@ export const {
   useRemoveStudentFcmTokenMutation,
   useCreateQuestionMutation,
   useDeleteQuestionMutation,
+  useUpdateQuestionMutation,
   useAssignHomeworkMutation,
   useGetIdGenQuery,
   useGetScoreQuery,
