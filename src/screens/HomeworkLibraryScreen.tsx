@@ -10,11 +10,12 @@ import {
   Alert,
   Modal,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useIsFocused } from '@react-navigation/native';
-import { AdminHeader, LoadingState } from '../component';
-import { useGetQuestionsQuery } from '../store/api';
+import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import { useDeleteQuestionMutation, useGetQuestionsQuery } from '../store/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ type Module = {
   iconBg: string;
   iconColor: string;
   iconLabel?: string;
+  updatedAt?: string;
 };
 
 const ICON_COLORS = [
@@ -55,6 +57,20 @@ const evaluateMath = (expr: string): string => {
 };
 
 // ─── Module Icon ──────────────────────────────────────────────────────────────
+
+const formatHomeworkTime = (dateValue?: string) => {
+  if (!dateValue) return '';
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 const ModuleIcon = ({
   iconType,
@@ -87,29 +103,55 @@ const ModuleIcon = ({
 const ModuleCard = ({
   item,
   onPress,
+  onDeletePress,
+  isDeleting,
 }: {
   item: Module;
   onPress: () => void;
-}) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.card}>
-      {/* Top row */}
-      <View style={styles.cardTop}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <View style={styles.cardBottom}>
-          <View style={styles.questionsBadge}>
-            <MaterialIcons name="quiz" size={14} color="#94A3B8" />
-            <Text style={styles.questionsText}>
-              {item.questions.length} Questions
+  onDeletePress: () => void;
+  isDeleting: boolean;
+}) => {
+  const updatedTime = formatHomeworkTime(item.updatedAt);
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.card}>
+        <View style={styles.cardTop}>
+          <View style={styles.cardDetails}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {item.title}
             </Text>
+            <View style={styles.cardBottom}>
+              <View style={styles.questionsBadge}>
+                <MaterialIcons name="quiz" size={14} color="#94A3B8" />
+                <Text style={styles.questionsText}>
+                  {item.questions.length} Questions
+                </Text>
+              </View>
+              {updatedTime ? (
+                <View style={styles.updatedBadge}>
+                  <MaterialIcons name="schedule" size={14} color="#94A3B8" />
+                  <Text style={styles.updatedText}>{updatedTime}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
+          <TouchableOpacity
+            style={[styles.deleteButton, isDeleting && styles.deleteButtonOff]}
+            onPress={event => {
+              event.stopPropagation();
+              onDeletePress();
+            }}
+            disabled={isDeleting}
+            activeOpacity={0.82}
+          >
+            <MaterialIcons name="delete-outline" size={20} color="#B91C1C" />
+          </TouchableOpacity>
         </View>
       </View>
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -118,9 +160,12 @@ export default function HomeworkLibraryScreen() {
   const { data: questionsData, isLoading } = useGetQuestionsQuery(undefined, {
     skip: !isFocused,
   });
+  const [deleteQuestion, { isLoading: isDeleting }] =
+    useDeleteQuestionMutation();
 
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const modules = useMemo(() => {
     if (!questionsData) return [];
@@ -129,9 +174,23 @@ export default function HomeworkLibraryScreen() {
       id: q.id,
       title: q.questionId ?? q.id,
       questions: q.question,
+      updatedAt: q.updatedAt,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));
   }, [questionsData]);
+
+  const filteredModules = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return modules;
+
+    return modules.filter(module => {
+      const questionText = module.questions.join(' ').toLowerCase();
+      return (
+        module.title.toLowerCase().includes(query) ||
+        questionText.includes(query)
+      );
+    });
+  }, [modules, searchTerm]);
 
   const handleModulePress = (item: Module) => {
     setSelectedModule(item);
@@ -143,21 +202,74 @@ export default function HomeworkLibraryScreen() {
     setSelectedModule(null);
   };
 
+  const handleDeletePress = (item: Module) => {
+    Alert.alert(
+      'Delete homework?',
+      `Delete "${item.title}" and its ${item.questions.length} question(s)?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteQuestion({ questionId: item.id }).unwrap();
+              if (selectedModule?.id === item.id) {
+                closeModal();
+              }
+            } catch {
+              Alert.alert(
+                'Unable to delete',
+                'Please try deleting this homework again.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
       <AdminHeader header="Homework Library" />
-      <View style={{ marginTop: 15 }}></View>
+      <View style={styles.headerGap} />
+      <View style={styles.searchWrap}>
+        <MaterialIcons name="search" size={20} color="#94A3B8" />
+        <TextInput
+          style={styles.searchInput}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          placeholder="Search homework"
+          placeholderTextColor="#94A3B8"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {searchTerm ? (
+          <TouchableOpacity
+            style={styles.clearSearchButton}
+            onPress={() => setSearchTerm('')}
+            activeOpacity={0.75}
+          >
+            <MaterialIcons name="close" size={18} color="#64748B" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
       {/* ── Module List ── */}
       <FlatList
-        data={modules}
+        data={filteredModules}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <ModuleCard item={item} onPress={() => handleModulePress(item)} />
+          <ModuleCard
+            item={item}
+            onPress={() => handleModulePress(item)}
+            onDeletePress={() => handleDeletePress(item)}
+            isDeleting={isDeleting}
+          />
         )}
         ListEmptyComponent={
           isFocused && isLoading ? (
@@ -165,9 +277,13 @@ export default function HomeworkLibraryScreen() {
           ) : (
             <View style={styles.emptyState}>
               <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
-              <Text style={styles.emptyText}>No questions yet</Text>
+              <Text style={styles.emptyText}>
+                {searchTerm ? 'No homework found' : 'No questions yet'}
+              </Text>
               <Text style={styles.emptySubText}>
-                Questions will appear here when created
+                {searchTerm
+                  ? 'Try searching another task or question'
+                  : 'Questions will appear here when created'}
               </Text>
             </View>
           )
@@ -215,6 +331,7 @@ export default function HomeworkLibraryScreen() {
           </View>
         </View>
       </Modal>
+      <LoadingOverlay visible={isDeleting} label="Deleting homework..." />
     </SafeAreaView>
   );
 }
@@ -225,6 +342,38 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#EEF0F8',
+  },
+  headerGap: {
+    marginTop: 15,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1A202C',
+    paddingVertical: 0,
+  },
+  clearSearchButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
   },
 
   // Header
@@ -304,7 +453,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 14,
+  },
+  cardDetails: {
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
   },
   moduleIcon: {
     width: 44,
@@ -332,7 +485,8 @@ const styles = StyleSheet.create({
   cardBottom: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   questionsBadge: {
     flexDirection: 'row',
@@ -344,6 +498,16 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontWeight: '500',
   },
+  updatedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  updatedText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
   cardActions: {
     flexDirection: 'row',
     gap: 4,
@@ -351,6 +515,19 @@ const styles = StyleSheet.create({
   actionBtn: {
     padding: 6,
     borderRadius: 8,
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonOff: {
+    opacity: 0.55,
   },
 
   // Empty

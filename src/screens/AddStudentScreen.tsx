@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,15 @@ import {
   StatusBar,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
-import { useAddStudentMutation } from '../store/api';
+import { useAddStudentMutation, useUpdateStudentMutation } from '../store/api';
 import { AdminHeader, LoadingOverlay } from '../component';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,31 +25,57 @@ import { AdminHeader, LoadingOverlay } from '../component';
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function AddStudentScreen() {
-  const [fullName, setFullName] = useState('');
+  const route = useRoute<any>();
+  const editStudentId = route.params?.studentId as string | undefined;
+  const editStudentName = route.params?.studentName as string | undefined;
+  const editStudentLevel =
+    typeof route.params?.level === 'number' ? route.params.level : 0;
+  const isEditMode = Boolean(editStudentId);
+  const [fullName, setFullName] = useState(editStudentName ?? '');
+  const [level, setLevel] = useState(editStudentLevel);
+  const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFormValid = fullName.trim().length > 0;
   const navigation = useNavigation<any>();
 
   const [addStudent] = useAddStudentMutation();
+  const [updateStudent] = useUpdateStudentMutation();
+
+  useEffect(() => {
+    setFullName(editStudentName ?? '');
+    setLevel(editStudentLevel);
+  }, [editStudentLevel, editStudentName]);
 
   const handleAddStudent = async () => {
     if (!isFormValid) return;
 
     setIsSubmitting(true);
     try {
-      await addStudent({
-        name: fullName.trim(),
-      }).unwrap();
+      if (isEditMode && editStudentId) {
+        await updateStudent({
+          studentId: editStudentId,
+          name: fullName.trim(),
+          level,
+        }).unwrap();
+      } else {
+        await addStudent({
+          name: fullName.trim(),
+          level,
+        }).unwrap();
+      }
 
       Alert.alert(
-        'Student Added',
-        `${fullName} has been registered successfully.`,
+        isEditMode ? 'Student Updated' : 'Student Added',
+        `${fullName} has been ${
+          isEditMode ? 'updated' : 'registered'
+        } successfully.`,
         [
           {
             text: 'OK',
             onPress: () => {
               setFullName('');
+              setLevel(0);
               navigation.navigate('AdminStudents', {
                 screen: 'StudentDirectory',
               });
@@ -57,7 +85,10 @@ export default function AddStudentScreen() {
       );
     } catch (err) {
       console.log(err);
-      Alert.alert('Error', 'Failed to add student. Please try again.');
+      Alert.alert(
+        'Error',
+        `Failed to ${isEditMode ? 'update' : 'add'} student. Please try again.`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +99,7 @@ export default function AddStudentScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
-      <AdminHeader header="Add Student" />
+      <AdminHeader header={isEditMode ? 'Update Student' : 'Add Student'} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -83,8 +114,9 @@ export default function AddStudentScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Student Information</Text>
             <Text style={styles.cardSubtitle}>
-              Enter the administrative details to register a new student to the
-              portal.
+              {isEditMode
+                ? 'Update the student details and save the changes.'
+                : 'Enter the administrative details to register a new student to the portal.'}
             </Text>
 
             {/* Full Name */}
@@ -105,6 +137,23 @@ export default function AddStudentScreen() {
               />
             </View>
 
+            {/* Level */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Level</Text>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setIsLevelPickerOpen(true)}
+                activeOpacity={0.82}
+              >
+                <Text style={styles.dropdownValue}>Level {level}</Text>
+                <MaterialIcons
+                  name="keyboard-arrow-down"
+                  size={22}
+                  color="#4F46E5"
+                />
+              </TouchableOpacity>
+            </View>
+
             {/* Submit Button */}
             <TouchableOpacity
               style={[
@@ -116,7 +165,13 @@ export default function AddStudentScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.addButtonText}>
-                {isSubmitting ? 'Adding...' : 'Add Student'}
+                {isSubmitting
+                  ? isEditMode
+                    ? 'Updating...'
+                    : 'Adding...'
+                  : isEditMode
+                  ? 'Update Student'
+                  : 'Add Student'}
               </Text>
               {!isSubmitting && (
                 <MaterialIcons
@@ -130,6 +185,54 @@ export default function AddStudentScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Modal
+        visible={isLevelPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLevelPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsLevelPickerOpen(false)}
+        >
+          <Pressable style={styles.levelModal}>
+            <View style={styles.levelModalHeader}>
+              <Text style={styles.levelModalTitle}>Select Level</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setIsLevelPickerOpen(false)}
+              >
+                <MaterialIcons name="close" size={20} color="#334155" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.levelGrid}>
+              {Array.from({ length: 11 }, (_, value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.levelOption,
+                    level === value && styles.levelOptionActive,
+                  ]}
+                  onPress={() => {
+                    setLevel(value);
+                    setIsLevelPickerOpen(false);
+                  }}
+                  activeOpacity={0.82}
+                >
+                  <Text
+                    style={[
+                      styles.levelOptionText,
+                      level === value && styles.levelOptionTextActive,
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
       <LoadingOverlay visible={isSubmitting} label="Adding student..." />
     </SafeAreaView>
   );
@@ -228,6 +331,87 @@ const styles = StyleSheet.create({
   inputFilled: {
     borderColor: '#C7D2FE',
     backgroundColor: '#F5F6FF',
+  },
+  dropdownButton: {
+    minHeight: 50,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#F5F6FF',
+    borderWidth: 1.5,
+    borderColor: '#C7D2FE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownValue: {
+    color: '#2D3748',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  levelModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  levelModalTitle: {
+    color: '#1A202C',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  modalCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  levelOption: {
+    width: 48,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelOptionActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  levelOptionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  levelOptionTextActive: {
+    color: '#FFFFFF',
   },
 
   // Add Button

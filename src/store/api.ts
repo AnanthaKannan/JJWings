@@ -29,6 +29,7 @@ type ApiStudent = {
   _id: string;
   studentId?: string;
   name?: string;
+  level?: number;
   vertical?: boolean;
   deviceIds?: string[];
   fcmToken?: string;
@@ -40,6 +41,7 @@ type ApiQuestion = {
   _id: string;
   questionId?: string;
   questions?: string[];
+  updatedAt?: string;
 };
 
 type ApiHomework = {
@@ -111,6 +113,7 @@ export type Student = {
   id: string;
   name: string;
   studentId?: string;
+  level?: number;
   fcmTokens: string[];
   horizontal: boolean;
   assigned: number;
@@ -136,6 +139,7 @@ export type QuestionTask = {
   id: string;
   questionId?: string;
   question: string[];
+  updatedAt?: string;
 };
 
 export type Homework = {
@@ -237,6 +241,13 @@ type StudentByIdArg = {
 
 type AddStudentArg = {
   name: string;
+  level: number;
+};
+
+type UpdateStudentArg = {
+  studentId: string;
+  name: string;
+  level: number;
 };
 
 type UpdateStudentHorizontalArg = {
@@ -278,6 +289,10 @@ type CreateQuestionArg = {
   question: string[];
 };
 
+type DeleteQuestionArg = {
+  questionId: string;
+};
+
 type AssignHomeworkArg = {
   studentId: string;
   questionIds: string[];
@@ -303,6 +318,7 @@ const mapStudent = (student: ApiStudent): Student => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
+  level: student.level,
   fcmTokens: [
     ...(student.fcmTokens ?? []),
     ...(student.fcmToken ? [student.fcmToken] : []),
@@ -327,6 +343,7 @@ const mapQuestion = (question: ApiQuestion): QuestionTask => ({
   id: question._id,
   questionId: question.questionId,
   question: question.questions ?? [],
+  updatedAt: question.updatedAt,
 });
 
 const mapHomework = (homework: ApiHomework): Homework => {
@@ -595,13 +612,26 @@ export const jjWingsApi = createApi({
     }),
 
     addStudent: builder.mutation<string, AddStudentArg>({
-      query: ({ name }) => ({
+      query: ({ name, level }) => ({
         url: '/admin/students',
         method: 'POST',
-        body: { name },
+        body: { name, level },
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'Students', id: 'LIST' }],
+    }),
+
+    updateStudent: builder.mutation<string, UpdateStudentArg>({
+      query: ({ studentId, name, level }) => ({
+        url: `/admin/students/${studentId}`,
+        method: 'PATCH',
+        body: { name, level },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Student', id: studentId },
+        { type: 'Students', id: 'LIST' },
+      ],
     }),
 
     updateStudentHorizontal: builder.mutation<
@@ -671,6 +701,18 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'Questions', id: 'LIST' }],
     }),
 
+    deleteQuestion: builder.mutation<string, DeleteQuestionArg>({
+      query: ({ questionId }) => ({
+        url: `/admin/questions/${questionId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { questionId }) => [
+        { type: 'Question', id: questionId },
+        'Questions',
+      ],
+    }),
+
     assignHomework: builder.mutation<string, AssignHomeworkArg>({
       query: ({ studentId, questionIds }) => ({
         url: '/admin/questions/assign',
@@ -721,12 +763,14 @@ export const {
   useGetQuestionsQuery,
   useGetAvailableQuestionsQuery,
   useAddStudentMutation,
+  useUpdateStudentMutation,
   useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,
   useCreateQuestionMutation,
+  useDeleteQuestionMutation,
   useAssignHomeworkMutation,
   useGetIdGenQuery,
   useGetScoreQuery,

@@ -107,7 +107,7 @@ const StudentCard = ({
       disabled={isDeleting}
       activeOpacity={0.82}
     >
-      <MaterialIcons name="delete-outline" size={20} color="#FFFFFF" />
+      <MaterialIcons name="delete-outline" size={20} color="#B91C1C" />
     </TouchableOpacity>
   </TouchableOpacity>
 );
@@ -709,7 +709,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -27,6 +27,7 @@ type Student = {
   id: string;
   name: string;
   studentId?: string;
+  level?: number;
   fcmTokens: string[];
   assigned: number;
   completed: number;
@@ -93,6 +94,9 @@ const StudentRow = ({
       <View style={styles.nameBlock}>
         <Text style={styles.studentName}>{item.name}</Text>
         <Text style={styles.studentMeta}>#{item.studentId ?? item.id}</Text>
+        <Text style={styles.studentLevel}>
+          Level {typeof item.level === 'number' ? item.level : '-'}
+        </Text>
       </View>
     </View>
 
@@ -223,6 +227,17 @@ export default function StudentDirectoryScreen() {
     });
   };
 
+  const handleModalEditPress = () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+    navigation.navigate('AddStudent', {
+      studentId: selectedStudent.id,
+      studentName: selectedStudent.name,
+      level: selectedStudent.level,
+    });
+  };
+
   const handleModalHorizontalPress = async () => {
     if (!selectedStudent) return;
 
@@ -341,6 +356,12 @@ export default function StudentDirectoryScreen() {
               <Text style={styles.modalNotificationActionText}>
                 Notifications
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalEditAction}
+              onPress={handleModalEditPress}
+            >
+              <Text style={styles.modalEditActionText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -517,6 +538,12 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   studentMeta: { fontSize: 11, color: '#A0AEC0', marginTop: 1 },
+  studentLevel: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+    fontWeight: '700',
+  },
 
   // Accuracy
   accuracyBadge: {
@@ -674,6 +701,18 @@ const styles = StyleSheet.create({
   modalNotificationActionText: {
     fontSize: 14,
     color: '#2563EB',
+    fontWeight: '800',
+  },
+  modalEditAction: {
+    borderRadius: 10,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  modalEditActionText: {
+    fontSize: 14,
+    color: '#7E22CE',
     fontWeight: '800',
   },
   modalHorizontalAction: {

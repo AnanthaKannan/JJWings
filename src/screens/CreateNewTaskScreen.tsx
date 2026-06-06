@@ -67,6 +67,78 @@ const SYMBOLS = ['+', '-', '*', '/'];
 const randomInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
+const getNextSafeStep = (
+  runningTotal: number,
+  min: number,
+  max: number,
+  symbols: string[],
+) => {
+  const shuffledSymbols = [...symbols].sort(() => Math.random() - 0.5);
+
+  for (const symbol of shuffledSymbols) {
+    if (symbol === '-') {
+      const maxSubtract = Math.min(max, Math.floor(runningTotal));
+
+      if (maxSubtract >= min) {
+        const number = randomInt(min, maxSubtract);
+        return {
+          symbol,
+          number,
+          nextTotal: runningTotal - number,
+        };
+      }
+
+      continue;
+    }
+
+    if (symbol === '/') {
+      const safeMin = Math.max(1, min);
+      if (safeMin > max) continue;
+
+      const number = randomInt(safeMin, max);
+      return {
+        symbol,
+        number,
+        nextTotal: runningTotal / number,
+      };
+    }
+
+    const number = randomInt(min, max);
+
+    return {
+      symbol,
+      number,
+      nextTotal: symbol === '*' ? runningTotal * number : runningTotal + number,
+    };
+  }
+
+  const number = randomInt(min, max);
+  return {
+    symbol: '+',
+    number,
+    nextTotal: runningTotal + number,
+  };
+};
+
+const generateSafeExpression = (
+  min: number,
+  max: number,
+  steps: number,
+  symbols: string[],
+) => {
+  let runningTotal = randomInt(min, max);
+  let expression = String(runningTotal);
+
+  for (let index = 1; index < steps; index++) {
+    const nextStep = getNextSafeStep(runningTotal, min, max, symbols);
+
+    expression = `${expression}${nextStep.symbol}${nextStep.number}`;
+    runningTotal = nextStep.nextTotal;
+  }
+
+  return expression;
+};
+
 // ─── Question Row ─────────────────────────────────────────────────────────────
 
 const QuestionRow = ({
@@ -249,18 +321,11 @@ export default function CreateNewTaskScreen() {
       return;
     }
 
-    const generated = Array.from({ length: count }, () => {
-      const numbers = Array.from({ length: steps }, () => randomInt(min, max));
-      const expression = numbers.reduce((expr, number, index) => {
-        if (index === 0) return String(number);
-
-        const symbol =
-          genForm.symbols[randomInt(0, genForm.symbols.length - 1)];
-        return `${expr}${symbol}${number}`;
-      }, '');
-
-      return createQuestionFromExpression(expression);
-    });
+    const generated = Array.from({ length: count }, () =>
+      createQuestionFromExpression(
+        generateSafeExpression(min, max, steps, genForm.symbols),
+      ),
+    );
 
     setQuestions(prev => {
       const existing = prev.filter(q => q.expression.trim() !== '');
