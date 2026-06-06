@@ -67,6 +67,7 @@ export default function LoginScreen() {
           );
           try {
             const deviceId = await DeviceInfo.getUniqueId();
+            console.log('deviceId', deviceId);
             await updateStudentDeviceId({ deviceId }).unwrap();
           } catch (error) {
             console.error('Failed to update student device id', error);

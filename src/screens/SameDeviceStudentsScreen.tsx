@@ -176,7 +176,6 @@ export default function SameDeviceStudentsScreen() {
 
       try {
         const deviceId = await DeviceInfo.getUniqueId();
-        console.log('studentId', student.id, 'deviceId', deviceId);
         await deleteStudentDeviceId({
           studentId: student.id,
           deviceId,
@@ -256,7 +255,7 @@ export default function SameDeviceStudentsScreen() {
       }
 
       const deviceId = await DeviceInfo.getUniqueId();
-
+      console.log('deviceId', deviceId);
       await updateStudentDeviceId({
         deviceId,
         authToken: result.data.token,

@@ -82,7 +82,6 @@ export default function ProfileScreen() {
     if (!isAdmin && studentId) {
       try {
         const deviceId = await DeviceInfo.getUniqueId();
-        console.log('studentId', studentId, 'deviceId', deviceId);
         await deleteStudentDeviceId({ studentId, deviceId }).unwrap();
       } catch (error) {
         console.error('Failed to remove student device id', error);
