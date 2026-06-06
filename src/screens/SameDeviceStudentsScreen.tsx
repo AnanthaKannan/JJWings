@@ -2,11 +2,14 @@ import React, { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Modal,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -24,6 +27,8 @@ import {
   SameDeviceStudent,
   useDeleteStudentDeviceIdMutation,
   useGetSameDeviceStudentsQuery,
+  useLazyGetLoginQuery,
+  useUpdateStudentDeviceIdMutation,
 } from '../store/api';
 import { logout } from '../store/slices';
 import { RootState } from '../store/store';
@@ -99,6 +104,11 @@ export default function SameDeviceStudentsScreen() {
   const [deletingStudentId, setDeletingStudentId] = useState<string | null>(
     null,
   );
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [studentLoginId, setStudentLoginId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
@@ -117,6 +127,12 @@ export default function SameDeviceStudentsScreen() {
 
   const [deleteStudentDeviceId, { isLoading: isDeleting }] =
     useDeleteStudentDeviceIdMutation();
+  const [login, loginRes] = useLazyGetLoginQuery();
+  const [updateStudentDeviceId, updateDeviceRes] =
+    useUpdateStudentDeviceIdMutation();
+
+  const isAddingStudent = loginRes.isFetching || updateDeviceRes.isLoading;
+  const canSubmitAdd = studentLoginId.trim().length > 0 && password.length > 0;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -193,6 +209,54 @@ export default function SameDeviceStudentsScreen() {
     [deleteStudentFromDevice],
   );
 
+  const closeAddModal = useCallback(() => {
+    if (isAddingStudent) return;
+
+    setIsAddModalOpen(false);
+    setStudentLoginId('');
+    setPassword('');
+    setShowPassword(false);
+    setLoginError('');
+  }, [isAddingStudent]);
+
+  const handleAddStudent = useCallback(async () => {
+    const cleanStudentId = studentLoginId.trim();
+
+    if (!cleanStudentId || !password) {
+      setLoginError('User Name or password incorrect.');
+      return;
+    }
+
+    setLoginError('');
+
+    try {
+      const result = await login({
+        username: cleanStudentId,
+        password,
+      });
+
+      if (!('data' in result) || !result.data || result.data.role !== 'student') {
+        setLoginError('User Name or password incorrect.');
+        return;
+      }
+
+      const deviceId = await DeviceInfo.getUniqueId();
+
+      await updateStudentDeviceId({
+        deviceId,
+        authToken: result.data.token,
+      }).unwrap();
+
+      setIsAddModalOpen(false);
+      setStudentLoginId('');
+      setPassword('');
+      setShowPassword(false);
+      await refetch();
+    } catch {
+      setLoginError('User Name or password incorrect.');
+    }
+  }, [login, password, refetch, studentLoginId, updateStudentDeviceId]);
+
   const showLoader = isFocused && isLoading && students.length === 0;
 
   return (
@@ -203,6 +267,14 @@ export default function SameDeviceStudentsScreen() {
           <Text style={styles.headerTitle}>Same Device Students</Text>
           <Text style={styles.headerSubtitle}>Students logged on this device</Text>
         </View>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setIsAddModalOpen(true)}
+          activeOpacity={0.82}
+        >
+          <MaterialIcons name="person-add-alt" size={21} color="#FFFFFF" />
+          <Text style={styles.addButtonText}>Add</Text>
+        </TouchableOpacity>
         <View style={styles.headerIcon}>
           <MaterialIcons name="devices-other" size={22} color="#4F46E5" />
         </View>
@@ -251,6 +323,90 @@ export default function SameDeviceStudentsScreen() {
           }
         />
       )}
+      <Modal
+        visible={isAddModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAddModal}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={closeAddModal}>
+          <Pressable style={styles.loginCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Add Student</Text>
+                <Text style={styles.modalSubtitle}>Login to add this device</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={closeAddModal}
+                disabled={isAddingStudent}
+              >
+                <MaterialIcons name="close" size={20} color="#334155" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>Explorer ID</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. JJ099"
+                placeholderTextColor="#AABDD4"
+                value={studentLoginId}
+                onChangeText={text => {
+                  setStudentLoginId(text);
+                  setLoginError('');
+                }}
+                autoCapitalize="none"
+                editable={!isAddingStudent}
+              />
+            </View>
+
+            <Text style={styles.inputLabel}>Secret Code</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#AABDD4"
+                value={password}
+                onChangeText={text => {
+                  setPassword(text);
+                  setLoginError('');
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                editable={!isAddingStudent}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(prev => !prev)}
+                disabled={isAddingStudent}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.eyeIcon}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {loginError.length > 0 && (
+              <Text style={styles.errorText}>{loginError}</Text>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                (!canSubmitAdd || isAddingStudent) && styles.submitButtonOff,
+              ]}
+              onPress={handleAddStudent}
+              disabled={!canSubmitAdd || isAddingStudent}
+              activeOpacity={0.86}
+            >
+              <Text style={styles.submitButtonText}>
+                {isAddingStudent ? 'Adding...' : 'Add to Device'}
+              </Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
       <LoadingOverlay visible={isDeleting} label="Removing student..." />
     </SafeAreaView>
   );
@@ -268,6 +424,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#F8F9FB',
+    gap: 10,
   },
   headerTitle: {
     color: '#1E293B',
@@ -280,6 +437,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2,
   },
+  addButton: {
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
+  },
   headerIcon: {
     width: 38,
     height: 38,
@@ -287,6 +459,106 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.46)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 22,
+  },
+  loginCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 24,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  modalTitle: {
+    color: '#1A2259',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  modalSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A2259',
+    marginBottom: 8,
+    marginTop: 14,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F4FF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A2259',
+    fontWeight: '500',
+    padding: 0,
+  },
+  eyeIcon: {
+    minWidth: 38,
+    fontSize: 13,
+    color: '#1A3A6B',
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#EF4444',
+    textAlign: 'center',
+    fontWeight: '700',
+    marginTop: 12,
+  },
+  submitButton: {
+    backgroundColor: '#1A3A6B',
+    borderRadius: 18,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 22,
+  },
+  submitButtonOff: {
+    backgroundColor: '#A0AECC',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
   },
   loaderWrap: {
     marginHorizontal: 16,

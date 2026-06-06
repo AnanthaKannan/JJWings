@@ -244,6 +244,7 @@ type UpdateStudentFcmTokenArg = {
 
 type UpdateStudentDeviceIdArg = {
   deviceId: string;
+  authToken?: string;
 };
 
 type DeleteStudentDeviceIdArg = {
@@ -608,10 +609,11 @@ export const jjWingsApi = createApi({
     }),
 
     updateStudentDeviceId: builder.mutation<string, UpdateStudentDeviceIdArg>({
-      query: ({ deviceId }) => ({
+      query: ({ deviceId, authToken }) => ({
         url: '/student',
         method: 'PATCH',
         body: { deviceId },
+        headers: authToken ? { 'x-access-token': authToken } : undefined,
       }),
       transformResponse: () => 'success',
     }),
