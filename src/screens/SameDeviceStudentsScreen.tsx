@@ -329,14 +329,6 @@ export default function SameDeviceStudentsScreen() {
             Students logged on this device
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setIsAddModalOpen(true)}
-          activeOpacity={0.82}
-        >
-          <MaterialIcons name="person-add-alt" size={21} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Add</Text>
-        </TouchableOpacity>
         <View style={styles.headerIcon}>
           <MaterialIcons name="devices-other" size={22} color="#4F46E5" />
         </View>
@@ -387,6 +379,13 @@ export default function SameDeviceStudentsScreen() {
           }
         />
       )}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setIsAddModalOpen(true)}
+        activeOpacity={0.86}
+      >
+        <MaterialIcons name="person-add-alt" size={25} color="#FFFFFF" />
+      </TouchableOpacity>
       <Modal
         visible={isAddModalOpen}
         transparent
@@ -507,21 +506,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2,
   },
-  addButton: {
-    height: 38,
-    borderRadius: 8,
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '900',
-  },
   headerIcon: {
     width: 38,
     height: 38,
@@ -529,6 +513,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: 18,
+    bottom: 18,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 8,
   },
   modalBackdrop: {
     flex: 1,
