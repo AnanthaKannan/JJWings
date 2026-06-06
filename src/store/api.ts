@@ -30,6 +30,7 @@ type ApiStudent = {
   studentId?: string;
   name?: string;
   vertical?: boolean;
+  deviceIds?: string[];
   fcmToken?: string;
   fcmTokens?: string[];
   score?: ApiScore;
@@ -54,6 +55,11 @@ type ApiHomework = {
 type ApiStudentsResponse = {
   students: ApiStudent[];
   meta: ApiMeta;
+};
+
+type ApiSameDeviceStudentsResponse = {
+  students: ApiStudent[];
+  count: number;
 };
 
 type ApiQuestionsResponse = {
@@ -111,6 +117,14 @@ export type Student = {
   new: number;
   success: number;
   failure: number;
+};
+
+export type SameDeviceStudent = {
+  id: string;
+  name: string;
+  studentId?: string;
+  deviceIds: string[];
+  horizontal: boolean;
 };
 
 export type Question = {
@@ -228,6 +242,15 @@ type UpdateStudentFcmTokenArg = {
   fcmToken: string;
 };
 
+type UpdateStudentDeviceIdArg = {
+  deviceId: string;
+};
+
+type DeleteStudentDeviceIdArg = {
+  studentId: string;
+  deviceId: string;
+};
+
 type RemoveStudentFcmTokenArg = {
   studentId: string;
   fcmToken: string;
@@ -283,6 +306,14 @@ const mapStudent = (student: ApiStudent): Student => ({
   new: student.score?.new ?? 0,
   success: student.score?.correct ?? 0,
   failure: student.score?.wrong ?? 0,
+});
+
+const mapSameDeviceStudent = (student: ApiStudent): SameDeviceStudent => ({
+  id: student._id,
+  name: student.name ?? '',
+  studentId: student.studentId,
+  deviceIds: student.deviceIds ?? [],
+  horizontal: !(student.vertical ?? true),
 });
 
 const mapQuestion = (question: ApiQuestion): QuestionTask => ({
@@ -431,6 +462,13 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    getSameDeviceStudents: builder.query<SameDeviceStudent[], void>({
+      query: () => '/student/same-device',
+      transformResponse: (response: ApiSameDeviceStudentsResponse) =>
+        response.students.map(mapSameDeviceStudent),
+      providesTags: [{ type: 'Students', id: 'SAME_DEVICE' }],
+    }),
+
     getQuestions: builder.query<QuestionTask[], void>({
       query: () => ({
         url: '/admin/questions',
@@ -569,6 +607,25 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
     }),
 
+    updateStudentDeviceId: builder.mutation<string, UpdateStudentDeviceIdArg>({
+      query: ({ deviceId }) => ({
+        url: '/student',
+        method: 'PATCH',
+        body: { deviceId },
+      }),
+      transformResponse: () => 'success',
+    }),
+
+    deleteStudentDeviceId: builder.mutation<string, DeleteStudentDeviceIdArg>({
+      query: ({ studentId, deviceId }) => ({
+        url: '/student/device-id',
+        method: 'DELETE',
+        body: { studentId, deviceId },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Students', id: 'SAME_DEVICE' }],
+    }),
+
     removeStudentFcmToken: builder.mutation<string, RemoveStudentFcmTokenArg>({
       query: ({ studentId, fcmToken }) => ({
         url: `/admin/students/${studentId}`,
@@ -636,11 +693,14 @@ export const {
   useGetHomeworkByIdQuery,
   useGetStudentByIdQuery,
   useGetStudentsQuery,
+  useGetSameDeviceStudentsQuery,
   useGetQuestionsQuery,
   useGetAvailableQuestionsQuery,
   useAddStudentMutation,
   useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
+  useUpdateStudentDeviceIdMutation,
+  useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,
   useCreateQuestionMutation,
   useAssignHomeworkMutation,

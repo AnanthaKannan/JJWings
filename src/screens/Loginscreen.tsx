@@ -14,10 +14,14 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
+import DeviceInfo from 'react-native-device-info';
 
 import bannerImage from '../../assets/images/banner.png';
 import color from '../util/colors';
-import { useLazyGetLoginQuery } from '../store/api';
+import {
+  useLazyGetLoginQuery,
+  useUpdateStudentDeviceIdMutation,
+} from '../store/api';
 import { setAdminCredentials, setStudentCredentials } from '../store/slices';
 import {
   clearSavedLoginCredentials,
@@ -32,6 +36,7 @@ export default function LoginScreen() {
   const [checkingSavedLogin, setCheckingSavedLogin] = useState(true);
 
   const [login, loginRes] = useLazyGetLoginQuery();
+  const [updateStudentDeviceId] = useUpdateStudentDeviceIdMutation();
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
 
@@ -59,6 +64,12 @@ export default function LoginScreen() {
               token: result.data.token,
             }),
           );
+          try {
+            const deviceId = await DeviceInfo.getUniqueId();
+            await updateStudentDeviceId({ deviceId }).unwrap();
+          } catch (error) {
+            console.error('Failed to update student device id', error);
+          }
         } else {
           dispatch(
             setAdminCredentials({
@@ -78,7 +89,7 @@ export default function LoginScreen() {
 
       return false;
     },
-    [dispatch, login, navigation],
+    [dispatch, login, navigation, updateStudentDeviceId],
   );
 
   useEffect(() => {

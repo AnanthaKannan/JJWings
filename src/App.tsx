@@ -27,6 +27,7 @@ import {
   QuizReviewScreen,
   // ── Admin screens (create these in your screens folder) ──
   StudentDirectoryScreen,
+  SameDeviceStudentsScreen,
   AddStudentScreen,
   HomeworkLibraryScreen,
   CreateNewTaskScreen,
@@ -258,6 +259,20 @@ const MainTabs = createBottomTabNavigator({
         tabBarLabel: 'Notifications',
         tabBarIcon: ({ color, size, focused }) => (
           <NotificationTabIcon color={color} size={size} focused={focused} />
+        ),
+      },
+    },
+    SameDeviceStudents: {
+      screen: SameDeviceStudentsScreen,
+      options: {
+        tabBarLabel: 'Same Device',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="devices-other"
+            color={color}
+            size={size}
+            focused={focused}
+          />
         ),
       },
     },
