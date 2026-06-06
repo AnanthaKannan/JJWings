@@ -12,7 +12,16 @@ Password: Welcome123
 2. ./gradlew assembleRelease
 3. The generated APK will be located in `android/app/build/outputs/apk/release
 
+## Connect device to wifi
+### verify deice connected
+```adb devices
+```
+### connect to wifi
+```adb tcpip 5555
+adb connect 10.70.190.83:5555
+```
 
-## Issues
-1. could not add more than 9 questions at a time
-2. homeworkscreen => quize screen => success popup model => review quize screen on top if we click back button it should navigate to homework screen instead of quize screen
+## how to get device Ipaddress
+1. Go to Settings on your Android device.
+2. Navigate to "Network & Internet" or "Wi-Fi" settings.
+3. Tap on the connected Wi-Fi network to view its details.

@@ -13,6 +13,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 import { RootState } from '../store/store';
+import { APP_VERSION } from '../util/version';
 
 type AdminHeaderProps = {
   header: string;
@@ -117,6 +118,7 @@ export default function AdminHeader({
               </View>
 
               <ScrollView
+                style={styles.navScroll}
                 contentContainerStyle={styles.navList}
                 showsVerticalScrollIndicator={false}
               >
@@ -141,6 +143,8 @@ export default function AdminHeader({
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+
+              <Text style={styles.versionText}>v{APP_VERSION}</Text>
             </View>
           </View>
         </Modal>
@@ -205,6 +209,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingTop: 18,
     paddingHorizontal: 16,
+    paddingBottom: 14,
     shadowColor: '#0F172A',
     shadowOffset: { width: -8, height: 0 },
     shadowOpacity: 0.16,
@@ -258,6 +263,10 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 28,
     gap: 10,
+    flexGrow: 1,
+  },
+  navScroll: {
+    flex: 1,
   },
   navItem: {
     minHeight: 48,
@@ -275,5 +284,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     marginLeft: 12,
+  },
+  versionText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
   },
 });

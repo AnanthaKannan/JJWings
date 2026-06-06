@@ -32,6 +32,7 @@ interface HomeworkCardProps {
   result: boolean[];
   answer: number[];
   timer: number;
+  updatedAt?: string;
   isAdminReview?: boolean;
   studentId?: string;
   studentName?: string;
@@ -52,6 +53,7 @@ function HomeworkCard({
   result,
   answer,
   timer = 0,
+  updatedAt,
   isAdminReview = false,
   studentId,
   studentName,
@@ -70,6 +72,22 @@ function HomeworkCard({
 
     return `${minutes}:${remainingSeconds}`;
   };
+
+  const formatUpdatedTime = (dateValue?: string) => {
+    if (!dateValue) return '';
+
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const updatedTime = formatUpdatedTime(updatedAt);
 
   const handleAttend = () => {
     dispatch(
@@ -101,28 +119,22 @@ function HomeworkCard({
   return (
     <View style={styles.card}>
       {/* Title & subtitle */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <View>
+      <View style={styles.cardHeaderRow}>
+        <View style={styles.cardTextBlock}>
           <Text style={styles.cardTitle}>{questionLabel ?? questionId}</Text>
-          {/* <Text style={styles.questionIcon}>
-              {' '}
-              {state === HomeworkState.COMPLETED ? '✅' : '📋'}
-            </Text> */}
           {state === HomeworkState.COMPLETED ? (
-            <View style={styles.questionRow}>
-              <Text style={styles.questionIcon}>✅</Text>
-              <Text style={styles.questionCount}>
-                {correctCount}/{question.length} correct
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 16 }}> ⏱ </Text>
-                <Text style={styles.timeText}>{formatTime(timer)}</Text>
+            <View>
+              <View style={styles.completedCorrectRow}>
+                <Text style={styles.questionIcon}>✅</Text>
+                <Text style={styles.questionCount}>
+                  {correctCount}/{question.length} correct
+                </Text>
+              </View>
+              <View style={styles.completedMetaRow}>
+                {updatedTime.length > 0 && (
+                  <Text style={styles.updatedText}>{updatedTime}</Text>
+                )}
+                <Text style={styles.timeText}>⏱ {formatTime(timer)}</Text>
               </View>
             </View>
           ) : (
@@ -131,12 +143,11 @@ function HomeworkCard({
               <Text style={styles.questionCount}>
                 {result.length}/{question.length} questions
               </Text>
+              {updatedTime.length > 0 && (
+                <Text style={styles.updatedText}>• {updatedTime}</Text>
+              )}
             </View>
           )}
-          {/* <View style={styles.detailRow}>
-            <Text style={styles.questionIcon}>⏱</Text>
-            <Text style={styles.timeText}>{formatTime(timer)}</Text>
-          </View> */}
         </View>
         <View style={styles.actionRow}>
           {/* Attend button — hidden for COMPLETED */}
@@ -188,6 +199,7 @@ export default function HomeworkScreen() {
   const {
     data: homeworks,
     isLoading,
+    isFetching,
     refetch,
   } = useGetHomeworksQuery(
     { studentId: studentId ?? '', state: selectedFilter },
@@ -198,7 +210,7 @@ export default function HomeworkScreen() {
 
   const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
-  const showLoader = isFocused && isLoading && filteredHomeworks.length === 0;
+  const showLoader = isFocused && (isLoading || isFetching) && !refreshing;
   const handleAdminBack = () => {
     navigation.reset({
       index: 0,
@@ -450,12 +462,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 6,
-    paddingRight: 90, // avoid overlap with badge
   },
-  actionRow: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 10,
+  },
+  cardTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  actionRow: {
+    alignItems: 'flex-start',
     marginBottom: 15,
   },
   questionRow: {
@@ -463,6 +482,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     marginBottom: 14,
+  },
+  completedCorrectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 5,
+  },
+  completedMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  updatedText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '700',
   },
   questionIcon: {
     fontSize: 12,
@@ -496,9 +533,10 @@ const styles = StyleSheet.create({
   attendBtn: {
     alignSelf: 'flex-end',
     backgroundColor: '#1E3A8A',
+    minWidth: 68,
     paddingHorizontal: 18,
     paddingVertical: 8,
-    borderRadius: 50,
+    borderRadius: 10,
   },
   attendBtnText: {
     color: '#FFFFFF',

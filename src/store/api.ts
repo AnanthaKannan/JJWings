@@ -50,6 +50,7 @@ type ApiHomework = {
   results?: boolean[];
   answers?: Array<number | string>;
   timer?: number;
+  updatedAt?: string;
 };
 
 type ApiStudentsResponse = {
@@ -147,6 +148,7 @@ export type Homework = {
   result: boolean[];
   answer: number[];
   timer: number;
+  updatedAt?: string;
 };
 
 export type Notification = {
@@ -347,6 +349,7 @@ const mapHomework = (homework: ApiHomework): Homework => {
     result: homework.results ?? [],
     answer: (homework.answers ?? []).map(Number),
     timer: homework.timer ?? 0,
+    updatedAt: homework.updatedAt,
   };
 };
 
