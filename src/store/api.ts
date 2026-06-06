@@ -212,6 +212,7 @@ type LoginApiResponse = {
     name: string;
     studentId?: string;
     adminId?: string;
+    level?: number;
     vertical: boolean;
   };
 };
@@ -221,6 +222,7 @@ type LoginResult = {
   name: string;
   role: 'student' | 'admin';
   token: string;
+  level?: number;
   vertical: boolean;
 };
 
@@ -313,6 +315,10 @@ type AssignHomeworkArg = {
 
 type AvailableQuestionsArg = {
   studentId: string;
+  level?: number;
+};
+
+type RankingArg = {
   level?: number;
 };
 
@@ -482,6 +488,7 @@ export const jjWingsApi = createApi({
         name: response.user.name,
         role: response.role,
         token: response.token,
+        level: response.user.level,
         vertical: response.user.vertical,
       }),
     }),
@@ -496,6 +503,7 @@ export const jjWingsApi = createApi({
         name: response.user.name,
         role: response.role,
         token: response.token,
+        level: response.user.level,
         vertical: response.user.vertical,
       }),
     }),
@@ -610,8 +618,11 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
     }),
 
-    getRanking: builder.query<RankingStudent[], void>({
-      query: () => '/ranking',
+    getRanking: builder.query<RankingStudent[], RankingArg | void>({
+      query: arg => ({
+        url: '/ranking',
+        params: typeof arg?.level === 'number' ? { level: arg.level } : {},
+      }),
       transformResponse: (response: ApiRankingResponse) =>
         response.data.map(mapRankingStudent),
       providesTags: [{ type: 'Ranking', id: 'LIST' }],

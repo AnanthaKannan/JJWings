@@ -295,6 +295,7 @@ export default function SameDeviceStudentsScreen() {
             vertical: result.vertical,
             isStudent: true,
             studentName: result.name,
+            studentLevel: result.level,
             token: result.token,
           }),
         );

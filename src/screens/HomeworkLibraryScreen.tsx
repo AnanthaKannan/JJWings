@@ -139,7 +139,7 @@ const ModuleCard = ({
                 </Text>
               </View>
               <View style={styles.levelBadge}>
-                <MaterialIcons name="school" size={14} color="#4F46E5" />
+                <MaterialIcons name="school" size={14} color="#64748B" />
                 <Text style={styles.levelText}>
                   Level {typeof item.level === 'number' ? item.level : '-'}
                 </Text>
@@ -356,7 +356,7 @@ export default function HomeworkLibraryScreen() {
           <MaterialIcons
             name="filter-list"
             size={18}
-            color={selectedLevel === null ? '#64748B' : '#4F46E5'}
+            color={selectedLevel === null ? '#64748B' : '#475569'}
           />
           <Text
             style={[
@@ -696,8 +696,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   levelFilterButtonActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#C7D2FE',
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
   },
   levelFilterText: {
     color: '#64748B',
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   levelFilterTextActive: {
-    color: '#4F46E5',
+    color: '#475569',
   },
 
   // Header
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
   },
   levelText: {
     fontSize: 12,
-    color: '#4F46E5',
+    color: '#64748B',
     fontWeight: '700',
   },
   updatedText: {

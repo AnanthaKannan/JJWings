@@ -16,6 +16,8 @@ import {
   TouchableOpacity,
   Easing,
   RefreshControl,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
@@ -543,19 +545,28 @@ const RisingStarRow: React.FC<{
 const TopExplorerScreen: React.FC = () => {
   const isFocused = useIsFocused();
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+  const studentLevel = useSelector(
+    (state: RootState) => state.common.studentLevel,
+  );
   const headerFade = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-30)).current;
   const bgScale = useRef(new Animated.Value(1)).current;
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
+  const rankingLevel = isAdmin ? selectedLevel : studentLevel;
 
   const {
     data: ranking = [],
     isLoading,
     refetch,
-  } = useGetRankingQuery(undefined, {
+  } = useGetRankingQuery(
+    typeof rankingLevel === 'number' ? { level: rankingLevel } : undefined,
+    {
     skip: !isFocused,
     refetchOnMountOrArgChange: true,
-  });
+    },
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -661,9 +672,25 @@ const TopExplorerScreen: React.FC = () => {
             <Text style={styles.headerSub}>🏅 Last 7 days</Text>
             <Text style={styles.headerTitle}>Top Explorers</Text>
           </View>
-          <TouchableOpacity style={styles.filterBtn}>
-            <Text style={styles.filterBtnText}>🌍 Global</Text>
-          </TouchableOpacity>
+          {isAdmin && (
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                selectedLevel !== null && styles.filterBtnActive,
+              ]}
+              onPress={() => setIsLevelPickerOpen(true)}
+              activeOpacity={0.82}
+            >
+              <Text
+                style={[
+                  styles.filterBtnText,
+                  selectedLevel !== null && styles.filterBtnTextActive,
+                ]}
+              >
+                {selectedLevel === null ? 'All Levels' : `Level ${selectedLevel}`}
+              </Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
 
         {showLoader && (
@@ -782,8 +809,77 @@ const TopExplorerScreen: React.FC = () => {
           ))}
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <Modal
+        visible={isAdmin && isLevelPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLevelPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.levelModalBackdrop}
+          onPress={() => setIsLevelPickerOpen(false)}
+        >
+          <Pressable style={styles.levelModal}>
+            <View style={styles.levelModalHeader}>
+              <Text style={styles.levelModalTitle}>Filter Level</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setIsLevelPickerOpen(false)}
+              >
+                <Text style={styles.modalCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.levelAllOption,
+                selectedLevel === null && styles.levelOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedLevel(null);
+                setIsLevelPickerOpen(false);
+              }}
+              activeOpacity={0.82}
+            >
+              <Text
+                style={[
+                  styles.levelOptionText,
+                  selectedLevel === null && styles.levelOptionTextActive,
+                ]}
+              >
+                All Levels
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.levelGrid}>
+              {Array.from({ length: 11 }, (_, value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.levelOption,
+                    selectedLevel === value && styles.levelOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedLevel(value);
+                    setIsLevelPickerOpen(false);
+                  }}
+                  activeOpacity={0.82}
+                >
+                  <Text
+                    style={[
+                      styles.levelOptionText,
+                      selectedLevel === value && styles.levelOptionTextActive,
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -884,10 +980,100 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  filterBtnActive: {
+    backgroundColor: '#EAF1FB',
+  },
   filterBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#4A90D9',
+  },
+  filterBtnTextActive: {
+    color: '#315A8C',
+  },
+  bottomSpacer: {
+    height: 40,
+  },
+  levelModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  levelModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  levelModalTitle: {
+    color: '#1A3558',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  modalCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    color: '#334155',
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 24,
+  },
+  levelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  levelAllOption: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  levelOption: {
+    width: 48,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelOptionActive: {
+    backgroundColor: '#4A90D9',
+    borderColor: '#4A90D9',
+  },
+  levelOptionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  levelOptionTextActive: {
+    color: '#FFFFFF',
   },
 
   // Podium

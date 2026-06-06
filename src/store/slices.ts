@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface AuthState {
   studentId: string | null;
+  studentLevel: number | null;
   isStudent: boolean;
   isAuthenticated: boolean;
   questions: string[];
@@ -22,6 +23,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   studentId: null,
+  studentLevel: null,
   studentName: '',
   isAuthenticated: false,
   isStudent: false,
@@ -49,11 +51,16 @@ const commonSlice = createSlice({
         studentId: string;
         isStudent: boolean;
         studentName: string;
+        studentLevel?: number;
         token?: string;
         vertical: boolean;
       }>,
     ) => {
       state.studentId = action.payload.studentId;
+      state.studentLevel =
+        typeof action.payload.studentLevel === 'number'
+          ? action.payload.studentLevel
+          : null;
       state.studentName = action.payload.studentName;
       state.isStudent = action.payload.isStudent;
       state.isAdmin = false;
@@ -72,6 +79,7 @@ const commonSlice = createSlice({
     ) => {
       state.adminId = action.payload.adminId;
       state.adminName = action.payload.adminName;
+      state.studentLevel = null;
       state.isAdmin = true;
       state.isStudent = false;
       state.isAuthenticated = true;
@@ -97,6 +105,7 @@ const commonSlice = createSlice({
     },
     logout: state => {
       state.studentId = null;
+      state.studentLevel = null;
       state.studentName = '';
       state.adminId = '';
       state.adminName = '';

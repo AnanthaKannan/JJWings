@@ -61,6 +61,7 @@ export default function LoginScreen() {
               vertical: result.data.vertical,
               isStudent: true,
               studentName: result.data.name,
+              studentLevel: result.data.level,
               token: result.data.token,
             }),
           );
