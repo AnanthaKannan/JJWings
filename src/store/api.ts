@@ -190,6 +190,10 @@ type LoginArg = {
   password: string;
 };
 
+type SwitchStudentLoginArg = {
+  studentId: string;
+};
+
 type LoginApiResponse = {
   success: boolean;
   message: string;
@@ -447,6 +451,20 @@ export const jjWingsApi = createApi({
       }),
     }),
 
+    switchStudentLogin: builder.mutation<LoginResult, SwitchStudentLoginArg>({
+      query: ({ studentId }) => ({
+        url: `/login/${studentId}`,
+        method: 'POST',
+      }),
+      transformResponse: (response: LoginApiResponse) => ({
+        id: response.user.id,
+        name: response.user.name,
+        role: response.role,
+        token: response.token,
+        vertical: response.user.vertical,
+      }),
+    }),
+
     getStudents: builder.query<Student[], void>({
       query: () => ({
         url: '/admin/students',
@@ -691,6 +709,7 @@ export const jjWingsApi = createApi({
 export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
+  useSwitchStudentLoginMutation,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
   useGetStudentByIdQuery,

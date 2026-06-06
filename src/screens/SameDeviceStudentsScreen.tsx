@@ -28,9 +28,10 @@ import {
   useDeleteStudentDeviceIdMutation,
   useGetSameDeviceStudentsQuery,
   useLazyGetLoginQuery,
+  useSwitchStudentLoginMutation,
   useUpdateStudentDeviceIdMutation,
 } from '../store/api';
-import { logout } from '../store/slices';
+import { logout, setStudentCredentials } from '../store/slices';
 import { RootState } from '../store/store';
 import { clearSavedLoginCredentials } from '../util/authStorage';
 
@@ -61,13 +62,22 @@ const ItemSeparator = () => <View style={styles.separator} />;
 const StudentCard = ({
   student,
   isDeleting,
+  isSwitching,
+  onPress,
   onDeletePress,
 }: {
   student: SameDeviceStudent;
   isDeleting: boolean;
+  isSwitching: boolean;
+  onPress: () => void;
   onDeletePress: () => void;
 }) => (
-  <View style={styles.card}>
+  <TouchableOpacity
+    style={[styles.card, isSwitching && styles.cardDisabled]}
+    onPress={onPress}
+    disabled={isDeleting || isSwitching}
+    activeOpacity={0.82}
+  >
     <View
       style={[styles.avatar, { backgroundColor: getAvatarColor(student.id) }]}
     >
@@ -90,13 +100,16 @@ const StudentCard = ({
 
     <TouchableOpacity
       style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
-      onPress={onDeletePress}
+      onPress={event => {
+        event.stopPropagation();
+        onDeletePress();
+      }}
       disabled={isDeleting}
       activeOpacity={0.82}
     >
       <MaterialIcons name="delete-outline" size={20} color="#FFFFFF" />
     </TouchableOpacity>
-  </View>
+  </TouchableOpacity>
 );
 
 export default function SameDeviceStudentsScreen() {
@@ -130,8 +143,11 @@ export default function SameDeviceStudentsScreen() {
   const [login, loginRes] = useLazyGetLoginQuery();
   const [updateStudentDeviceId, updateDeviceRes] =
     useUpdateStudentDeviceIdMutation();
+  const [switchStudentLogin, switchStudentRes] =
+    useSwitchStudentLoginMutation();
 
   const isAddingStudent = loginRes.isFetching || updateDeviceRes.isLoading;
+  const isSwitchingStudent = switchStudentRes.isLoading;
   const canSubmitAdd = studentLoginId.trim().length > 0 && password.length > 0;
 
   const onRefresh = useCallback(async () => {
@@ -181,12 +197,7 @@ export default function SameDeviceStudentsScreen() {
         setDeletingStudentId(null);
       }
     },
-    [
-      deleteStudentDeviceId,
-      loggedInStudentId,
-      logoutCurrentStudent,
-      refetch,
-    ],
+    [deleteStudentDeviceId, loggedInStudentId, logoutCurrentStudent, refetch],
   );
 
   const handleDeletePress = useCallback(
@@ -235,7 +246,11 @@ export default function SameDeviceStudentsScreen() {
         password,
       });
 
-      if (!('data' in result) || !result.data || result.data.role !== 'student') {
+      if (
+        !('data' in result) ||
+        !result.data ||
+        result.data.role !== 'student'
+      ) {
         setLoginError('User Name or password incorrect.');
         return;
       }
@@ -257,6 +272,51 @@ export default function SameDeviceStudentsScreen() {
     }
   }, [login, password, refetch, studentLoginId, updateStudentDeviceId]);
 
+  const handleStudentPress = useCallback(
+    async (student: SameDeviceStudent) => {
+      if (student.id === loggedInStudentId) {
+        navigation.navigate('Progress');
+        return;
+      }
+
+      try {
+        const result = await switchStudentLogin({
+          studentId: student.id,
+        }).unwrap();
+
+        if (result.role !== 'student') {
+          Alert.alert('Unable to switch', 'Only student accounts can be used.');
+          return;
+        }
+
+        dispatch(
+          setStudentCredentials({
+            studentId: result.id,
+            vertical: result.vertical,
+            isStudent: true,
+            studentName: result.name,
+            token: result.token,
+          }),
+        );
+
+        await clearSavedLoginCredentials();
+
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Main', params: { screen: 'Progress' } }],
+          }),
+        );
+      } catch {
+        Alert.alert(
+          'Unable to switch',
+          'Please try opening this student again.',
+        );
+      }
+    },
+    [dispatch, loggedInStudentId, navigation, switchStudentLogin],
+  );
+
   const showLoader = isFocused && isLoading && students.length === 0;
 
   return (
@@ -265,7 +325,9 @@ export default function SameDeviceStudentsScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Same Device Students</Text>
-          <Text style={styles.headerSubtitle}>Students logged on this device</Text>
+          <Text style={styles.headerSubtitle}>
+            Students logged on this device
+          </Text>
         </View>
         <TouchableOpacity
           style={styles.addButton}
@@ -305,6 +367,8 @@ export default function SameDeviceStudentsScreen() {
             <StudentCard
               student={item}
               isDeleting={deletingStudentId === item.id}
+              isSwitching={isSwitchingStudent}
+              onPress={() => handleStudentPress(item)}
               onDeletePress={() => handleDeletePress(item)}
             />
           )}
@@ -334,7 +398,9 @@ export default function SameDeviceStudentsScreen() {
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>Add Student</Text>
-                <Text style={styles.modalSubtitle}>Login to add this device</Text>
+                <Text style={styles.modalSubtitle}>
+                  Login to add this device
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.modalCloseButton}
@@ -407,6 +473,10 @@ export default function SameDeviceStudentsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+      <LoadingOverlay
+        visible={isSwitchingStudent}
+        label="Switching student..."
+      />
       <LoadingOverlay visible={isDeleting} label="Removing student..." />
     </SafeAreaView>
   );
@@ -583,6 +653,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 14,
+  },
+  cardDisabled: {
+    opacity: 0.6,
   },
   avatar: {
     width: 42,
