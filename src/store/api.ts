@@ -2,7 +2,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { HomeworkState } from '../util/enum';
-import { baseQuery } from './baseQuery';
+import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
 
@@ -112,6 +112,30 @@ type ApiRankingResponse = {
   data: ApiRankingStudent[];
 };
 
+type ApiFileUpload = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  path?: string;
+  url?: string;
+  filePath?: string;
+  fileUrl?: string;
+  originalName?: string;
+  mimeType?: string;
+  size?: number;
+  type?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ApiFileUploadsResponse =
+  | ApiFileUpload[]
+  | {
+      data?: ApiFileUpload[];
+      files?: ApiFileUpload[];
+      fileUploads?: ApiFileUpload[];
+    };
+
 export type Student = {
   id: string;
   name: string;
@@ -199,6 +223,18 @@ export type RankingStudent = {
   accuracy: number;
 };
 
+export type QuestionPaper = {
+  id: string;
+  name: string;
+  path?: string;
+  url?: string;
+  originalName?: string;
+  mimeType?: string;
+  size?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 type LoginArg = {
   username: string;
   password: string;
@@ -244,6 +280,11 @@ type UploadFile = {
   name?: string;
 };
 
+type UploadQuestionPaperArg = {
+  file: UploadFile;
+  name: string;
+};
+
 type UploadProfilePicArg = {
   file: UploadFile;
 };
@@ -268,6 +309,23 @@ type UploadResponse = {
     profilePicPath?: string;
   };
 };
+
+type DownloadResponse =
+  | string
+  | {
+      url?: string;
+      downloadUrl?: string;
+      path?: string;
+      file?: {
+        url?: string;
+        path?: string;
+      };
+      data?: {
+        url?: string;
+        downloadUrl?: string;
+        path?: string;
+      };
+    };
 
 type HomeworkArg = {
   studentId: string;
@@ -459,6 +517,26 @@ const mapRankingStudent = (student: ApiRankingStudent): RankingStudent => ({
   accuracy: student.accuracy ?? 0,
 });
 
+const getFileUploadsFromResponse = (
+  response: ApiFileUploadsResponse,
+): ApiFileUpload[] => {
+  if (Array.isArray(response)) return response;
+
+  return response.data ?? response.files ?? response.fileUploads ?? [];
+};
+
+const mapQuestionPaper = (file: ApiFileUpload): QuestionPaper => ({
+  id: file._id ?? file.id ?? '',
+  name: file.name ?? file.originalName ?? 'Question paper',
+  path: file.path ?? file.filePath,
+  url: file.url ?? file.fileUrl,
+  originalName: file.originalName,
+  mimeType: file.mimeType,
+  size: file.size,
+  createdAt: file.createdAt,
+  updatedAt: file.updatedAt,
+});
+
 const getNextStudentId = (students: Student[]): IdGenData => {
   const lastId = students.reduce((highest, student) => {
     const numericId = Number(student.studentId?.replace(/\D/g, '') ?? 0);
@@ -480,6 +558,7 @@ export const jjWingsApi = createApi({
     'Score',
     'Notifications',
     'Ranking',
+    'FileUploads',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<Homework[], HomeworkArg>({
@@ -683,6 +762,18 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Ranking', id: 'LIST' }],
     }),
 
+    getQuestionPapers: builder.query<QuestionPaper[], void>({
+      query: () => ({
+        url: '/file-uploads',
+        params: { type: 'practice' },
+      }),
+      transformResponse: (response: ApiFileUploadsResponse) =>
+        getFileUploadsFromResponse(response)
+          .map(mapQuestionPaper)
+          .filter(file => file.id.length > 0),
+      providesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
     sendNotification: builder.mutation<string, SendNotificationArg>({
       query: body => ({
         url: '/admin/notifications',
@@ -820,6 +911,63 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
     }),
 
+    uploadQuestionPaper: builder.mutation<string, UploadQuestionPaperArg>({
+      query: ({ file, name }) => {
+        const formData = new FormData();
+        formData.append('path', 'practice');
+        formData.append('name', name);
+        formData.append('file', {
+          uri: file.uri,
+          type: file.type ?? 'application/octet-stream',
+          name: file.name ?? name,
+        } as any);
+
+        return {
+          url: '/uploads',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
+    deleteQuestionPaper: builder.mutation<string, string>({
+      query: id => ({
+        url: `/admin/file-uploads/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
+    getQuestionPaperDownload: builder.query<string, string>({
+      query: id => ({
+        url: `/admin/file-uploads/${id}/download`,
+        responseHandler: async response => {
+          const fallbackUrl = `${API_URL}/admin/file-uploads/${id}/download`;
+          const contentType = response.headers.get('content-type') ?? '';
+
+          if (contentType.includes('application/json')) {
+            const json = (await response.json()) as DownloadResponse;
+
+            if (typeof json === 'string') return json;
+
+            return (
+              json.downloadUrl ??
+              json.url ??
+              json.file?.url ??
+              json.data?.downloadUrl ??
+              json.data?.url ??
+              fallbackUrl
+            );
+          }
+
+          return fallbackUrl;
+        },
+      }),
+    }),
+
     createQuestion: builder.mutation<string, CreateQuestionArg>({
       query: ({ taskId, question, level }) => ({
         url: '/admin/questions',
@@ -927,4 +1075,8 @@ export const {
   useGetAdminNotificationsQuery,
   useGetRankingQuery,
   useSendNotificationMutation,
+  useGetQuestionPapersQuery,
+  useUploadQuestionPaperMutation,
+  useDeleteQuestionPaperMutation,
+  useLazyGetQuestionPaperDownloadQuery,
 } = jjWingsApi;

@@ -3,7 +3,7 @@ import Config from 'react-native-config';
 
 import type { RootState } from './store';
 
-const API_URL =
+export const API_URL =
   Config.API_URL?.replace(/\/$/, '') ||
   'https://jjwingabackend.onrender.com/v1/api';
 

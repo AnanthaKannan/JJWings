@@ -38,6 +38,7 @@ import {
   AdminMessageScreen,
   TopExplorerScreen,
   AdminProfileScreen,
+  QuestionPaperScreen,
 } from './screens';
 
 type AnimatedTabIconProps = {
@@ -296,6 +297,22 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    QuestionPapers: {
+      screen: QuestionPaperScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Question Papers',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="description"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
     Logout: {
       screen: ProfileScreen,
       options: {
@@ -446,6 +463,17 @@ const AdminTabs = createBottomTabNavigator({
         tabBarLabel: 'Profile',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="person" color={color} size={size} />
+        ),
+      },
+    },
+    AdminQuestionPapers: {
+      screen: QuestionPaperScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Question Papers',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="description" color={color} size={size} />
         ),
       },
     },

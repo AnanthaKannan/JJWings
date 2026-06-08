@@ -35,6 +35,11 @@ const adminNavItems = [
     routeName: 'AdminRanking',
   },
   {
+    label: 'Question Papers',
+    icon: 'description',
+    routeName: 'AdminQuestionPapers',
+  },
+  {
     label: 'Profile',
     icon: 'person',
     routeName: 'AdminProfile',
