@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StatusBar, Alert, useColorScheme } from 'react-native';
+import { Animated, StatusBar, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   CommonActions,
@@ -9,13 +9,14 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { Provider, useSelector } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
 import { useUpdateStudentFcmTokenMutation } from './store/api';
+import { showNotificationAttention } from './store/slices';
 import {
-  getStudentPushToken,
-  onStudentPushMessage,
-  onStudentPushTokenRefresh,
+  getStudentPushToken as getPushToken,
+  onStudentPushMessage as onPushMessage,
+  onStudentPushTokenRefresh as onPushTokenRefresh,
 } from './services/pushNotifications';
 
 import {
@@ -26,6 +27,7 @@ import {
   QuizReviewScreen,
   // ── Admin screens (create these in your screens folder) ──
   StudentDirectoryScreen,
+  SameDeviceStudentsScreen,
   AddStudentScreen,
   HomeworkLibraryScreen,
   CreateNewTaskScreen,
@@ -43,12 +45,13 @@ type AnimatedTabIconProps = {
   focused: boolean;
 };
 
-function AnimatedTabIcon({
-  name,
-  color,
-  size,
-  focused,
-}: AnimatedTabIconProps) {
+type NotificationTabIconProps = {
+  color: string;
+  size: number;
+  focused?: boolean;
+};
+
+function AnimatedTabIcon({ name, color, size, focused }: AnimatedTabIconProps) {
   const progress = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
   useEffect(() => {
@@ -74,9 +77,88 @@ function AnimatedTabIcon({
   });
 
   return (
-    <Animated.View style={{ transform: [{ translateY }, { scale }, { rotate }] }}>
+    <Animated.View
+      style={{ transform: [{ translateY }, { scale }, { rotate }] }}
+    >
       <MaterialIcons name={name} color={color} size={size} />
     </Animated.View>
+  );
+}
+
+function NotificationTabIcon({
+  color,
+  size,
+  focused = false,
+}: NotificationTabIconProps) {
+  const hasNotificationAttention = useSelector(
+    (state: RootState) => state.common.hasNotificationAttention,
+  );
+  const ring = useRef(new Animated.Value(0)).current;
+  const shouldRing = hasNotificationAttention && !focused;
+
+  useEffect(() => {
+    if (!shouldRing) {
+      ring.stopAnimation();
+      ring.setValue(0);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ring, {
+          toValue: 1,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: -1,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: 0.7,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: 0,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [ring, shouldRing]);
+
+  const rotate = ring.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-16deg', '16deg'],
+  });
+
+  return (
+    <View>
+      <Animated.View style={{ transform: [{ rotate }] }}>
+        <MaterialIcons name="notifications" color={color} size={size} />
+      </Animated.View>
+      {shouldRing && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -2,
+            right: -3,
+            width: 9,
+            height: 9,
+            borderRadius: 5,
+            backgroundColor: '#EF4444',
+            borderWidth: 1,
+            borderColor: '#FFFFFF',
+          }}
+        />
+      )}
+    </View>
   );
 }
 
@@ -129,13 +211,12 @@ const MainTabs = createBottomTabNavigator({
         return {
           tabBarLabel: 'Homework',
           unmountOnBlur: true,
-          tabBarStyle:
-            shouldHideTabBar
-              ? { display: 'none' }
-              : {
-                  backgroundColor: '#FFFFFF',
-                  borderTopColor: '#E5E7EB',
-                },
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
           tabBarIcon: ({ color, size, focused }) => (
             <AnimatedTabIcon
               name="book"
@@ -177,8 +258,17 @@ const MainTabs = createBottomTabNavigator({
       options: {
         tabBarLabel: 'Notifications',
         tabBarIcon: ({ color, size, focused }) => (
+          <NotificationTabIcon color={color} size={size} focused={focused} />
+        ),
+      },
+    },
+    SameDeviceStudents: {
+      screen: SameDeviceStudentsScreen,
+      options: {
+        tabBarLabel: 'Same Device',
+        tabBarIcon: ({ color, size, focused }) => (
           <AnimatedTabIcon
-            name="notifications"
+            name="devices-other"
             color={color}
             size={size}
             focused={focused}
@@ -218,6 +308,7 @@ const AdminStudentsStack = createNativeStackNavigator({
     AssignHomework: { screen: AssignHomeworkScreen },
     HomeworkScreen: { screen: HomeworkScreen },
     QuizReview: { screen: QuizReviewScreen },
+    StudentNotifications: { screen: NotificationsScreen },
   },
 });
 
@@ -269,6 +360,8 @@ const AdminTabs = createBottomTabNavigator({
     AdminAddStudent: {
       screen: AddStudentScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Add Student',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="person-add" color={color} size={size} />
@@ -305,6 +398,26 @@ const AdminTabs = createBottomTabNavigator({
         ),
       },
     },
+    AdminNotifications: {
+      screen: NotificationsScreen,
+      options: {
+        tabBarLabel: 'Notifications',
+        tabBarIcon: ({ color, size, focused }) => (
+          <NotificationTabIcon color={color} size={size} focused={focused} />
+        ),
+      },
+    },
+    AdminRanking: {
+      screen: TopExplorerScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Rank',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="leaderboard" color={color} size={size} />
+        ),
+      },
+    },
     // Tab — Settings / Logout
     Logout: {
       screen: ProfileScreen,
@@ -338,16 +451,20 @@ const Navigation = createStaticNavigation(RootStack);
 function PushNotificationRegistrar() {
   const studentId = useSelector((state: RootState) => state.common.studentId);
   const isStudent = useSelector((state: RootState) => state.common.isStudent);
+  const adminId = useSelector((state: RootState) => state.common.adminId);
+  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+
   const [updateStudentFcmToken] = useUpdateStudentFcmTokenMutation();
 
   useEffect(() => {
-    if (!studentId || !isStudent) return;
+    const canRegisterToken = (isStudent && studentId) || (isAdmin && adminId);
+    if (!canRegisterToken) return;
 
     let isActive = true;
 
     const registerToken = async () => {
       try {
-        const token = await getStudentPushToken();
+        const token = await getPushToken();
 
         if (!token || !isActive) return;
 
@@ -359,7 +476,7 @@ function PushNotificationRegistrar() {
 
     registerToken();
 
-    const unsubscribe = onStudentPushTokenRefresh(token => {
+    const unsubscribe = onPushTokenRefresh(token => {
       updateStudentFcmToken({ fcmToken: token }).catch(error => {
         console.error('Failed to refresh push token', error);
       });
@@ -369,22 +486,21 @@ function PushNotificationRegistrar() {
       isActive = false;
       unsubscribe();
     };
-  }, [isStudent, studentId, updateStudentFcmToken]);
+  }, [adminId, isAdmin, isStudent, studentId, updateStudentFcmToken]);
 
   return null;
 }
 
 function PushNotificationListener() {
+  const dispatch = useDispatch();
+
   useEffect(() => {
-    const unsubscribeMessage = onStudentPushMessage(message => {
-      Alert.alert(
-        message.title ?? 'New homework assigned',
-        message.body ?? 'You have new homework to attend.',
-      );
+    const unsubscribeMessage = onPushMessage(() => {
+      dispatch(showNotificationAttention());
     });
 
     return unsubscribeMessage;
-  }, []);
+  }, [dispatch]);
 
   return null;
 }

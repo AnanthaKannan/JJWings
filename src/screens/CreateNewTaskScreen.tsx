@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Pressable,
   ScrollView,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -66,6 +67,78 @@ const SYMBOLS = ['+', '-', '*', '/'];
 
 const randomInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
+
+const getNextSafeStep = (
+  runningTotal: number,
+  min: number,
+  max: number,
+  symbols: string[],
+) => {
+  const shuffledSymbols = [...symbols].sort(() => Math.random() - 0.5);
+
+  for (const symbol of shuffledSymbols) {
+    if (symbol === '-') {
+      const maxSubtract = Math.min(max, Math.floor(runningTotal));
+
+      if (maxSubtract >= min) {
+        const number = randomInt(min, maxSubtract);
+        return {
+          symbol,
+          number,
+          nextTotal: runningTotal - number,
+        };
+      }
+
+      continue;
+    }
+
+    if (symbol === '/') {
+      const safeMin = Math.max(1, min);
+      if (safeMin > max) continue;
+
+      const number = randomInt(safeMin, max);
+      return {
+        symbol,
+        number,
+        nextTotal: runningTotal / number,
+      };
+    }
+
+    const number = randomInt(min, max);
+
+    return {
+      symbol,
+      number,
+      nextTotal: symbol === '*' ? runningTotal * number : runningTotal + number,
+    };
+  }
+
+  const number = randomInt(min, max);
+  return {
+    symbol: '+',
+    number,
+    nextTotal: runningTotal + number,
+  };
+};
+
+const generateSafeExpression = (
+  min: number,
+  max: number,
+  steps: number,
+  symbols: string[],
+) => {
+  let runningTotal = randomInt(min, max);
+  let expression = String(runningTotal);
+
+  for (let index = 1; index < steps; index++) {
+    const nextStep = getNextSafeStep(runningTotal, min, max, symbols);
+
+    expression = `${expression}${nextStep.symbol}${nextStep.number}`;
+    runningTotal = nextStep.nextTotal;
+  }
+
+  return expression;
+};
 
 // ─── Question Row ─────────────────────────────────────────────────────────────
 
@@ -147,8 +220,10 @@ const DEFAULT_GEN_FORM: GenForm = {
 export default function CreateNewTaskScreen() {
   const navigation = useNavigation<any>();
   const [taskId, setTaskId] = useState('');
+  const [level, setLevel] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenModalVisible, setIsGenModalVisible] = useState(false);
+  const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [genForm, setGenForm] = useState<GenForm>(DEFAULT_GEN_FORM);
   const [createQuestion] = useCreateQuestionMutation();
   const [questions, setQuestions] = useState<Question[]>([
@@ -157,8 +232,10 @@ export default function CreateNewTaskScreen() {
 
   const resetForm = useCallback(() => {
     setTaskId('');
+    setLevel(0);
     setIsSaving(false);
     setIsGenModalVisible(false);
+    setIsLevelPickerOpen(false);
     setGenForm(DEFAULT_GEN_FORM);
     setQuestions([createEmptyQuestion()]);
   }, []);
@@ -249,18 +326,11 @@ export default function CreateNewTaskScreen() {
       return;
     }
 
-    const generated = Array.from({ length: count }, () => {
-      const numbers = Array.from({ length: steps }, () => randomInt(min, max));
-      const expression = numbers.reduce((expr, number, index) => {
-        if (index === 0) return String(number);
-
-        const symbol =
-          genForm.symbols[randomInt(0, genForm.symbols.length - 1)];
-        return `${expr}${symbol}${number}`;
-      }, '');
-
-      return createQuestionFromExpression(expression);
-    });
+    const generated = Array.from({ length: count }, () =>
+      createQuestionFromExpression(
+        generateSafeExpression(min, max, steps, genForm.symbols),
+      ),
+    );
 
     setQuestions(prev => {
       const existing = prev.filter(q => q.expression.trim() !== '');
@@ -310,9 +380,11 @@ export default function CreateNewTaskScreen() {
       await createQuestion({
         taskId: taskIdentifier,
         question,
+        level,
       }).unwrap();
 
       setTaskId('');
+      setLevel(0);
       setQuestions([createEmptyQuestion()]);
 
       Alert.alert(
@@ -378,6 +450,22 @@ export default function CreateNewTaskScreen() {
                 autoCapitalize="characters"
                 returnKeyType="next"
               />
+            </View>
+
+            <View style={styles.taskIdSection}>
+              <Text style={styles.taskIdLabel}>LEVEL</Text>
+              <TouchableOpacity
+                style={styles.levelDropdown}
+                onPress={() => setIsLevelPickerOpen(true)}
+                activeOpacity={0.82}
+              >
+                <Text style={styles.levelDropdownText}>Level {level}</Text>
+                <MaterialIcons
+                  name="keyboard-arrow-down"
+                  size={22}
+                  color="#4F46E5"
+                />
+              </TouchableOpacity>
             </View>
 
             {/* Question List */}
@@ -532,6 +620,55 @@ export default function CreateNewTaskScreen() {
             </View>
           </View>
         </Modal>
+
+        <Modal
+          visible={isLevelPickerOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsLevelPickerOpen(false)}
+        >
+          <Pressable
+            style={styles.levelModalBackdrop}
+            onPress={() => setIsLevelPickerOpen(false)}
+          >
+            <Pressable style={styles.levelModal}>
+              <View style={styles.levelModalHeader}>
+                <Text style={styles.levelModalTitle}>Select Level</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setIsLevelPickerOpen(false)}
+                >
+                  <MaterialIcons name="close" size={20} color="#334155" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.levelGrid}>
+                {Array.from({ length: 11 }, (_, value) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.levelOption,
+                      level === value && styles.levelOptionActive,
+                    ]}
+                    onPress={() => {
+                      setLevel(value);
+                      setIsLevelPickerOpen(false);
+                    }}
+                    activeOpacity={0.82}
+                  >
+                    <Text
+                      style={[
+                        styles.levelOptionText,
+                        level === value && styles.levelOptionTextActive,
+                      ]}
+                    >
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </KeyboardAvoidingView>
       <LoadingOverlay visible={isSaving} label="Saving task..." />
     </SafeAreaView>
@@ -607,6 +744,82 @@ const styles = StyleSheet.create({
     color: '#1E3A5F',
     fontWeight: '500',
     padding: 0,
+  },
+  levelDropdown: {
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  levelDropdownText: {
+    fontSize: 16,
+    color: '#1E3A5F',
+    fontWeight: '700',
+  },
+  levelModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  levelModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  levelModalTitle: {
+    color: '#1A202C',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  modalCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  levelOption: {
+    width: 48,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelOptionActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  levelOptionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  levelOptionTextActive: {
+    color: '#FFFFFF',
   },
 
   // Question list

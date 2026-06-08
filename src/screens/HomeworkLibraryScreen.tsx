@@ -9,12 +9,18 @@ import {
   StatusBar,
   Alert,
   Modal,
+  Pressable,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useIsFocused } from '@react-navigation/native';
-import { AdminHeader, LoadingState } from '../component';
-import { useGetQuestionsQuery } from '../store/api';
+import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import {
+  useDeleteQuestionMutation,
+  useGetQuestionsQuery,
+  useUpdateQuestionMutation,
+} from '../store/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +34,8 @@ type Module = {
   iconBg: string;
   iconColor: string;
   iconLabel?: string;
+  level?: number;
+  updatedAt?: string;
 };
 
 const ICON_COLORS = [
@@ -55,6 +63,20 @@ const evaluateMath = (expr: string): string => {
 };
 
 // ─── Module Icon ──────────────────────────────────────────────────────────────
+
+const formatHomeworkTime = (dateValue?: string) => {
+  if (!dateValue) return '';
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 const ModuleIcon = ({
   iconType,
@@ -87,40 +109,103 @@ const ModuleIcon = ({
 const ModuleCard = ({
   item,
   onPress,
+  onUpdatePress,
+  onDeletePress,
+  isUpdating,
+  isDeleting,
 }: {
   item: Module;
   onPress: () => void;
-}) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.card}>
-      {/* Top row */}
-      <View style={styles.cardTop}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <View style={styles.cardBottom}>
-          <View style={styles.questionsBadge}>
-            <MaterialIcons name="quiz" size={14} color="#94A3B8" />
-            <Text style={styles.questionsText}>
-              {item.questions.length} Questions
+  onUpdatePress: () => void;
+  onDeletePress: () => void;
+  isUpdating: boolean;
+  isDeleting: boolean;
+}) => {
+  const updatedTime = formatHomeworkTime(item.updatedAt);
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.card}>
+        <View style={styles.cardTop}>
+          <View style={styles.cardDetails}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {item.title}
             </Text>
+            <View style={styles.cardBottom}>
+              <View style={styles.questionsBadge}>
+                <MaterialIcons name="quiz" size={14} color="#94A3B8" />
+                <Text style={styles.questionsText}>
+                  {item.questions.length} Questions
+                </Text>
+              </View>
+              <View style={styles.levelBadge}>
+                <MaterialIcons name="school" size={14} color="#64748B" />
+                <Text style={styles.levelText}>
+                  Level {typeof item.level === 'number' ? item.level : '-'}
+                </Text>
+              </View>
+              {updatedTime ? (
+                <View style={styles.updatedBadge}>
+                  <MaterialIcons name="schedule" size={14} color="#94A3B8" />
+                  <Text style={styles.updatedText}>{updatedTime}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={[styles.updateButton, isUpdating && styles.actionButtonOff]}
+              onPress={event => {
+                event.stopPropagation();
+                onUpdatePress();
+              }}
+              disabled={isUpdating}
+              activeOpacity={0.82}
+            >
+              <MaterialIcons name="edit" size={19} color="#2563EB" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.deleteButton, isDeleting && styles.actionButtonOff]}
+              onPress={event => {
+                event.stopPropagation();
+                onDeletePress();
+              }}
+              disabled={isDeleting}
+              activeOpacity={0.82}
+            >
+              <MaterialIcons name="delete-outline" size={20} color="#B91C1C" />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeworkLibraryScreen() {
   const isFocused = useIsFocused();
-  const { data: questionsData, isLoading } = useGetQuestionsQuery(undefined, {
-    skip: !isFocused,
-  });
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const { data: questionsData, isLoading } = useGetQuestionsQuery(
+    selectedLevel === null ? undefined : { level: selectedLevel },
+    {
+      skip: !isFocused,
+    },
+  );
+  const [deleteQuestion, { isLoading: isDeleting }] =
+    useDeleteQuestionMutation();
+  const [updateQuestion, { isLoading: isUpdating }] =
+    useUpdateQuestionMutation();
 
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editModule, setEditModule] = useState<Module | null>(null);
+  const [editQuestionId, setEditQuestionId] = useState('');
+  const [editLevel, setEditLevel] = useState(0);
+  const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
+  const [isFilterLevelPickerOpen, setIsFilterLevelPickerOpen] = useState(false);
 
   const modules = useMemo(() => {
     if (!questionsData) return [];
@@ -129,9 +214,24 @@ export default function HomeworkLibraryScreen() {
       id: q.id,
       title: q.questionId ?? q.id,
       questions: q.question,
+      level: q.level,
+      updatedAt: q.updatedAt,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));
   }, [questionsData]);
+
+  const filteredModules = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return modules;
+
+    return modules.filter(module => {
+      const questionText = module.questions.join(' ').toLowerCase();
+      return (
+        module.title.toLowerCase().includes(query) ||
+        questionText.includes(query)
+      );
+    });
+  }, [modules, searchTerm]);
 
   const handleModulePress = (item: Module) => {
     setSelectedModule(item);
@@ -143,21 +243,146 @@ export default function HomeworkLibraryScreen() {
     setSelectedModule(null);
   };
 
+  const openUpdateModal = (item: Module) => {
+    setEditModule(item);
+    setEditQuestionId(item.title);
+    setEditLevel(typeof item.level === 'number' ? item.level : 0);
+  };
+
+  const closeUpdateModal = () => {
+    setEditModule(null);
+    setEditQuestionId('');
+    setEditLevel(0);
+    setIsLevelPickerOpen(false);
+  };
+
+  const handleUpdateQuestion = async () => {
+    const nextQuestionId = editQuestionId.trim();
+
+    if (!editModule || !nextQuestionId) {
+      Alert.alert('Missing Task ID', 'Please enter a task identifier.');
+      return;
+    }
+
+    try {
+      await updateQuestion({
+        id: editModule.id,
+        questionId: nextQuestionId,
+        level: editLevel,
+      }).unwrap();
+
+      if (selectedModule?.id === editModule.id) {
+        setSelectedModule({
+          ...selectedModule,
+          title: nextQuestionId,
+          level: editLevel,
+        });
+      }
+
+      closeUpdateModal();
+      Alert.alert('Homework Updated', 'The homework details were updated.');
+    } catch {
+      Alert.alert(
+        'Unable to update',
+        'Please try updating this homework again.',
+      );
+    }
+  };
+
+  const handleDeletePress = (item: Module) => {
+    Alert.alert(
+      'Delete homework?',
+      `Delete "${item.title}" and its ${item.questions.length} question(s)?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteQuestion({ questionId: item.id }).unwrap();
+              if (selectedModule?.id === item.id) {
+                closeModal();
+              }
+            } catch {
+              Alert.alert(
+                'Unable to delete',
+                'Please try deleting this homework again.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
       <AdminHeader header="Homework Library" />
-      <View style={{ marginTop: 15 }}></View>
+      <View style={styles.headerGap} />
+      <View style={styles.searchFilterRow}>
+        <View style={styles.searchWrap}>
+          <MaterialIcons name="search" size={20} color="#94A3B8" />
+          <TextInput
+            style={styles.searchInput}
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            placeholder="Search homework"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchTerm ? (
+            <TouchableOpacity
+              style={styles.clearSearchButton}
+              onPress={() => setSearchTerm('')}
+              activeOpacity={0.75}
+            >
+              <MaterialIcons name="close" size={18} color="#64748B" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.levelFilterButton,
+            selectedLevel !== null && styles.levelFilterButtonActive,
+          ]}
+          onPress={() => setIsFilterLevelPickerOpen(true)}
+          activeOpacity={0.82}
+        >
+          <MaterialIcons
+            name="filter-list"
+            size={18}
+            color={selectedLevel === null ? '#64748B' : '#475569'}
+          />
+          <Text
+            style={[
+              styles.levelFilterText,
+              selectedLevel !== null && styles.levelFilterTextActive,
+            ]}
+          >
+            {selectedLevel === null ? 'All' : `L${selectedLevel}`}
+          </Text>
+        </TouchableOpacity>
+      </View>
       {/* ── Module List ── */}
       <FlatList
-        data={modules}
+        data={filteredModules}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <ModuleCard item={item} onPress={() => handleModulePress(item)} />
+          <ModuleCard
+            item={item}
+            onPress={() => handleModulePress(item)}
+            onUpdatePress={() => openUpdateModal(item)}
+            onDeletePress={() => handleDeletePress(item)}
+            isUpdating={isUpdating}
+            isDeleting={isDeleting}
+          />
         )}
         ListEmptyComponent={
           isFocused && isLoading ? (
@@ -165,9 +390,13 @@ export default function HomeworkLibraryScreen() {
           ) : (
             <View style={styles.emptyState}>
               <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
-              <Text style={styles.emptyText}>No questions yet</Text>
+              <Text style={styles.emptyText}>
+                {searchTerm ? 'No homework found' : 'No questions yet'}
+              </Text>
               <Text style={styles.emptySubText}>
-                Questions will appear here when created
+                {searchTerm
+                  ? 'Try searching another task or question'
+                  : 'Questions will appear here when created'}
               </Text>
             </View>
           )
@@ -215,6 +444,195 @@ export default function HomeworkLibraryScreen() {
           </View>
         </View>
       </Modal>
+      <Modal
+        visible={Boolean(editModule)}
+        transparent
+        animationType="fade"
+        onRequestClose={closeUpdateModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.updateModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                Update Homework
+              </Text>
+              <TouchableOpacity onPress={closeUpdateModal}>
+                <MaterialIcons name="close" size={24} color="#1A202C" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.updateModalContent}>
+              <View style={styles.updateFieldGroup}>
+                <Text style={styles.updateLabel}>Task ID</Text>
+                <TextInput
+                  style={styles.updateInput}
+                  value={editQuestionId}
+                  onChangeText={setEditQuestionId}
+                  placeholder="Enter task identifier"
+                  placeholderTextColor="#A0AEC0"
+                  autoCapitalize="characters"
+                  returnKeyType="done"
+                  onSubmitEditing={handleUpdateQuestion}
+                />
+              </View>
+
+              <View style={styles.updateFieldGroup}>
+                <Text style={styles.updateLabel}>Level</Text>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setIsLevelPickerOpen(true)}
+                  activeOpacity={0.82}
+                >
+                  <Text style={styles.dropdownValue}>Level {editLevel}</Text>
+                  <MaterialIcons
+                    name="keyboard-arrow-down"
+                    size={22}
+                    color="#4F46E5"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.updateSubmitButton,
+                  (!editQuestionId.trim() || isUpdating) &&
+                    styles.updateSubmitButtonOff,
+                ]}
+                onPress={handleUpdateQuestion}
+                disabled={!editQuestionId.trim() || isUpdating}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.updateSubmitText}>
+                  {isUpdating ? 'Updating...' : 'Update Homework'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isLevelPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLevelPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.levelModalBackdrop}
+          onPress={() => setIsLevelPickerOpen(false)}
+        >
+          <Pressable style={styles.levelModal}>
+            <View style={styles.levelModalHeader}>
+              <Text style={styles.levelModalTitle}>Select Level</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setIsLevelPickerOpen(false)}
+              >
+                <MaterialIcons name="close" size={20} color="#334155" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.levelGrid}>
+              {Array.from({ length: 11 }, (_, value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.levelOption,
+                    editLevel === value && styles.levelOptionActive,
+                  ]}
+                  onPress={() => {
+                    setEditLevel(value);
+                    setIsLevelPickerOpen(false);
+                  }}
+                  activeOpacity={0.82}
+                >
+                  <Text
+                    style={[
+                      styles.levelOptionText,
+                      editLevel === value && styles.levelOptionTextActive,
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={isFilterLevelPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsFilterLevelPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.levelModalBackdrop}
+          onPress={() => setIsFilterLevelPickerOpen(false)}
+        >
+          <Pressable style={styles.levelModal}>
+            <View style={styles.levelModalHeader}>
+              <Text style={styles.levelModalTitle}>Filter Level</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setIsFilterLevelPickerOpen(false)}
+              >
+                <MaterialIcons name="close" size={20} color="#334155" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.levelAllOption,
+                selectedLevel === null && styles.levelOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedLevel(null);
+                setIsFilterLevelPickerOpen(false);
+              }}
+              activeOpacity={0.82}
+            >
+              <Text
+                style={[
+                  styles.levelOptionText,
+                  selectedLevel === null && styles.levelOptionTextActive,
+                ]}
+              >
+                All Levels
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.levelGrid}>
+              {Array.from({ length: 11 }, (_, value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.levelOption,
+                    selectedLevel === value && styles.levelOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedLevel(value);
+                    setIsFilterLevelPickerOpen(false);
+                  }}
+                  activeOpacity={0.82}
+                >
+                  <Text
+                    style={[
+                      styles.levelOptionText,
+                      selectedLevel === value && styles.levelOptionTextActive,
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <LoadingOverlay
+        visible={isDeleting || isUpdating}
+        label={isUpdating ? 'Updating homework...' : 'Deleting homework...'}
+      />
     </SafeAreaView>
   );
 }
@@ -225,6 +643,69 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#EEF0F8',
+  },
+  headerGap: {
+    marginTop: 15,
+  },
+  searchFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 14,
+    gap: 10,
+  },
+  searchWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1A202C',
+    paddingVertical: 0,
+  },
+  clearSearchButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  levelFilterButton: {
+    height: 48,
+    minWidth: 78,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+  },
+  levelFilterButtonActive: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+  },
+  levelFilterText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  levelFilterTextActive: {
+    color: '#475569',
   },
 
   // Header
@@ -304,7 +785,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 14,
+  },
+  cardDetails: {
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
   },
   moduleIcon: {
     width: 44,
@@ -332,7 +817,8 @@ const styles = StyleSheet.create({
   cardBottom: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   questionsBadge: {
     flexDirection: 'row',
@@ -344,13 +830,56 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontWeight: '500',
   },
+  updatedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  levelText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+  updatedText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
   cardActions: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
   },
   actionBtn: {
     padding: 6,
     borderRadius: 8,
+  },
+  updateButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#DBEAFE',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonOff: {
+    opacity: 0.55,
   },
 
   // Empty
@@ -408,6 +937,18 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 12,
   },
+  updateModalContainer: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    elevation: 12,
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -433,6 +974,135 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 12,
+  },
+  updateModalContent: {
+    padding: 18,
+    gap: 18,
+  },
+  updateFieldGroup: {
+    gap: 8,
+  },
+  updateLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2D3748',
+  },
+  updateInput: {
+    backgroundColor: '#F5F6FF',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: '#2D3748',
+    borderWidth: 1.5,
+    borderColor: '#C7D2FE',
+  },
+  dropdownButton: {
+    minHeight: 50,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#F5F6FF',
+    borderWidth: 1.5,
+    borderColor: '#C7D2FE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownValue: {
+    color: '#2D3748',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  updateSubmitButton: {
+    minHeight: 50,
+    borderRadius: 25,
+    backgroundColor: '#2C3E8C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  updateSubmitButtonOff: {
+    backgroundColor: '#A0AEC0',
+  },
+  updateSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  levelModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  levelModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  levelModalTitle: {
+    color: '#1A202C',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  modalCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  levelAllOption: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  levelOption: {
+    width: 48,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelOptionActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  levelOptionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  levelOptionTextActive: {
+    color: '#FFFFFF',
   },
   questionItem: {
     flexDirection: 'row',

@@ -29,7 +29,9 @@ type ApiStudent = {
   _id: string;
   studentId?: string;
   name?: string;
+  level?: number;
   vertical?: boolean;
+  deviceIds?: string[];
   fcmToken?: string;
   fcmTokens?: string[];
   score?: ApiScore;
@@ -39,6 +41,8 @@ type ApiQuestion = {
   _id: string;
   questionId?: string;
   questions?: string[];
+  level?: number;
+  updatedAt?: string;
 };
 
 type ApiHomework = {
@@ -49,11 +53,17 @@ type ApiHomework = {
   results?: boolean[];
   answers?: Array<number | string>;
   timer?: number;
+  updatedAt?: string;
 };
 
 type ApiStudentsResponse = {
   students: ApiStudent[];
   meta: ApiMeta;
+};
+
+type ApiSameDeviceStudentsResponse = {
+  students: ApiStudent[];
+  count: number;
 };
 
 type ApiQuestionsResponse = {
@@ -104,6 +114,7 @@ export type Student = {
   id: string;
   name: string;
   studentId?: string;
+  level?: number;
   fcmTokens: string[];
   horizontal: boolean;
   assigned: number;
@@ -111,6 +122,14 @@ export type Student = {
   new: number;
   success: number;
   failure: number;
+};
+
+export type SameDeviceStudent = {
+  id: string;
+  name: string;
+  studentId?: string;
+  deviceIds: string[];
+  horizontal: boolean;
 };
 
 export type Question = {
@@ -121,6 +140,8 @@ export type QuestionTask = {
   id: string;
   questionId?: string;
   question: string[];
+  level?: number;
+  updatedAt?: string;
 };
 
 export type Homework = {
@@ -133,6 +154,7 @@ export type Homework = {
   result: boolean[];
   answer: number[];
   timer: number;
+  updatedAt?: string;
 };
 
 export type Notification = {
@@ -176,6 +198,10 @@ type LoginArg = {
   password: string;
 };
 
+type SwitchStudentLoginArg = {
+  studentId: string;
+};
+
 type LoginApiResponse = {
   success: boolean;
   message: string;
@@ -186,6 +212,7 @@ type LoginApiResponse = {
     name: string;
     studentId?: string;
     adminId?: string;
+    level?: number;
     vertical: boolean;
   };
 };
@@ -195,6 +222,7 @@ type LoginResult = {
   name: string;
   role: 'student' | 'admin';
   token: string;
+  level?: number;
   vertical: boolean;
 };
 
@@ -217,6 +245,13 @@ type StudentByIdArg = {
 
 type AddStudentArg = {
   name: string;
+  level: number;
+};
+
+type UpdateStudentArg = {
+  studentId: string;
+  name: string;
+  level: number;
 };
 
 type UpdateStudentHorizontalArg = {
@@ -226,6 +261,16 @@ type UpdateStudentHorizontalArg = {
 
 type UpdateStudentFcmTokenArg = {
   fcmToken: string;
+};
+
+type UpdateStudentDeviceIdArg = {
+  deviceId: string;
+  authToken?: string;
+};
+
+type DeleteStudentDeviceIdArg = {
+  studentId: string;
+  deviceId: string;
 };
 
 type RemoveStudentFcmTokenArg = {
@@ -246,6 +291,21 @@ type UpdateHomeworkArg = {
 type CreateQuestionArg = {
   taskId: string;
   question: string[];
+  level: number;
+};
+
+type DeleteQuestionArg = {
+  questionId: string;
+};
+
+type QuestionsArg = {
+  level?: number;
+};
+
+type UpdateQuestionArg = {
+  id: string;
+  questionId: string;
+  level: number;
 };
 
 type AssignHomeworkArg = {
@@ -255,6 +315,11 @@ type AssignHomeworkArg = {
 
 type AvailableQuestionsArg = {
   studentId: string;
+  level?: number;
+};
+
+type RankingArg = {
+  level?: number;
 };
 
 type NotificationsArg = {
@@ -273,6 +338,7 @@ const mapStudent = (student: ApiStudent): Student => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
+  level: student.level,
   fcmTokens: [
     ...(student.fcmTokens ?? []),
     ...(student.fcmToken ? [student.fcmToken] : []),
@@ -285,10 +351,20 @@ const mapStudent = (student: ApiStudent): Student => ({
   failure: student.score?.wrong ?? 0,
 });
 
+const mapSameDeviceStudent = (student: ApiStudent): SameDeviceStudent => ({
+  id: student._id,
+  name: student.name ?? '',
+  studentId: student.studentId,
+  deviceIds: student.deviceIds ?? [],
+  horizontal: !(student.vertical ?? true),
+});
+
 const mapQuestion = (question: ApiQuestion): QuestionTask => ({
   id: question._id,
   questionId: question.questionId,
   question: question.questions ?? [],
+  level: question.level,
+  updatedAt: question.updatedAt,
 });
 
 const mapHomework = (homework: ApiHomework): Homework => {
@@ -311,6 +387,7 @@ const mapHomework = (homework: ApiHomework): Homework => {
     result: homework.results ?? [],
     answer: (homework.answers ?? []).map(Number),
     timer: homework.timer ?? 0,
+    updatedAt: homework.updatedAt,
   };
 };
 
@@ -411,6 +488,22 @@ export const jjWingsApi = createApi({
         name: response.user.name,
         role: response.role,
         token: response.token,
+        level: response.user.level,
+        vertical: response.user.vertical,
+      }),
+    }),
+
+    switchStudentLogin: builder.mutation<LoginResult, SwitchStudentLoginArg>({
+      query: ({ studentId }) => ({
+        url: `/login/${studentId}`,
+        method: 'POST',
+      }),
+      transformResponse: (response: LoginApiResponse) => ({
+        id: response.user.id,
+        name: response.user.name,
+        role: response.role,
+        token: response.token,
+        level: response.user.level,
         vertical: response.user.vertical,
       }),
     }),
@@ -431,10 +524,21 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    getQuestions: builder.query<QuestionTask[], void>({
-      query: () => ({
+    getSameDeviceStudents: builder.query<SameDeviceStudent[], void>({
+      query: () => '/student/same-device',
+      transformResponse: (response: ApiSameDeviceStudentsResponse) =>
+        response.students.map(mapSameDeviceStudent),
+      providesTags: [{ type: 'Students', id: 'SAME_DEVICE' }],
+    }),
+
+    getQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+      query: arg => ({
         url: '/admin/questions',
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+        },
       }),
       transformResponse: (response: ApiQuestionsResponse) =>
         response.questions.map(mapQuestion),
@@ -449,9 +553,13 @@ export const jjWingsApi = createApi({
 
     getAvailableQuestions: builder.query<QuestionTask[], AvailableQuestionsArg>(
       {
-        query: ({ studentId }) => ({
+        query: ({ studentId, level }) => ({
           url: `/admin/questions/available/${studentId}`,
-          params: { page: 1, limit: DEFAULT_LIMIT },
+          params: {
+            page: 1,
+            limit: DEFAULT_LIMIT,
+            ...(typeof level === 'number' ? { level } : {}),
+          },
         }),
         transformResponse: (response: ApiQuestionsResponse) =>
           response.questions.map(mapQuestion),
@@ -500,8 +608,21 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    getRanking: builder.query<RankingStudent[], void>({
-      query: () => '/ranking',
+    getAdminNotifications: builder.query<Notification[], void>({
+      query: () => ({
+        url: '/admin/notifications',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiNotificationsResponse) =>
+        response.data.map(mapNotification),
+      providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
+    }),
+
+    getRanking: builder.query<RankingStudent[], RankingArg | void>({
+      query: arg => ({
+        url: '/ranking',
+        params: typeof arg?.level === 'number' ? { level: arg.level } : {},
+      }),
       transformResponse: (response: ApiRankingResponse) =>
         response.data.map(mapRankingStudent),
       providesTags: [{ type: 'Ranking', id: 'LIST' }],
@@ -515,20 +636,36 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { studentIds }) =>
-        studentIds.map(student => ({
-          type: 'Notifications' as const,
-          id: student.id,
-        })),
+        [
+          ...studentIds.map(student => ({
+            type: 'Notifications' as const,
+            id: student.id,
+          })),
+          { type: 'Notifications' as const, id: 'ADMIN' },
+        ],
     }),
 
     addStudent: builder.mutation<string, AddStudentArg>({
-      query: ({ name }) => ({
+      query: ({ name, level }) => ({
         url: '/admin/students',
         method: 'POST',
-        body: { name },
+        body: { name, level },
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'Students', id: 'LIST' }],
+    }),
+
+    updateStudent: builder.mutation<string, UpdateStudentArg>({
+      query: ({ studentId, name, level }) => ({
+        url: `/admin/students/${studentId}`,
+        method: 'PATCH',
+        body: { name, level },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Student', id: studentId },
+        { type: 'Students', id: 'LIST' },
+      ],
     }),
 
     updateStudentHorizontal: builder.mutation<
@@ -556,6 +693,26 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
     }),
 
+    updateStudentDeviceId: builder.mutation<string, UpdateStudentDeviceIdArg>({
+      query: ({ deviceId, authToken }) => ({
+        url: '/student',
+        method: 'PATCH',
+        body: { deviceId },
+        headers: authToken ? { 'x-access-token': authToken } : undefined,
+      }),
+      transformResponse: () => 'success',
+    }),
+
+    deleteStudentDeviceId: builder.mutation<string, DeleteStudentDeviceIdArg>({
+      query: ({ studentId, deviceId }) => ({
+        url: '/student/device-id',
+        method: 'DELETE',
+        body: { studentId, deviceId },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Students', id: 'SAME_DEVICE' }],
+    }),
+
     removeStudentFcmToken: builder.mutation<string, RemoveStudentFcmTokenArg>({
       query: ({ studentId, fcmToken }) => ({
         url: `/admin/students/${studentId}`,
@@ -566,16 +723,42 @@ export const jjWingsApi = createApi({
     }),
 
     createQuestion: builder.mutation<string, CreateQuestionArg>({
-      query: ({ taskId, question }) => ({
+      query: ({ taskId, question, level }) => ({
         url: '/admin/questions',
         method: 'POST',
         body: {
           questionId: taskId,
           questions: question,
+          level,
         },
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'Questions', id: 'LIST' }],
+    }),
+
+    deleteQuestion: builder.mutation<string, DeleteQuestionArg>({
+      query: ({ questionId }) => ({
+        url: `/admin/questions/${questionId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { questionId }) => [
+        { type: 'Question', id: questionId },
+        'Questions',
+      ],
+    }),
+
+    updateQuestion: builder.mutation<string, UpdateQuestionArg>({
+      query: ({ id, questionId, level }) => ({
+        url: `/admin/questions/${id}`,
+        method: 'PATCH',
+        body: { questionId, level },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Question', id },
+        'Questions',
+      ],
     }),
 
     assignHomework: builder.mutation<string, AssignHomeworkArg>({
@@ -619,21 +802,29 @@ export const jjWingsApi = createApi({
 export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
+  useSwitchStudentLoginMutation,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
   useGetStudentByIdQuery,
   useGetStudentsQuery,
+  useGetSameDeviceStudentsQuery,
   useGetQuestionsQuery,
   useGetAvailableQuestionsQuery,
   useAddStudentMutation,
+  useUpdateStudentMutation,
   useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
+  useUpdateStudentDeviceIdMutation,
+  useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,
   useCreateQuestionMutation,
+  useDeleteQuestionMutation,
+  useUpdateQuestionMutation,
   useAssignHomeworkMutation,
   useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
+  useGetAdminNotificationsQuery,
   useGetRankingQuery,
   useSendNotificationMutation,
 } = jjWingsApi;

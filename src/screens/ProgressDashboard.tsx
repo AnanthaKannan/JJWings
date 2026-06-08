@@ -18,6 +18,7 @@ import { useSelector } from 'react-redux';
 import { useGetScoreQuery } from '../store/api';
 import { RootState } from '../store/store';
 import { formatDuration } from '../util/fn';
+import { APP_VERSION } from '../util/version';
 import { LoadingState } from '../component';
 
 const { width } = Dimensions.get('window');
@@ -554,6 +555,7 @@ const ProgressDashboard: React.FC = () => {
               </Text>
             </View>
 
+            <Text style={styles.versionText}>v{APP_VERSION}</Text>
             <View style={{ height: 32 }} />
           </Animated.View>
         )}
@@ -831,6 +833,14 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontWeight: '600',
     marginTop: 4,
+  },
+  versionText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: 10,
   },
 });
 
