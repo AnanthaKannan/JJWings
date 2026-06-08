@@ -17,7 +17,9 @@ interface AuthState {
   studentProfilePic: string | null;
   token: string | null;
   adminId: string;
+  adminCode: string | null;
   adminName: string;
+  adminProfilePic: string | null;
   isAdmin: boolean;
   vertical: boolean;
   hasNotificationAttention: boolean;
@@ -39,7 +41,9 @@ const initialState: AuthState = {
   timer: 0,
   token: null,
   adminId: '',
+  adminCode: null,
   adminName: '',
+  adminProfilePic: null,
   isAdmin: false,
   vertical: false,
   hasNotificationAttention: false,
@@ -80,13 +84,17 @@ const commonSlice = createSlice({
       state,
       action: PayloadAction<{
         adminId: string;
+        adminCode?: string | null;
         isAdmin: boolean;
         adminName: string;
+        adminProfilePic?: string | null;
         token?: string;
       }>,
     ) => {
       state.adminId = action.payload.adminId;
+      state.adminCode = action.payload.adminCode ?? null;
       state.adminName = action.payload.adminName;
+      state.adminProfilePic = action.payload.adminProfilePic ?? null;
       state.studentLevel = null;
       state.isAdmin = true;
       state.isStudent = false;
@@ -118,7 +126,9 @@ const commonSlice = createSlice({
       state.studentName = '';
       state.studentProfilePic = null;
       state.adminId = '';
+      state.adminCode = null;
       state.adminName = '';
+      state.adminProfilePic = null;
       state.isStudent = false;
       state.isAdmin = false;
       state.isAuthenticated = false;
@@ -137,6 +147,9 @@ const commonSlice = createSlice({
     ) => {
       state.studentProfilePic = action.payload;
     },
+    setAdminProfilePic: (state, action: PayloadAction<string | null>) => {
+      state.adminProfilePic = action.payload;
+    },
   },
 });
 
@@ -148,5 +161,6 @@ export const {
   showNotificationAttention,
   clearNotificationAttention,
   setStudentProfilePic,
+  setAdminProfilePic,
 } = commonSlice.actions;
 export default commonSlice.reducer;

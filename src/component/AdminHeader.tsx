@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Modal,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 import { RootState } from '../store/store';
+import { getFileUrl } from '../util/fileUrl';
 import { APP_VERSION } from '../util/version';
 
 type AdminHeaderProps = {
@@ -32,6 +34,11 @@ const adminNavItems = [
     icon: 'leaderboard',
     routeName: 'AdminRanking',
   },
+  {
+    label: 'Profile',
+    icon: 'person',
+    routeName: 'AdminProfile',
+  },
 ];
 
 export default function AdminHeader({
@@ -41,9 +48,13 @@ export default function AdminHeader({
   const navigation = useNavigation<any>();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const adminName = useSelector((state: RootState) => state.common.adminName);
+  const adminProfilePic = useSelector(
+    (state: RootState) => state.common.adminProfilePic,
+  );
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
   const displayName = adminName.trim() || 'Admin';
+  const profilePicUrl = getFileUrl(adminProfilePic);
 
   const handleProfilePress = () => {
     if (isAdmin) {
@@ -81,7 +92,11 @@ export default function AdminHeader({
           disabled={!isAdmin}
           activeOpacity={0.78}
         >
-          <Text style={styles.profileInitial}>{adminInitial}</Text>
+          {profilePicUrl ? (
+            <Image source={{ uri: profilePicUrl }} style={styles.profileImage} />
+          ) : (
+            <Text style={styles.profileInitial}>{adminInitial}</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -100,7 +115,14 @@ export default function AdminHeader({
             <View style={styles.sideNav}>
               <View style={styles.sideNavHeader}>
                 <View style={styles.largeProfileCircle}>
-                  <Text style={styles.largeProfileInitial}>{adminInitial}</Text>
+                  {profilePicUrl ? (
+                    <Image
+                      source={{ uri: profilePicUrl }}
+                      style={styles.largeProfileImage}
+                    />
+                  ) : (
+                    <Text style={styles.largeProfileInitial}>{adminInitial}</Text>
+                  )}
                 </View>
                 <View style={styles.adminTextWrap}>
                   <Text style={styles.adminName} numberOfLines={1}>
@@ -187,6 +209,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E0',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
   profileInitial: {
     color: '#334155',
@@ -230,6 +257,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E7FF',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  largeProfileImage: {
+    width: '100%',
+    height: '100%',
   },
   largeProfileInitial: {
     color: '#4338CA',

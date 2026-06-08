@@ -79,8 +79,11 @@ export default function LoginScreen() {
           dispatch(
             setAdminCredentials({
               adminId: result.data.id,
+              adminCode: result.data.adminCode,
               isAdmin: true,
               adminName: result.data.name,
+              adminProfilePic:
+                result.data.profilePicPath ?? result.data.profilePic,
               token: result.data.token,
             }),
           );

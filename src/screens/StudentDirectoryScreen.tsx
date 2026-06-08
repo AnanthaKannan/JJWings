@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   FlatList,
   Modal,
@@ -20,6 +21,7 @@ import {
 } from '../store/api';
 import { randomNumber } from '../util/fn';
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import { getFileUrl } from '../util/fileUrl';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,8 @@ type Student = {
   name: string;
   studentId?: string;
   level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
   fcmTokens: string[];
   assigned: number;
   completed: number;
@@ -52,14 +56,28 @@ const COLORS = [
 
 // ─── Avatar Component ─────────────────────────────────────────────────────────
 
-const Avatar = ({ color, name }: { color: string; name: string }) => {
+const Avatar = ({
+  color,
+  name,
+  profilePic,
+}: {
+  color: string;
+  name: string;
+  profilePic?: string;
+}) => {
   const initials = name
     .split(' ')
     .map(n => n[0])
     .join('');
+  const profilePicUrl = getFileUrl(profilePic);
+
   return (
     <View style={[styles.avatar, { backgroundColor: color }]}>
-      <Text style={styles.avatarText}>{initials}</Text>
+      {profilePicUrl ? (
+        <Image source={{ uri: profilePicUrl }} style={styles.avatarImage} />
+      ) : (
+        <Text style={styles.avatarText}>{initials}</Text>
+      )}
     </View>
   );
 };
@@ -92,7 +110,11 @@ const StudentRow = ({
 }) => (
   <View style={styles.row}>
     <View style={styles.studentInfo}>
-      <Avatar color={COLORS[randomNumber(0, 6)]} name={item.name} />
+      <Avatar
+        color={COLORS[randomNumber(0, 6)]}
+        name={item.name}
+        profilePic={item.profilePicPath ?? item.profilePic}
+      />
       <View style={styles.nameBlock}>
         <Text style={styles.studentName}>{item.name}</Text>
         <Text style={styles.studentMeta}>#{item.studentId ?? item.id}</Text>
@@ -531,6 +553,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   nameBlock: { flex: 1 },

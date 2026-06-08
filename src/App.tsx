@@ -37,6 +37,7 @@ import {
   NotificationsScreen,
   AdminMessageScreen,
   TopExplorerScreen,
+  AdminProfileScreen,
 } from './screens';
 
 type AnimatedTabIconProps = {
@@ -434,6 +435,17 @@ const AdminTabs = createBottomTabNavigator({
         tabBarLabel: 'Rank',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="leaderboard" color={color} size={size} />
+        ),
+      },
+    },
+    AdminProfile: {
+      screen: AdminProfileScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Profile',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="person" color={color} size={size} />
         ),
       },
     },

@@ -117,6 +117,8 @@ export type Student = {
   name: string;
   studentId?: string;
   level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
   fcmTokens: string[];
   horizontal: boolean;
   assigned: number;
@@ -130,6 +132,8 @@ export type SameDeviceStudent = {
   id: string;
   name: string;
   studentId?: string;
+  profilePic?: string;
+  profilePicPath?: string;
   deviceIds: string[];
   horizontal: boolean;
 };
@@ -224,6 +228,7 @@ type LoginApiResponse = {
 type LoginResult = {
   id: string;
   studentCode?: string;
+  adminCode?: string;
   name: string;
   role: 'student' | 'admin';
   token: string;
@@ -377,6 +382,8 @@ const mapStudent = (student: ApiStudent): Student => ({
   name: student.name ?? '',
   studentId: student.studentId,
   level: student.level,
+  profilePic: student.profilePicPath ?? student.profilePic,
+  profilePicPath: student.profilePicPath,
   fcmTokens: [
     ...(student.fcmTokens ?? []),
     ...(student.fcmToken ? [student.fcmToken] : []),
@@ -393,6 +400,8 @@ const mapSameDeviceStudent = (student: ApiStudent): SameDeviceStudent => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
+  profilePic: student.profilePicPath ?? student.profilePic,
+  profilePicPath: student.profilePicPath,
   deviceIds: student.deviceIds ?? [],
   horizontal: !(student.vertical ?? true),
 });
@@ -524,6 +533,7 @@ export const jjWingsApi = createApi({
       transformResponse: (response: LoginApiResponse) => ({
         id: response.user.id,
         studentCode: response.user.studentId,
+        adminCode: response.user.adminId,
         name: response.user.name,
         role: response.role,
         token: response.token,
@@ -542,6 +552,7 @@ export const jjWingsApi = createApi({
       transformResponse: (response: LoginApiResponse) => ({
         id: response.user.id,
         studentCode: response.user.studentId,
+        adminCode: response.user.adminId,
         name: response.user.name,
         role: response.role,
         token: response.token,
