@@ -30,6 +30,8 @@ type ApiStudent = {
   studentId?: string;
   name?: string;
   level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
   vertical?: boolean;
   deviceIds?: string[];
   fcmToken?: string;
@@ -213,17 +215,53 @@ type LoginApiResponse = {
     studentId?: string;
     adminId?: string;
     level?: number;
+    profilePic?: string;
+    profilePicPath?: string;
     vertical: boolean;
   };
 };
 
 type LoginResult = {
   id: string;
+  studentCode?: string;
   name: string;
   role: 'student' | 'admin';
   token: string;
   level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
   vertical: boolean;
+};
+
+type UploadFile = {
+  uri: string;
+  type?: string;
+  name?: string;
+};
+
+type UploadProfilePicArg = {
+  file: UploadFile;
+};
+
+type UploadResponse = {
+  url?: string;
+  path?: string;
+  fileUrl?: string;
+  location?: string;
+  profilePic?: string;
+  profilePicPath?: string;
+  file?: {
+    url?: string;
+    path?: string;
+  };
+  data?: {
+    url?: string;
+    path?: string;
+    fileUrl?: string;
+    location?: string;
+    profilePic?: string;
+    profilePicPath?: string;
+  };
 };
 
 type HomeworkArg = {
@@ -485,10 +523,13 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: (response: LoginApiResponse) => ({
         id: response.user.id,
+        studentCode: response.user.studentId,
         name: response.user.name,
         role: response.role,
         token: response.token,
         level: response.user.level,
+        profilePic: response.user.profilePicPath ?? response.user.profilePic,
+        profilePicPath: response.user.profilePicPath,
         vertical: response.user.vertical,
       }),
     }),
@@ -500,10 +541,13 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: (response: LoginApiResponse) => ({
         id: response.user.id,
+        studentCode: response.user.studentId,
         name: response.user.name,
         role: response.role,
         token: response.token,
         level: response.user.level,
+        profilePic: response.user.profilePicPath ?? response.user.profilePic,
+        profilePicPath: response.user.profilePicPath,
         vertical: response.user.vertical,
       }),
     }),
@@ -722,6 +766,49 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
     }),
 
+    uploadProfilePic: builder.mutation<string | undefined, UploadProfilePicArg>(
+      {
+        query: ({ file }) => {
+          const formData = new FormData();
+          formData.append('path', 'profile');
+          formData.append('file', {
+            uri: file.uri,
+            type: file.type ?? 'image/jpeg',
+            name: file.name ?? 'profile.jpg',
+          } as any);
+
+          return {
+            url: '/uploads',
+            method: 'POST',
+            body: formData,
+          };
+        },
+        transformResponse: (response: UploadResponse) =>
+          response.profilePic ??
+          response.profilePicPath ??
+          response.file?.path ??
+          response.url ??
+          response.file?.url ??
+          response.fileUrl ??
+          response.location ??
+          response.path ??
+          response.data?.profilePic ??
+          response.data?.profilePicPath ??
+          response.data?.url ??
+          response.data?.fileUrl ??
+          response.data?.location ??
+          response.data?.path,
+      },
+    ),
+
+    deleteProfilePic: builder.mutation<string, void>({
+      query: () => ({
+        url: '/profile-pic',
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+    }),
+
     createQuestion: builder.mutation<string, CreateQuestionArg>({
       query: ({ taskId, question, level }) => ({
         url: '/admin/questions',
@@ -817,6 +904,8 @@ export const {
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,
+  useUploadProfilePicMutation,
+  useDeleteProfilePicMutation,
   useCreateQuestionMutation,
   useDeleteQuestionMutation,
   useUpdateQuestionMutation,

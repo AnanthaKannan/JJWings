@@ -23,6 +23,7 @@ import {
   Calculate,
   LoginScreen,
   ProfileScreen,
+  StudentProfileScreen,
   HomeworkScreen,
   QuizReviewScreen,
   // ── Admin screens (create these in your screens folder) ──
@@ -271,6 +272,22 @@ const MainTabs = createBottomTabNavigator({
         tabBarIcon: ({ color, size, focused }) => (
           <AnimatedTabIcon
             name="devices-other"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
+    StudentProfile: {
+      screen: StudentProfileScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Profile',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="person"
             color={color}
             size={size}
             focused={focused}

@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface AuthState {
   studentId: string | null;
+  studentCode: string | null;
   studentLevel: number | null;
   isStudent: boolean;
   isAuthenticated: boolean;
@@ -13,6 +14,7 @@ interface AuthState {
   homeworkId: string | null;
   questionId: string | null;
   studentName: string;
+  studentProfilePic: string | null;
   token: string | null;
   adminId: string;
   adminName: string;
@@ -23,8 +25,10 @@ interface AuthState {
 
 const initialState: AuthState = {
   studentId: null,
+  studentCode: null,
   studentLevel: null,
   studentName: '',
+  studentProfilePic: null,
   isAuthenticated: false,
   isStudent: false,
   questions: [],
@@ -49,19 +53,23 @@ const commonSlice = createSlice({
       state,
       action: PayloadAction<{
         studentId: string;
+        studentCode?: string | null;
         isStudent: boolean;
         studentName: string;
         studentLevel?: number;
+        studentProfilePic?: string | null;
         token?: string;
         vertical: boolean;
       }>,
     ) => {
       state.studentId = action.payload.studentId;
+      state.studentCode = action.payload.studentCode ?? null;
       state.studentLevel =
         typeof action.payload.studentLevel === 'number'
           ? action.payload.studentLevel
           : null;
       state.studentName = action.payload.studentName;
+      state.studentProfilePic = action.payload.studentProfilePic ?? null;
       state.isStudent = action.payload.isStudent;
       state.isAdmin = false;
       state.isAuthenticated = true;
@@ -105,8 +113,10 @@ const commonSlice = createSlice({
     },
     logout: state => {
       state.studentId = null;
+      state.studentCode = null;
       state.studentLevel = null;
       state.studentName = '';
+      state.studentProfilePic = null;
       state.adminId = '';
       state.adminName = '';
       state.isStudent = false;
@@ -121,6 +131,12 @@ const commonSlice = createSlice({
     clearNotificationAttention: state => {
       state.hasNotificationAttention = false;
     },
+    setStudentProfilePic: (
+      state,
+      action: PayloadAction<string | null>,
+    ) => {
+      state.studentProfilePic = action.payload;
+    },
   },
 });
 
@@ -131,5 +147,6 @@ export const {
   setQuestions,
   showNotificationAttention,
   clearNotificationAttention,
+  setStudentProfilePic,
 } = commonSlice.actions;
 export default commonSlice.reducer;

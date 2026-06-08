@@ -291,10 +291,12 @@ export default function SameDeviceStudentsScreen() {
         dispatch(
           setStudentCredentials({
             studentId: result.id,
+            studentCode: result.studentCode,
             vertical: result.vertical,
             isStudent: true,
             studentName: result.name,
             studentLevel: result.level,
+            studentProfilePic: result.profilePicPath ?? result.profilePic,
             token: result.token,
           }),
         );

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Modal,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import { useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { RootState } from '../store/store';
+import { getFileUrl } from '../util/fileUrl';
 import { APP_VERSION } from '../util/version';
 
 type StudentHeaderProps = {
@@ -31,16 +33,8 @@ type StudentNavItem = {
 };
 
 const studentNavItems: StudentNavItem[] = [
-  { label: 'Progress', icon: 'insights', routeName: 'Progress' },
-  {
-    label: 'Homework',
-    icon: 'book',
-    routeName: 'Homework',
-    params: { screen: 'HomeworkScreen' },
-  },
-  { label: 'Top Explorers', icon: 'emoji-events', routeName: 'TopExplorer' },
-  { label: 'Notifications', icon: 'notifications', routeName: 'Notifications' },
   { label: 'Same Device', icon: 'devices-other', routeName: 'SameDeviceStudents' },
+  { label: 'Profile', icon: 'person', routeName: 'StudentProfile' },
   { label: 'Logout', icon: 'logout', routeName: 'Logout' },
 ];
 
@@ -59,9 +53,13 @@ export default function StudentHeader({
   const studentLevel = useSelector(
     (state: RootState) => state.common.studentLevel,
   );
+  const studentProfilePic = useSelector(
+    (state: RootState) => state.common.studentProfilePic,
+  );
   const isStudent = useSelector((state: RootState) => state.common.isStudent);
   const studentInitial = (studentName.trim()[0] ?? 'S').toUpperCase();
   const displayName = studentName.trim() || 'Student';
+  const profilePicUrl = getFileUrl(studentProfilePic);
   const headerStyle = [
     styles.header,
     headerBackgroundColor && { backgroundColor: headerBackgroundColor },
@@ -120,7 +118,11 @@ export default function StudentHeader({
           disabled={!isStudent}
           activeOpacity={0.78}
         >
-          <Text style={styles.profileInitial}>{studentInitial}</Text>
+          {profilePicUrl ? (
+            <Image source={{ uri: profilePicUrl }} style={styles.profileImage} />
+          ) : (
+            <Text style={styles.profileInitial}>{studentInitial}</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -139,9 +141,16 @@ export default function StudentHeader({
             <View style={styles.sideNav}>
               <View style={styles.sideNavHeader}>
                 <View style={styles.largeProfileCircle}>
-                  <Text style={styles.largeProfileInitial}>
-                    {studentInitial}
-                  </Text>
+                  {profilePicUrl ? (
+                    <Image
+                      source={{ uri: profilePicUrl }}
+                      style={styles.largeProfileImage}
+                    />
+                  ) : (
+                    <Text style={styles.largeProfileInitial}>
+                      {studentInitial}
+                    </Text>
+                  )}
                 </View>
                 <View style={styles.studentTextWrap}>
                   <Text style={styles.studentName} numberOfLines={1}>
@@ -246,6 +255,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E0',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
   profileInitial: {
     color: '#334155',
@@ -289,6 +303,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E7FF',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  largeProfileImage: {
+    width: '100%',
+    height: '100%',
   },
   largeProfileInitial: {
     color: '#4338CA',

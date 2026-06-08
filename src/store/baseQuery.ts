@@ -13,7 +13,6 @@ export const baseQuery = fetchBaseQuery({
     const token = (getState() as RootState).common.token;
 
     headers.set('Accept', 'application/json');
-    headers.set('Content-Type', 'application/json');
 
     if (token && !headers.has('x-access-token')) {
       headers.set('x-access-token', token);
