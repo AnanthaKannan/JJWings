@@ -19,7 +19,7 @@ import { useGetScoreQuery } from '../store/api';
 import { RootState } from '../store/store';
 import { formatDuration } from '../util/fn';
 import { APP_VERSION } from '../util/version';
-import { LoadingState } from '../component';
+import { LoadingState, StudentHeader } from '../component';
 
 const { width } = Dimensions.get('window');
 
@@ -372,6 +372,7 @@ const ProgressDashboard: React.FC = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+      <StudentHeader header="" headerBackgroundColor="#4F46E5" />
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -568,7 +569,7 @@ const ProgressDashboard: React.FC = () => {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F0F4FF',
+    backgroundColor: '#4F46E5',
   },
   container: {
     flex: 1,
@@ -578,7 +579,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    paddingTop: 56,
+    paddingTop: 24,
     paddingBottom: 32,
     paddingHorizontal: 24,
     marginBottom: 20,

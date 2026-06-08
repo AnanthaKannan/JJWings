@@ -22,7 +22,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import DeviceInfo from 'react-native-device-info';
 
-import { LoadingOverlay, LoadingState } from '../component';
+import { LoadingOverlay, LoadingState, StudentHeader } from '../component';
 import {
   SameDeviceStudent,
   useDeleteStudentDeviceIdMutation,
@@ -322,17 +322,7 @@ export default function SameDeviceStudentsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Same Device Students</Text>
-          <Text style={styles.headerSubtitle}>
-            Students logged on this device
-          </Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons name="devices-other" size={22} color="#4F46E5" />
-        </View>
-      </View>
+      <StudentHeader header="Same Device Students" />
 
       {showLoader ? (
         <View style={styles.loaderWrap}>

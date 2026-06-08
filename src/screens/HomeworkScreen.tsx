@@ -21,7 +21,7 @@ import { useGetHomeworksQuery } from '../store/api';
 import { setQuestions } from '../store/slices';
 import { BadgeType } from '../util/types';
 import { HomeworkState } from '../util/enum';
-import { LoadingState } from '../component';
+import { AdminHeader, LoadingState, StudentHeader } from '../component';
 
 interface HomeworkCardProps {
   questionId: string;
@@ -181,7 +181,6 @@ function HomeworkCard({
 }
 
 export default function HomeworkScreen() {
-  const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const isFocused = useIsFocused();
   const routeStudentId = route?.params?.studentId;
@@ -211,12 +210,6 @@ export default function HomeworkScreen() {
   const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
   const showLoader = isFocused && (isLoading || isFetching) && !refreshing;
-  const handleAdminBack = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'StudentDirectory' }],
-    });
-  };
 
   const onRefresh = useCallback(async () => {
     if (!studentId) return;
@@ -232,6 +225,14 @@ export default function HomeworkScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF2FF" />
+      {isAdminReview ? (
+        <AdminHeader
+          header={`${studentName ?? 'Student'} Performance`}
+          showBackButton={true}
+        />
+      ) : (
+        <StudentHeader header="Homework" headerBackgroundColor="#EEF2FF" />
+      )}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -246,29 +247,6 @@ export default function HomeworkScreen() {
           />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTitleRow}>
-            {isAdminReview && (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleAdminBack}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.backButtonText}>‹</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={styles.headerTitle}>
-              {isAdminReview
-                ? `${studentName ?? 'Student'} Performance`
-                : 'Homework'}
-            </Text>
-          </View>
-          {/* <Text style={styles.headerSubtitle}>
-            You have {tasks.length} tasks to explore today
-          </Text> */}
-        </View>
-
         <View style={styles.filterBar}>
           {FILTERS.map(filter => {
             const isSelected = selectedFilter === filter.value;

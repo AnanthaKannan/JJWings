@@ -22,7 +22,7 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
-import { AdminHeader, LoadingState } from '../component';
+import { AdminHeader, LoadingState, StudentHeader } from '../component';
 import { RankingStudent, useGetRankingQuery } from '../store/api';
 import { RootState } from '../store/store';
 
@@ -637,6 +637,9 @@ const TopExplorerScreen: React.FC = () => {
           <AdminHeader header="Rank" showBackButton={true} />
         </View>
       )}
+      {!isAdmin && (
+        <StudentHeader header="" headerBackgroundColor="#EEF4FF" />
+      )}
 
       {/* Animated background blob */}
       <Animated.View
@@ -946,7 +949,7 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   scrollContent: {
-    paddingTop: 28,
+    paddingTop: 0,
     paddingHorizontal: 16,
   },
 

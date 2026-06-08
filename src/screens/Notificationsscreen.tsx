@@ -12,7 +12,7 @@ import { useIsFocused, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { AdminHeader, LoadingState } from '../component';
+import { AdminHeader, LoadingState, StudentHeader } from '../component';
 import {
   useGetAdminNotificationsQuery,
   useGetNotificationsQuery,
@@ -86,11 +86,6 @@ export default function NotificationsScreen() {
   const headerTitle = isStudentNotificationReview
     ? `${routeStudentName ?? 'Student'} Notifications`
     : 'Notifications';
-  const headerSubtitle = isStudentNotificationReview
-    ? 'Notifications received by this student'
-    : isAdmin
-      ? 'Notifications sent to students'
-      : 'Updates from your homework team';
   const emptyText = isStudentNotificationReview
     ? 'This student has not received notifications yet.'
     : isAdmin
@@ -124,15 +119,10 @@ export default function NotificationsScreen() {
       showBackButton={isStudentNotificationReview}
     />
   ) : (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
-      </View>
-      <View style={styles.headerIcon}>
-        <MaterialIcons name="notifications-none" size={24} color="#2563EB" />
-      </View>
-    </View>
+    <StudentHeader
+      header="Notifications"
+      headerBackgroundColor="#EEF2FF"
+    />
   );
 
   return (

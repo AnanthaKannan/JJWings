@@ -265,6 +265,8 @@ const MainTabs = createBottomTabNavigator({
     SameDeviceStudents: {
       screen: SameDeviceStudentsScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Same Device',
         tabBarIcon: ({ color, size, focused }) => (
           <AnimatedTabIcon
