@@ -252,9 +252,11 @@ export default function SameDeviceStudentsScreen() {
     setLoginError('');
 
     try {
+      const deviceId = await DeviceInfo.getUniqueId();
       const result = await login({
         username: cleanStudentId,
         password,
+        deviceId,
       });
 
       if (
@@ -266,7 +268,6 @@ export default function SameDeviceStudentsScreen() {
         return;
       }
 
-      const deviceId = await DeviceInfo.getUniqueId();
       console.log('deviceId', deviceId);
       await updateStudentDeviceId({
         deviceId,

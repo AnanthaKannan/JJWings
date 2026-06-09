@@ -245,6 +245,7 @@ export type QuestionPaper = {
 type LoginArg = {
   username: string;
   password: string;
+  deviceId?: string;
 };
 
 type SwitchStudentLoginArg = {
@@ -621,12 +622,13 @@ export const jjWingsApi = createApi({
     }),
 
     getLogin: builder.query<LoginResult, LoginArg>({
-      query: ({ username, password }) => ({
+      query: ({ username, password, deviceId }) => ({
         url: '/login',
         method: 'POST',
         body: {
           username,
           password,
+          ...(deviceId ? { deviceId } : {}),
         },
       }),
       transformResponse: (response: LoginApiResponse) => ({

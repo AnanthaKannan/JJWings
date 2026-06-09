@@ -43,10 +43,12 @@ export default function LoginScreen() {
   const finishLogin = useCallback(
     async (studentId: string, password: string, shouldSave: boolean) => {
       const cleanStudentId = studentId.trim();
+      const deviceId = await DeviceInfo.getUniqueId();
 
       const result = await login({
         username: cleanStudentId,
         password,
+        deviceId,
       });
 
       if ('data' in result && result.data) {
@@ -69,7 +71,6 @@ export default function LoginScreen() {
             }),
           );
           try {
-            const deviceId = await DeviceInfo.getUniqueId();
             console.log('deviceId', deviceId);
             await updateStudentDeviceId({ deviceId }).unwrap();
           } catch (error) {
