@@ -20,12 +20,13 @@ export default function Header({ heading, sideHead, onBack }: HeaderProps) {
 
     if (heading === 'Quiz Review') {
       const returnToHomeworkParams = route.params?.returnToHomeworkParams;
+      const returnRouteName = route.params?.returnRouteName ?? 'HomeworkScreen';
 
       navigation.reset({
         index: 0,
         routes: [
           {
-            name: 'HomeworkScreen',
+            name: returnRouteName,
             params: returnToHomeworkParams,
           },
         ],

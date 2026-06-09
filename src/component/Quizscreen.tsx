@@ -27,6 +27,7 @@ import {
 // ─── Types ───────────────────────────────────────────────
 interface QuizScreenProps {
   timer: number;
+  returnRouteName?: string;
 }
 
 type QuizData = {
@@ -39,7 +40,7 @@ type QuizData = {
 type RootStackParamList = {
   Home: undefined;
   HomeworkScreen: undefined;
-  QuizReview: undefined;
+  QuizReview: { returnRouteName?: string } | undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -89,7 +90,7 @@ const getOralSpeechDuration = (question = '') => {
   return Math.min(Math.max((wordCount * 430) / ORAL_SPEECH_RATE, 1800), 4200);
 };
 
-export default function QuizScreen({ timer }: QuizScreenProps) {
+export default function QuizScreen({ timer, returnRouteName }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
   const selMarks = useSelector((state: RootState) => state.common.marks);
@@ -267,7 +268,10 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
         onClose={() => setModalVisible(false)}
         onSeeResults={() => {
           setModalVisible(false);
-          navigation.navigate('QuizReview');
+          navigation.navigate(
+            'QuizReview',
+            returnRouteName ? { returnRouteName } : undefined,
+          );
         }}
         timeTaken={completionStats.timeTaken}
         accuracy={completionStats.accuracy}

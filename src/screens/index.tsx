@@ -3,6 +3,7 @@ export { default as LoginScreen } from './Loginscreen';
 export { default as ProfileScreen } from './ProfileScreen';
 export { default as StudentProfileScreen } from './StudentProfileScreen';
 export { default as HomeworkScreen } from './HomeworkScreen';
+export { default as PracticeScreen } from './PracticeScreen';
 export { default as QuizReviewScreen } from './QuizReviewScreen';
 export { default as StudentDirectoryScreen } from './StudentDirectoryScreen';
 export { default as SameDeviceStudentsScreen } from './SameDeviceStudentsScreen';

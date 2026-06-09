@@ -163,7 +163,10 @@ const ModuleCard = ({
           </View>
           <View style={styles.cardActions}>
             <TouchableOpacity
-              style={[styles.updateButton, isUpdating && styles.actionButtonOff]}
+              style={[
+                styles.updateButton,
+                isUpdating && styles.actionButtonOff,
+              ]}
               onPress={event => {
                 event.stopPropagation();
                 onUpdatePress();
@@ -174,7 +177,10 @@ const ModuleCard = ({
               <MaterialIcons name="edit" size={19} color="#2563EB" />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.deleteButton, isDeleting && styles.actionButtonOff]}
+              style={[
+                styles.deleteButton,
+                isDeleting && styles.actionButtonOff,
+              ]}
               onPress={event => {
                 event.stopPropagation();
                 onDeletePress();
@@ -197,7 +203,12 @@ export default function HomeworkLibraryScreen() {
   const isFocused = useIsFocused();
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
-  const { data: questionsData, isLoading } = useGetQuestionsQuery(
+  const {
+    data: questionsData,
+    currentData: currentQuestionsData,
+    isLoading,
+    isFetching,
+  } = useGetQuestionsQuery(
     {
       type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
@@ -221,9 +232,10 @@ export default function HomeworkLibraryScreen() {
   const [isFilterLevelPickerOpen, setIsFilterLevelPickerOpen] = useState(false);
 
   const modules = useMemo(() => {
-    if (!questionsData) return [];
+    const activeQuestionsData = currentQuestionsData ?? questionsData;
+    if (!activeQuestionsData) return [];
 
-    return questionsData.map((q, index) => ({
+    return activeQuestionsData.map((q, index) => ({
       id: q.id,
       title: q.questionId ?? q.id,
       questions: q.question,
@@ -232,7 +244,7 @@ export default function HomeworkLibraryScreen() {
       updatedAt: q.updatedAt,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));
-  }, [questionsData]);
+  }, [currentQuestionsData, questionsData]);
 
   const filteredModules = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -248,6 +260,14 @@ export default function HomeworkLibraryScreen() {
   }, [modules, searchTerm]);
   const selectedTypeLabel = getTaskTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getTaskTypeLabel(typeFilter);
+  const showLoader = isFocused && (isLoading || isFetching);
+
+  const handleTypeFilterPress = (type: LibraryTypeFilter) => {
+    setTypeFilter(type);
+    setSearchTerm('');
+    setSelectedModule(null);
+    setModalVisible(false);
+  };
 
   const handleModulePress = (item: Module) => {
     setSelectedModule(item);
@@ -397,7 +417,7 @@ export default function HomeworkLibraryScreen() {
                 styles.typeFilterButton,
                 isSelected && styles.typeFilterButtonActive,
               ]}
-              onPress={() => setTypeFilter(type)}
+              onPress={() => handleTypeFilterPress(type)}
               activeOpacity={0.82}
             >
               <Text
@@ -414,7 +434,7 @@ export default function HomeworkLibraryScreen() {
         })}
       </View>
       <FlatList
-        data={filteredModules}
+        data={showLoader ? [] : filteredModules}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -429,13 +449,15 @@ export default function HomeworkLibraryScreen() {
           />
         )}
         ListEmptyComponent={
-          isFocused && isLoading ? (
-            <LoadingState label="Loading questions..." />
+          showLoader ? (
+            <LoadingState label={`Loading ${selectedTypeLabel}...`} />
           ) : (
             <View style={styles.emptyState}>
               <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
               <Text style={styles.emptyText}>
-                {searchTerm ? `No ${selectedTypeLabel} found` : `No ${selectedTypeLabel} yet`}
+                {searchTerm
+                  ? `No ${selectedTypeLabel} found`
+                  : `No ${selectedTypeLabel} yet`}
               </Text>
               <Text style={styles.emptySubText}>
                 {searchTerm
@@ -1258,4 +1280,3 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 });
-

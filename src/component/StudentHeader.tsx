@@ -33,6 +33,15 @@ type StudentNavItem = {
 };
 
 const studentNavItems: StudentNavItem[] = [
+  {
+    label: 'Examination',
+    icon: 'assignment',
+    routeName: 'Examination',
+    params: {
+      screen: 'HomeworkScreen',
+      params: { type: 'exam' },
+    },
+  },
   { label: 'Same Device', icon: 'devices-other', routeName: 'SameDeviceStudents' },
   { label: 'Question Papers', icon: 'description', routeName: 'QuestionPapers' },
   { label: 'Achievements', icon: 'emoji-events', routeName: 'Achievements' },

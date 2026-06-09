@@ -563,8 +563,7 @@ const TopExplorerScreen: React.FC = () => {
   } = useGetRankingQuery(
     typeof rankingLevel === 'number' ? { level: rankingLevel } : undefined,
     {
-    skip: !isFocused,
-    refetchOnMountOrArgChange: true,
+      skip: !isFocused,
     },
   );
 
@@ -637,9 +636,7 @@ const TopExplorerScreen: React.FC = () => {
           <AdminHeader header="Rank" showBackButton={true} />
         </View>
       )}
-      {!isAdmin && (
-        <StudentHeader header="" headerBackgroundColor="#EEF4FF" />
-      )}
+      {!isAdmin && <StudentHeader header="" headerBackgroundColor="#EEF4FF" />}
 
       {/* Animated background blob */}
       <Animated.View
@@ -690,7 +687,9 @@ const TopExplorerScreen: React.FC = () => {
                   selectedLevel !== null && styles.filterBtnTextActive,
                 ]}
               >
-                {selectedLevel === null ? 'All Levels' : `Level ${selectedLevel}`}
+                {selectedLevel === null
+                  ? 'All Levels'
+                  : `Level ${selectedLevel}`}
               </Text>
             </TouchableOpacity>
           )}

@@ -147,7 +147,6 @@ export default function SameDeviceStudentsScreen() {
     refetch,
   } = useGetSameDeviceStudentsQuery(undefined, {
     skip: !isFocused,
-    refetchOnMountOrArgChange: true,
   });
 
   const [deleteStudentDeviceId, { isLoading: isDeleting }] =

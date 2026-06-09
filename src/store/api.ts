@@ -428,6 +428,7 @@ type DeleteQuestionArg = {
 type QuestionsArg = {
   level?: number;
   type?: 'homework' | 'exam' | 'practice';
+  search?: string;
 };
 
 type UpdateQuestionArg = {
@@ -439,6 +440,11 @@ type UpdateQuestionArg = {
 type AssignHomeworkArg = {
   studentId: string;
   questionIds: string[];
+};
+
+type AssignPracticeQuestionsArg = {
+  questionIds: string[];
+  studentId?: string;
 };
 
 type AvailableQuestionsArg = {
@@ -721,6 +727,7 @@ export const jjWingsApi = createApi({
           limit: DEFAULT_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
           ...(arg?.type ? { type: arg.type } : {}),
+          ...(arg?.search ? { search: arg.search } : {}),
         },
       }),
       transformResponse: (response: ApiQuestionsResponse) =>
@@ -752,6 +759,27 @@ export const jjWingsApi = createApi({
         ],
       },
     ),
+
+    getPracticeQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+      query: arg => ({
+        url: '/questions/practice',
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+          ...(arg?.search ? { search: arg.search } : {}),
+        },
+      }),
+      transformResponse: (response: ApiQuestionsResponse) =>
+        response.questions.map(mapQuestion),
+      providesTags: result => [
+        { type: 'Questions', id: 'PRACTICE_LIST' },
+        ...(result ?? []).map(question => ({
+          type: 'Question' as const,
+          id: question.id,
+        })),
+      ],
+    }),
 
     getIdGen: builder.query<IdGenData, void>({
       query: () => ({
@@ -1119,6 +1147,30 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    assignPracticeQuestions: builder.mutation<
+      string,
+      AssignPracticeQuestionsArg
+    >({
+      query: ({ questionIds }) => ({
+        url: '/student/questions/practice/assign',
+        method: 'POST',
+        body: { questionIds },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Questions', id: 'PRACTICE_LIST' },
+        ...(studentId
+          ? [
+              {
+                type: 'Homework' as const,
+                id: `${studentId}_${HomeworkState.NEW}`,
+              },
+              { type: 'Score' as const, id: studentId },
+            ]
+          : []),
+      ],
+    }),
+
     updateHomework: builder.mutation<string, UpdateHomeworkArg>({
       query: ({ homeworkId, state, result, answer, timer }) => ({
         url: `/homework/${homeworkId}`,
@@ -1152,6 +1204,7 @@ export const {
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
   useGetQuestionsQuery,
+  useGetPracticeQuestionsQuery,
   useGetAvailableQuestionsQuery,
   useAddStudentMutation,
   useUpdateStudentMutation,
@@ -1166,6 +1219,7 @@ export const {
   useDeleteQuestionMutation,
   useUpdateQuestionMutation,
   useAssignHomeworkMutation,
+  useAssignPracticeQuestionsMutation,
   useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,

@@ -1,5 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StatusBar, View, useColorScheme } from 'react-native';
+import {
+  Animated,
+  StatusBar,
+  StyleSheet,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   CommonActions,
@@ -25,6 +31,7 @@ import {
   ProfileScreen,
   StudentProfileScreen,
   HomeworkScreen,
+  PracticeScreen,
   QuizReviewScreen,
   // ── Admin screens (create these in your screens folder) ──
   StudentDirectoryScreen,
@@ -148,19 +155,7 @@ function NotificationTabIcon({
         <MaterialIcons name="notifications" color={color} size={size} />
       </Animated.View>
       {shouldRing && (
-        <View
-          style={{
-            position: 'absolute',
-            top: -2,
-            right: -3,
-            width: 9,
-            height: 9,
-            borderRadius: 5,
-            backgroundColor: '#EF4444',
-            borderWidth: 1,
-            borderColor: '#FFFFFF',
-          }}
-        />
+        <View style={styles.notificationAttentionDot} />
       )}
     </View>
   );
@@ -174,6 +169,15 @@ const HomeworkStack = createNativeStackNavigator({
   screenOptions: { headerShown: false },
   screens: {
     HomeworkScreen: { screen: HomeworkScreen },
+    Calculate: { screen: Calculate },
+    QuizReview: { screen: QuizReviewScreen },
+  },
+});
+
+const PracticeStack = createNativeStackNavigator({
+  screenOptions: { headerShown: false },
+  screens: {
+    PracticeScreen: { screen: PracticeScreen },
     Calculate: { screen: Calculate },
     QuizReview: { screen: QuizReviewScreen },
   },
@@ -256,6 +260,8 @@ const MainTabs = createBottomTabNavigator({
 
         return {
           tabBarLabel: 'Examination',
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
           unmountOnBlur: true,
           tabBarStyle: shouldHideTabBar
             ? { display: 'none' }
@@ -282,6 +288,47 @@ const MainTabs = createBottomTabNavigator({
               params: {
                 screen: 'HomeworkScreen',
                 params: { type: 'exam' },
+              },
+            }),
+          );
+        },
+      }),
+    },
+    Practice: {
+      screen: PracticeStack,
+      options: ({ route }) => {
+        const routeName =
+          getFocusedRouteNameFromRoute(route) ?? 'PracticeScreen';
+        const shouldHideTabBar =
+          routeName === 'Calculate' || routeName === 'QuizReview';
+
+        return {
+          tabBarLabel: 'Practice',
+          unmountOnBlur: true,
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon
+              name="psychology"
+              color={color}
+              size={size}
+              focused={focused}
+            />
+          ),
+        };
+      },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          e.preventDefault();
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: 'Practice',
+              params: {
+                screen: 'PracticeScreen',
               },
             }),
           );
@@ -654,5 +701,19 @@ function App() {
     </Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  notificationAttentionDot: {
+    position: 'absolute',
+    top: -2,
+    right: -3,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+});
 
 export default App;
