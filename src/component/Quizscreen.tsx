@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Animated,
+  Easing,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
@@ -11,6 +18,8 @@ import { useUpdateHomeworkMutation } from '../store/api';
 import { HomeworkState } from '../util/enum';
 import { evaluateExpression } from '../util/fn';
 import {
+  formatQuestionForSpeech,
+  ORAL_SPEECH_RATE,
   speakOralQuestion,
   stopOralQuestionSpeech,
 } from '../util/oralSpeech';
@@ -74,6 +83,12 @@ const formatHorizontalQuestion = (question = '') => {
   return parts.join(' ');
 };
 
+const getOralSpeechDuration = (question = '') => {
+  const wordCount = formatQuestionForSpeech(question).split(/\s+/).filter(Boolean)
+    .length;
+  return Math.min(Math.max((wordCount * 430) / ORAL_SPEECH_RATE, 1800), 4200);
+};
+
 export default function QuizScreen({ timer }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
@@ -97,6 +112,9 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
     timeTaken: '00:00',
     accuracy: '0%',
   });
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speakerPulse = useRef(new Animated.Value(0)).current;
+  const speechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setData(prev => ({
@@ -118,15 +136,63 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   const verticalQuestionParts = getVerticalQuestionParts(currentQuestion);
   const horizontalQuestion = formatHorizontalQuestion(currentQuestion);
 
+  const stopSpeakerAnimation = useCallback(() => {
+    if (speechTimerRef.current) {
+      clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
+    setIsSpeaking(false);
+  }, []);
+
+  const playOralQuestion = useCallback((question: string) => {
+    if (!speakOralQuestion(question)) return;
+
+    stopSpeakerAnimation();
+    setIsSpeaking(true);
+    speechTimerRef.current = setTimeout(
+      stopSpeakerAnimation,
+      getOralSpeechDuration(question),
+    );
+  }, [stopSpeakerAnimation]);
+
+  useEffect(() => {
+    if (!isSpeaking) {
+      speakerPulse.stopAnimation();
+      speakerPulse.setValue(0);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(speakerPulse, {
+          toValue: 1,
+          duration: 520,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(speakerPulse, {
+          toValue: 0,
+          duration: 520,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [isSpeaking, speakerPulse]);
+
   useEffect(() => {
     if (isOral && currentQuestion) {
-      speakOralQuestion(currentQuestion);
+      playOralQuestion(currentQuestion);
     }
 
     return () => {
+      stopSpeakerAnimation();
       stopOralQuestionSpeech();
     };
-  }, [currentQuestion, isOral]);
+  }, [currentQuestion, isOral, playOralQuestion, stopSpeakerAnimation]);
 
   // Progress percentage
   const progress = result.length / questions.length;
@@ -177,8 +243,21 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   };
 
   const handleRepeatQuestion = () => {
-    speakOralQuestion(currentQuestion);
+    playOralQuestion(currentQuestion);
   };
+
+  const speakerScale = speakerPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.12],
+  });
+  const speakerHaloScale = speakerPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.72, 1.28],
+  });
+  const speakerHaloOpacity = speakerPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.28, 0],
+  });
 
   return (
     // <SafeAreaView style={styles.safeArea}>
@@ -218,17 +297,34 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
           >
             {isOral ? (
               <View style={styles.oralPrompt}>
-                <View style={styles.oralIconWrap}>
-                  <MaterialIcons name="volume-up" size={34} color="#2563EB" />
-                </View>
+                <Animated.View
+                  style={[
+                    styles.oralIconHalo,
+                    {
+                      opacity: speakerHaloOpacity,
+                      transform: [{ scale: speakerHaloScale }],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    styles.oralIconWrap,
+                    { transform: [{ scale: speakerScale }] },
+                  ]}
+                >
+                  <MaterialIcons
+                    name={isSpeaking ? 'volume-up' : 'volume-down'}
+                    size={34}
+                    color="#2563EB"
+                  />
+                </Animated.View>
                 <Text style={styles.oralTitle}>Listen and answer</Text>
                 <TouchableOpacity
-                  style={styles.repeatButton}
+                  style={styles.repeatIconButton}
                   onPress={handleRepeatQuestion}
                   activeOpacity={0.82}
                 >
-                  <MaterialIcons name="replay" size={18} color="#FFFFFF" />
-                  <Text style={styles.repeatButtonText}>Repeat</Text>
+                  <MaterialIcons name="replay" size={24} color="#2563EB" />
                 </TouchableOpacity>
               </View>
             ) : isHorizontal ? (
@@ -379,6 +475,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    position: 'relative',
+  },
+  oralIconHalo: {
+    position: 'absolute',
+    top: 0,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#93C5FD',
   },
   oralIconWrap: {
     width: 72,
@@ -393,21 +498,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
   },
-  repeatButton: {
-    minHeight: 42,
-    borderRadius: 12,
-    backgroundColor: '#2563EB',
-    flexDirection: 'row',
+  repeatIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#EAF2FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingHorizontal: 16,
-    marginTop: 2,
-  },
-  repeatButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '900',
   },
   verticalQuestion: {
     alignItems: 'flex-end',

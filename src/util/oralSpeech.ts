@@ -22,17 +22,18 @@ export const formatQuestionForSpeech = (question = '') => {
 
 export const speakOralQuestion = (question: string, rate = ORAL_SPEECH_RATE) => {
   const spokenQuestion = formatQuestionForSpeech(question);
-  if (!spokenQuestion) return;
+  if (!spokenQuestion) return false;
 
   if (!OralTts?.speak) {
     if (!hasWarnedMissingModule) {
       hasWarnedMissingModule = true;
       console.warn('OralTts native module is unavailable. Rebuild the Android app.');
     }
-    return;
+    return false;
   }
 
   OralTts.speak(spokenQuestion, rate);
+  return true;
 };
 
 export const stopOralQuestionSpeech = () => {
