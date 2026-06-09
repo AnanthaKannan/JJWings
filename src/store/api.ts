@@ -23,6 +23,13 @@ type ApiScore = {
   correct?: number;
   wrong?: number;
   timeTaken?: number;
+  practiceAssigned?: number;
+  practiceNew?: number;
+  practiceProgress?: number;
+  practiceCompleted?: number;
+  practiceCorrect?: number;
+  practiceWrong?: number;
+  practiceTimeTaken?: number;
 };
 
 type ApiStudent = {
@@ -218,6 +225,13 @@ export type Score = {
   failure: number;
   timeTaken: number;
   completed: number;
+  practiceAssigned: number;
+  practiceNew: number;
+  practiceProgress: number;
+  practiceCompleted: number;
+  practiceSuccess: number;
+  practiceFailure: number;
+  practiceTimeTaken: number;
 };
 
 export type RankingStudent = {
@@ -802,6 +816,13 @@ export const jjWingsApi = createApi({
         failure: response.wrong ?? 0,
         timeTaken: response.timeTaken ?? 0,
         completed: response.completed ?? 0,
+        practiceAssigned: response.practiceAssigned ?? 0,
+        practiceNew: response.practiceNew ?? 0,
+        practiceProgress: response.practiceProgress ?? 0,
+        practiceCompleted: response.practiceCompleted ?? 0,
+        practiceSuccess: response.practiceCorrect ?? 0,
+        practiceFailure: response.practiceWrong ?? 0,
+        practiceTimeTaken: response.practiceTimeTaken ?? 0,
       }),
       providesTags: (_result, _error, { studentId }) => [
         { type: 'Score', id: studentId },

@@ -295,11 +295,36 @@ const ProgressDashboard: React.FC = () => {
   const working = score?.progress ?? 0;
   const correct = score?.success ?? 0;
   const wrong = score?.failure ?? 0;
+  const practiceAssigned = score?.practiceAssigned ?? 0;
+  const practiceDone = score?.practiceCompleted ?? 0;
+  const practiceNew = score?.practiceNew ?? 0;
+  const practiceWorking = score?.practiceProgress ?? 0;
+  const practiceCorrect = score?.practiceSuccess ?? 0;
+  const practiceWrong = score?.practiceFailure ?? 0;
   const totalSolved = correct + wrong;
   const accuracy =
     totalSolved > 0 ? Math.round((correct / totalSolved) * 1000) / 10 : 0;
+  const practiceTotalSolved = practiceCorrect + practiceWrong;
+  const practiceAccuracy =
+    practiceTotalSolved > 0
+      ? Math.round((practiceCorrect / practiceTotalSolved) * 1000) / 10
+      : 0;
   const learningHours = formatDuration(score?.timeTaken ?? 0);
+  const practiceLearningHours = formatDuration(score?.practiceTimeTaken ?? 0);
   const dashboardTitle = `${studentName.trim() || 'Your'}'s Progress Dashboard`;
+
+  const navigateToPractice = () => {
+    if (isAdminReview) {
+      navigation.navigate('PracticeScreen', {
+        studentId,
+        studentName,
+        adminReview: true,
+      });
+      return;
+    }
+
+    navigation.navigate('Practice');
+  };
 
   // ── Pull-to-refresh handler ──────────────────────────────────────────
   const onRefresh = useCallback(async () => {
@@ -511,7 +536,7 @@ const ProgressDashboard: React.FC = () => {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardEmoji}>📊</Text>
-                <Text style={styles.cardTitle}>Performance Stats</Text>
+                <Text style={styles.cardTitle}>Homework Performance</Text>
               </View>
 
               <View style={styles.statsTopRow}>
@@ -572,6 +597,101 @@ const ProgressDashboard: React.FC = () => {
                 }}
               >
                 <Text style={styles.viewLogText}>📋 View Homework</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardEmoji}>🧠</Text>
+                <Text style={styles.cardTitle}>Practice Status</Text>
+              </View>
+              <View style={styles.circleRow}>
+                <StatCircle
+                  value={practiceAssigned}
+                  label="ASSIGNED"
+                  color="#7C3AED"
+                  bgColor="#F3E8FF"
+                  delay={200}
+                />
+
+                <StatCircle
+                  value={practiceNew}
+                  label="NEW"
+                  color="#0891B2"
+                  bgColor="#CFFAFE"
+                  delay={400}
+                />
+
+                <StatCircle
+                  value={practiceWorking}
+                  label="WORKING"
+                  color="#CA8A04"
+                  bgColor="#FEF9C3"
+                  delay={600}
+                />
+                <StatCircle
+                  value={practiceDone}
+                  label="DONE"
+                  color="#16A34A"
+                  bgColor="#DCFCE7"
+                  delay={800}
+                />
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardEmoji}>🎯</Text>
+                <Text style={styles.cardTitle}>Practice Performance</Text>
+              </View>
+
+              <View style={styles.statsTopRow}>
+                <View>
+                  <Text style={styles.statsSmallLabel}>Accuracy</Text>
+                  <Text style={styles.accuracyValue}>{practiceAccuracy}%</Text>
+                </View>
+                <View style={styles.statsRight}>
+                  <Text style={styles.statsSmallLabel}>Total Solved</Text>
+                  <Text style={styles.totalSolvedValue}>
+                    {practiceTotalSolved.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              <AccuracyBar percent={practiceAccuracy} />
+
+              <View style={styles.badgeRow}>
+                <PulseBadge
+                  icon="✅"
+                  value={practiceCorrect}
+                  label="CORRECT"
+                  correct={true}
+                />
+                <PulseBadge
+                  icon="❌"
+                  value={practiceWrong}
+                  label="WRONG"
+                  correct={false}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.card, styles.practiceTimeCard]}>
+              <View style={styles.timeCardInner}>
+                <Text style={styles.timeIcon}>🧩</Text>
+                <View style={styles.timeInfo}>
+                  <Text style={styles.practiceTimeLabel}>PRACTICE TIME</Text>
+                  <Text style={styles.timeValue}>
+                    {practiceLearningHours} Hours
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.practiceLogBtn}
+                activeOpacity={0.85}
+                onPress={navigateToPractice}
+              >
+                <Text style={styles.viewLogText}>🧠 View Practice</Text>
               </TouchableOpacity>
             </View>
 
@@ -823,6 +943,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B',
     gap: 16,
   },
+  practiceTimeCard: {
+    backgroundColor: '#312E81',
+    gap: 16,
+  },
   timeCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -833,6 +957,13 @@ const styles = StyleSheet.create({
   timeLabel: {
     fontSize: 11,
     color: '#818CF8',
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  practiceTimeLabel: {
+    fontSize: 11,
+    color: '#A5F3FC',
     fontWeight: '700',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -852,6 +983,18 @@ const styles = StyleSheet.create({
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  practiceLogBtn: {
+    backgroundColor: '#0891B2',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    shadowColor: '#0891B2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.42,
     shadowRadius: 8,
     elevation: 6,
   },
