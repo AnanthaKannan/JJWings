@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
-  Linking,
+  Platform,
   RefreshControl,
   SafeAreaView,
   StatusBar,
@@ -18,6 +18,7 @@ import {
   pick,
   types,
 } from '@react-native-documents/picker';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
 
@@ -30,6 +31,7 @@ import {
   useUploadQuestionPaperMutation,
 } from '../store/api';
 import { RootState } from '../store/store';
+import { getFileUrl } from '../util/fileUrl';
 
 const formatFileSize = (size?: number) => {
   if (!size) return '';
@@ -40,6 +42,18 @@ const formatFileSize = (size?: number) => {
 };
 
 const PaperSeparator = () => <View style={styles.separator} />;
+const DOWNLOAD_FOLDER = 'JJ Wings';
+
+const getDownloadFileName = (paper: QuestionPaper) => {
+  const fallbackName = paper.originalName ?? paper.name ?? 'question-paper';
+  const safeName = fallbackName.replace(/[\\/:*?"<>|]+/g, '-').trim();
+
+  if (/\.[a-z0-9]{2,}$/i.test(safeName)) return safeName;
+
+  const extension =
+    paper.mimeType === 'application/pdf' ? 'pdf' : paper.mimeType?.split('/').pop();
+  return extension ? `${safeName}.${extension}` : safeName;
+};
 
 const QuestionPaperRow = ({
   item,
@@ -86,8 +100,10 @@ const QuestionPaperRow = ({
 export default function QuestionPaperScreen() {
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const isStudent = useSelector((state: RootState) => state.common.isStudent);
+  const token = useSelector((state: RootState) => state.common.token);
   const [paperName, setPaperName] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const {
     data: papers = [],
     isLoading,
@@ -98,7 +114,10 @@ export default function QuestionPaperScreen() {
   const [deleteQuestionPaper, deleteResult] = useDeleteQuestionPaperMutation();
   const [getDownloadUrl, downloadResult] = useLazyGetQuestionPaperDownloadQuery();
   const isBusy =
-    uploadResult.isLoading || deleteResult.isLoading || downloadResult.isFetching;
+    uploadResult.isLoading ||
+    deleteResult.isLoading ||
+    downloadResult.isFetching ||
+    downloadingId !== null;
   const showLoader = isLoading && papers.length === 0;
 
   const onRefresh = useCallback(async () => {
@@ -183,21 +202,81 @@ export default function QuestionPaperScreen() {
 
   const handleDownload = async (paper: QuestionPaper) => {
     try {
-      const downloadUrl = await getDownloadUrl(paper.id).unwrap();
-      const canOpen = await Linking.canOpenURL(downloadUrl);
+      setDownloadingId(paper.id);
+      const downloadUrlValue = await getDownloadUrl(paper.id).unwrap();
+      const downloadUrl = getFileUrl(downloadUrlValue) ?? downloadUrlValue;
 
-      if (!canOpen) {
-        Alert.alert('Unable to download', 'This file link cannot be opened.');
+      if (!downloadUrl) {
+        Alert.alert('Unable to download', 'No file link was found.');
         return;
       }
 
-      await Linking.openURL(downloadUrl);
+      const fileName = getDownloadFileName(paper);
+      const mimeType = paper.mimeType ?? 'application/pdf';
+      const headers: Record<string, string> | undefined = token
+        ? { Accept: mimeType, 'x-access-token': token }
+        : { Accept: mimeType };
+
+      if (Platform.OS === 'android') {
+        const response = await ReactNativeBlobUtil.config({
+          addAndroidDownloads: {
+            useDownloadManager: true,
+            notification: true,
+            mediaScannable: true,
+            storeInDownloads: true,
+            title: `${DOWNLOAD_FOLDER}/${fileName}`,
+            description: 'Question paper downloaded',
+            mime: mimeType,
+          },
+        }).fetch('GET', downloadUrl, headers);
+        const status = response.info().status;
+
+        if (status < 200 || status >= 300) {
+          throw new Error(`Download request failed with status ${status}`);
+        }
+
+        const downloadedUri = response.path();
+        Alert.alert(
+          'Downloaded',
+          `${fileName} has been saved to Android Downloads.`,
+          [
+            { text: 'OK' },
+            {
+              text: 'Open',
+              onPress: () => {
+                ReactNativeBlobUtil.android
+                  .actionViewIntent(downloadedUri, mimeType)
+                  .catch(error => {
+                    console.error('Failed to open downloaded question paper', error);
+                  });
+              },
+            },
+          ],
+        );
+      } else {
+        const response = await ReactNativeBlobUtil.config({
+          fileCache: true,
+          appendExt: fileName.split('.').pop() ?? 'pdf',
+        }).fetch('GET', downloadUrl, headers);
+        const status = response.info().status;
+
+        if (status < 200 || status >= 300) {
+          throw new Error(`Download request failed with status ${status}`);
+        }
+
+        const path = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/${fileName}`;
+        await ReactNativeBlobUtil.fs.cp(response.path(), path);
+        ReactNativeBlobUtil.ios.openDocument(path);
+        Alert.alert('Downloaded', `${fileName} has been saved.`);
+      }
     } catch (error) {
       console.error('Failed to download question paper', error);
       Alert.alert(
         'Download failed',
         'Please try downloading the question paper again.',
       );
+    } finally {
+      setDownloadingId(null);
     }
   };
 

@@ -23,6 +23,7 @@
     "@reduxjs/toolkit": "^2.11.2",
     "react": "19.2.3",
     "react-native": "0.84.1",
+    "react-native-blob-util": "^0.24.9",
     "react-native-config": "^1.6.1",
     "react-native-device-info": "^15.0.2",
     "react-native-image-picker": "^8.2.1",

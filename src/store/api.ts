@@ -781,14 +781,13 @@ export const jjWingsApi = createApi({
         body,
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { studentIds }) =>
-        [
-          ...studentIds.map(student => ({
-            type: 'Notifications' as const,
-            id: student.id,
-          })),
-          { type: 'Notifications' as const, id: 'ADMIN' },
-        ],
+      invalidatesTags: (_result, _error, { studentIds }) => [
+        ...studentIds.map(student => ({
+          type: 'Notifications' as const,
+          id: student.id,
+        })),
+        { type: 'Notifications' as const, id: 'ADMIN' },
+      ],
     }),
 
     addStudent: builder.mutation<string, AddStudentArg>({
@@ -957,8 +956,11 @@ export const jjWingsApi = createApi({
               json.downloadUrl ??
               json.url ??
               json.file?.url ??
+              json.file?.path ??
               json.data?.downloadUrl ??
               json.data?.url ??
+              json.data?.path ??
+              json.path ??
               fallbackUrl
             );
           }
