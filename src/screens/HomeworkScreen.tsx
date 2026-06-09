@@ -28,6 +28,7 @@ interface HomeworkCardProps {
   questionLabel?: string;
   homeworkId: string;
   question: string[];
+  marks?: number[];
   state: BadgeType;
   result: boolean[];
   answer: number[];
@@ -49,6 +50,7 @@ function HomeworkCard({
   questionId,
   questionLabel,
   question,
+  marks,
   state,
   result,
   answer,
@@ -62,6 +64,15 @@ function HomeworkCard({
   const dispatch = useDispatch();
   const canUseAction = !isAdminReview || state === HomeworkState.COMPLETED;
   const correctCount = result.filter(Boolean).length;
+  const hasMarks = Array.isArray(marks) && marks.length > 0;
+  const totalMarks = hasMarks
+    ? marks.reduce((total, mark) => total + mark, 0)
+    : 0;
+  const earnedMarks = hasMarks
+    ? result.reduce((total, isCorrect, index) => {
+        return total + (isCorrect ? marks[index] ?? 0 : 0);
+      }, 0)
+    : 0;
 
   const formatTime = (seconds: number = 0) => {
     const safeSeconds = Math.max(0, seconds);
@@ -93,6 +104,7 @@ function HomeworkCard({
     dispatch(
       setQuestions({
         questions: question,
+        marks,
         homeworkId,
         result,
         answer,
@@ -127,7 +139,9 @@ function HomeworkCard({
               <View style={styles.completedCorrectRow}>
                 <Text style={styles.questionIcon}>✅</Text>
                 <Text style={styles.questionCount}>
-                  {correctCount}/{question.length} correct
+                  {hasMarks
+                    ? `${earnedMarks}/${totalMarks} marks`
+                    : `${correctCount}/${question.length} correct`}
                 </Text>
               </View>
               <View style={styles.completedMetaRow}>
@@ -186,6 +200,9 @@ export default function HomeworkScreen() {
   const routeStudentId = route?.params?.studentId;
   const studentName = route?.params?.studentName;
   const isAdminReview = route?.params?.adminReview === true;
+  const contentType = route?.params?.type === 'exam' ? 'exam' : 'homework';
+  const contentLabel = contentType === 'exam' ? 'examination' : 'homework';
+  const screenTitle = contentType === 'exam' ? 'Examination' : 'Homework';
   const [selectedFilter, setSelectedFilter] = useState<BadgeType>(
     isAdminReview ? HomeworkState.COMPLETED : HomeworkState.NEW,
   );
@@ -201,7 +218,7 @@ export default function HomeworkScreen() {
     isFetching,
     refetch,
   } = useGetHomeworksQuery(
-    { studentId: studentId ?? '', state: selectedFilter },
+    { studentId: studentId ?? '', state: selectedFilter, type: contentType },
     {
       skip: !isFocused || !studentId,
     },
@@ -231,7 +248,7 @@ export default function HomeworkScreen() {
           showBackButton={true}
         />
       ) : (
-        <StudentHeader header="Homework" headerBackgroundColor="#EEF2FF" />
+        <StudentHeader header={screenTitle} headerBackgroundColor="#EEF2FF" />
       )}
       <ScrollView
         style={styles.scroll}
@@ -274,7 +291,7 @@ export default function HomeworkScreen() {
           })}
         </View>
 
-        {showLoader && <LoadingState label="Loading homework..." />}
+        {showLoader && <LoadingState label={`Loading ${contentLabel}...`} />}
 
         {!showLoader &&
           filteredHomeworks.map(task => (
@@ -283,6 +300,7 @@ export default function HomeworkScreen() {
               {...task}
               homeworkId={task.id}
               question={task?.question?.question ?? []}
+              marks={task?.question?.marks}
               isAdminReview={isAdminReview}
               studentId={studentId}
               studentName={studentName}
@@ -291,7 +309,9 @@ export default function HomeworkScreen() {
 
         {!showLoader && filteredHomeworks.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No {emptyStateLabel} homework</Text>
+            <Text style={styles.emptyText}>
+              No {emptyStateLabel} {contentLabel}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -523,3 +543,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 });
+

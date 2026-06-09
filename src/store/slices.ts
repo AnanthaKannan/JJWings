@@ -8,6 +8,7 @@ interface AuthState {
   isStudent: boolean;
   isAuthenticated: boolean;
   questions: string[];
+  marks: number[];
   result: boolean[];
   answer: number[];
   timer: number;
@@ -34,6 +35,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isStudent: false,
   questions: [],
+  marks: [],
   result: [],
   answer: [],
   homeworkId: null,
@@ -105,6 +107,7 @@ const commonSlice = createSlice({
       state,
       action: PayloadAction<{
         questions: string[];
+        marks?: number[];
         homeworkId: string;
         questionId: string;
         result: boolean[];
@@ -113,6 +116,7 @@ const commonSlice = createSlice({
       }>,
     ) => {
       state.questions = action.payload.questions;
+      state.marks = action.payload.marks ?? [];
       state.homeworkId = action.payload.homeworkId;
       state.questionId = action.payload.questionId;
       state.result = action.payload.result;

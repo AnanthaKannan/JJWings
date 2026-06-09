@@ -236,7 +236,52 @@ const MainTabs = createBottomTabNavigator({
           navigation.dispatch(
             CommonActions.navigate({
               name: 'Homework',
-              params: { screen: 'HomeworkScreen' },
+              params: {
+                screen: 'HomeworkScreen',
+                params: { type: 'homework' },
+              },
+            }),
+          );
+        },
+      }),
+    },
+    Examination: {
+      screen: HomeworkStack,
+      options: ({ route }) => {
+        const routeName =
+          getFocusedRouteNameFromRoute(route) ?? 'HomeworkScreen';
+        const shouldHideTabBar =
+          routeName === 'Calculate' || routeName === 'QuizReview';
+
+        return {
+          tabBarLabel: 'Examination',
+          unmountOnBlur: true,
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon
+              name="assignment"
+              color={color}
+              size={size}
+              focused={focused}
+            />
+          ),
+        };
+      },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          e.preventDefault();
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: 'Examination',
+              params: {
+                screen: 'HomeworkScreen',
+                params: { type: 'exam' },
+              },
             }),
           );
         },

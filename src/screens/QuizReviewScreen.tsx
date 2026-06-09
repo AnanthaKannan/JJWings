@@ -37,6 +37,7 @@ const TrophyIcon = () => (
 type QuestionCardProps = {
   index: number;
   question: string;
+  points?: number;
   answer: number;
   correctAnswer: number;
   isWrong: boolean;
@@ -55,6 +56,7 @@ const formatTime = (seconds = 0) => {
 const QuestionCard = ({
   index,
   question,
+  points,
   answer,
   correctAnswer,
   isWrong,
@@ -77,7 +79,7 @@ const QuestionCard = ({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, index, slideAnim]);
 
   return (
     <Animated.View
@@ -128,6 +130,11 @@ const QuestionCard = ({
             </Text>
             {isWrong ? <CrossIcon /> : <CheckIcon />}
           </View>
+          {typeof points === 'number' && points > 0 && (
+            <View style={styles.pointsBadge}>
+              <Text style={styles.pointsText}>{points} pts</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -150,6 +157,7 @@ export default function QuizReviewScreen() {
 
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const questions = useSelector((state: RootState) => state.common.questions);
+  const storedMarks = useSelector((state: RootState) => state.common.marks);
 
   const { data: hw, isLoading } = useGetHomeworkByIdQuery(
     { homeworkId: homeworkId ?? '' },
@@ -172,7 +180,21 @@ export default function QuizReviewScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [headerAnim, scoreAnim]);
+
+  const marks = hw?.question?.marks ?? storedMarks;
+  const hasMarks = Array.isArray(marks) && marks.length > 0;
+  const totalMarks = hasMarks
+    ? marks.reduce((total, mark) => total + mark, 0)
+    : 0;
+  const earnedMarks =
+    hasMarks && hw?.result
+      ? hw.result.reduce((total, isCorrect, index) => {
+          return total + (isCorrect ? marks[index] ?? 0 : 0);
+        }, 0)
+      : 0;
+  const correctAnswers = hw?.result?.filter(val => val === true)?.length ?? 0;
+  const totalQuestions = hw?.result?.length ?? 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -210,15 +232,12 @@ export default function QuizReviewScreen() {
           >
             <View style={styles.heroLeft}>
               <Text style={styles.heroTitle}>Great Job!</Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}
-              >
+              <View style={styles.heroStatsLayout}>
                 <View>
                   <View style={styles.scorePill}>
-                    <Text style={styles.scorePillLabel}>FINAL SCORE</Text>
+                    <Text style={styles.scorePillLabel}>
+                      {hasMarks ? 'FINAL MARKS' : 'FINAL SCORE'}
+                    </Text>
                   </View>
                   <View style={styles.statsRow}>
                     <Animated.View
@@ -228,10 +247,10 @@ export default function QuizReviewScreen() {
                     >
                       <View style={styles.scoreRow}>
                         <Text style={styles.scoreNumber}>
-                          {hw?.result?.filter(val => val === true)?.length}
+                          {hasMarks ? earnedMarks : correctAnswers}
                         </Text>
                         <Text style={styles.scoreTotal}>
-                          /{hw?.result?.length}
+                          /{hasMarks ? totalMarks : totalQuestions}
                         </Text>
                       </View>
                     </Animated.View>
@@ -271,13 +290,14 @@ export default function QuizReviewScreen() {
                 key={question}
                 index={index}
                 question={question}
+                points={marks[index]}
                 answer={hw?.answer[index]}
                 correctAnswer={evaluateExpression(question)}
                 isWrong={!hw?.result[index]}
               />
             ))}
 
-          <View style={{ height: 32 }} />
+          <View style={styles.bottomSpacer} />
         </ScrollView>
       )}
     </SafeAreaView>
@@ -300,6 +320,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  bottomSpacer: {
+    height: 32,
   },
   loaderWrap: {
     paddingHorizontal: 16,
@@ -329,6 +352,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: -0.5,
     marginBottom: 6,
+  },
+  heroStatsLayout: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   heroSub: {
     fontSize: 13,
@@ -489,6 +516,19 @@ const styles = StyleSheet.create({
     color: MUTED,
     marginBottom: 2,
     letterSpacing: 0.3,
+  },
+  pointsBadge: {
+    alignSelf: 'flex-end',
+    borderRadius: 8,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 7,
+  },
+  pointsText: {
+    color: '#92400E',
+    fontSize: 11,
+    fontWeight: '900',
   },
   questionText: {
     fontSize: 22,

@@ -167,6 +167,7 @@ export type SameDeviceStudent = {
 
 export type Question = {
   question?: string[];
+  marks?: number[];
 };
 
 export type QuestionTask = {
@@ -336,6 +337,7 @@ type DownloadResponse =
 type HomeworkArg = {
   studentId: string;
   state: 'PROGRESS' | 'NEW' | 'COMPLETED';
+  type?: 'homework' | 'exam';
 };
 
 type HomeworkByIdArg = {
@@ -498,6 +500,7 @@ const mapHomework = (homework: ApiHomework): Homework => {
     questionLabel: question?.questionId,
     question: {
       question: question?.questions ?? [],
+      marks: question?.marks,
     },
     state: homework.state ?? HomeworkState.NEW,
     result: homework.results ?? [],
@@ -575,9 +578,13 @@ export const jjWingsApi = createApi({
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<Homework[], HomeworkArg>({
-      query: ({ studentId, state }) => ({
+      query: ({ studentId, state, type }) => ({
         url: `/homework/${studentId}/${state}`,
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(type ? { type } : {}),
+        },
       }),
       transformResponse: (response: ApiHomeworksResponse) =>
         response.homeworks.map(mapHomework),

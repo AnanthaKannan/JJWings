@@ -17,6 +17,7 @@ interface QuizScreenProps {
 
 type QuizData = {
   questions: string[];
+  marks: number[];
   answer: number[]; // or string[] depending on your use
   result: boolean[]; // or boolean[] if it's correct/incorrect
 };
@@ -71,6 +72,7 @@ const formatHorizontalQuestion = (question = '') => {
 export default function QuizScreen({ timer }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
+  const selMarks = useSelector((state: RootState) => state.common.marks);
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const isHorizontal = useSelector((state: RootState) => state.common.vertical);
 
@@ -81,6 +83,7 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
 
   const [data, setData] = useState<QuizData>({
     questions: [],
+    marks: [],
     answer: [],
     result: [],
   });
@@ -94,15 +97,18 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
       ...prev,
       result: selResult,
       questions: selQuestions,
+      marks: selMarks,
       answer: selAnswer,
     }));
-  }, [selQuestions, selResult, selAnswer]);
+  }, [selQuestions, selResult, selAnswer, selMarks]);
 
   const [modalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation<NavigationProp>();
-  const { questions, answer, result } = data;
+  const { questions, marks, answer, result } = data;
   const currentQuestion = questions[result.length] ?? '';
+  const currentMarks = marks[result.length];
+  const shouldShowMarks = typeof currentMarks === 'number' && currentMarks > 0;
   const verticalQuestionParts = getVerticalQuestionParts(currentQuestion);
   const horizontalQuestion = formatHorizontalQuestion(currentQuestion);
 
@@ -176,6 +182,11 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
               Question {result.length + 1} of {questions.length}
             </Text>
           </View>
+          {shouldShowMarks && (
+            <View style={styles.pointsBadge}>
+              <Text style={styles.pointsText}>{currentMarks} pts</Text>
+            </View>
+          )}
 
           {/* Question row */}
           <View
@@ -281,6 +292,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 20,
+    position: 'relative',
     shadowColor: '#B0BADF',
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -299,6 +311,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#5A6AA8',
+  },
+  pointsBadge: {
+    position: 'absolute',
+    top: 18,
+    right: 18,
+    minHeight: 30,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pointsText: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '900',
   },
   questionRow: {
     alignItems: 'center',
