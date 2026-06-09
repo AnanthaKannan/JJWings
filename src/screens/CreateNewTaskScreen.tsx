@@ -27,13 +27,17 @@ type Question = {
   id: string;
   expression: string;
   answer: number | null;
+  marks: string;
 };
+
+type TaskType = 'homework' | 'exam';
 
 type GenForm = {
   count: string;
   min: string;
   max: string;
   steps: string;
+  marks: string;
   symbols: string[];
 };
 
@@ -144,12 +148,16 @@ const generateSafeExpression = (
 
 const QuestionRow = ({
   item,
+  showMarks,
   onChange,
+  onMarksChange,
   onDelete,
 }: {
   item: Question;
   index: number;
+  showMarks: boolean;
   onChange: (id: string, val: string) => void;
+  onMarksChange: (id: string, val: string) => void;
   onDelete: (id: string) => void;
 }) => {
   const isPlaceholder = item.expression === '';
@@ -179,6 +187,17 @@ const QuestionRow = ({
         <Text style={styles.errorText}>?</Text>
       )}
 
+      {showMarks && item.expression !== '' && (
+        <TextInput
+          style={styles.marksInput}
+          value={item.marks}
+          onChangeText={val => onMarksChange(item.id, val)}
+          placeholder="Pts"
+          placeholderTextColor="#B0B8C8"
+          keyboardType="number-pad"
+        />
+      )}
+
       {/* Delete — only on filled rows */}
       {item.expression !== '' && (
         <TouchableOpacity
@@ -201,12 +220,17 @@ const createEmptyQuestion = (): Question => ({
   id: String(nextId++),
   expression: '',
   answer: null,
+  marks: '',
 });
 
-const createQuestionFromExpression = (expression: string): Question => ({
+const createQuestionFromExpression = (
+  expression: string,
+  marks = '',
+): Question => ({
   id: String(nextId++),
   expression,
   answer: evaluateMath(expression),
+  marks,
 });
 
 const DEFAULT_GEN_FORM: GenForm = {
@@ -214,6 +238,7 @@ const DEFAULT_GEN_FORM: GenForm = {
   min: '',
   max: '',
   steps: '4',
+  marks: '1',
   symbols: ['+'],
 };
 
@@ -221,6 +246,7 @@ export default function CreateNewTaskScreen() {
   const navigation = useNavigation<any>();
   const [taskId, setTaskId] = useState('');
   const [level, setLevel] = useState(0);
+  const [taskType, setTaskType] = useState<TaskType>('homework');
   const [isSaving, setIsSaving] = useState(false);
   const [isGenModalVisible, setIsGenModalVisible] = useState(false);
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
@@ -233,6 +259,7 @@ export default function CreateNewTaskScreen() {
   const resetForm = useCallback(() => {
     setTaskId('');
     setLevel(0);
+    setTaskType('homework');
     setIsSaving(false);
     setIsGenModalVisible(false);
     setIsLevelPickerOpen(false);
@@ -264,6 +291,21 @@ export default function CreateNewTaskScreen() {
     );
   };
 
+  const handleMarksChange = (id: string, val: string) => {
+    const sanitizedValue = val.replace(/[^\d]/g, '');
+
+    setQuestions(prev =>
+      prev.map(q =>
+        q.id === id
+          ? {
+              ...q,
+              marks: sanitizedValue,
+            }
+          : q,
+      ),
+    );
+  };
+
   const handleAddQuestion = () => {
     // If there's already an empty row, focus it rather than adding another
     const hasEmpty = questions.some(q => q.expression === '');
@@ -272,7 +314,7 @@ export default function CreateNewTaskScreen() {
     nextId++;
     setQuestions(prev => [
       ...prev,
-      { id: String(nextId), expression: '', answer: null },
+      { id: String(nextId), expression: '', answer: null, marks: '' },
     ]);
   };
 
@@ -325,10 +367,15 @@ export default function CreateNewTaskScreen() {
       Alert.alert('Missing Symbol', 'Select at least one symbol.');
       return;
     }
+    if (taskType === 'exam' && (!genForm.marks || Number(genForm.marks) < 1)) {
+      Alert.alert('Invalid Marks', 'Marks should be at least 1 for exam questions.');
+      return;
+    }
 
     const generated = Array.from({ length: count }, () =>
       createQuestionFromExpression(
         generateSafeExpression(min, max, steps, genForm.symbols),
+        taskType === 'exam' ? genForm.marks : '',
       ),
     );
 
@@ -346,7 +393,7 @@ export default function CreateNewTaskScreen() {
       const hasEmpty = updated.some(q => q.expression === '');
       if (!hasEmpty) {
         nextId++;
-        updated.push({ id: String(nextId), expression: '', answer: null });
+        updated.push({ id: String(nextId), expression: '', answer: null, marks: '' });
       }
       return updated;
     });
@@ -373,6 +420,18 @@ export default function CreateNewTaskScreen() {
       return;
     }
 
+    const marks = filled.map(q => Number(q.marks));
+    const hasInvalidMarks =
+      taskType === 'exam' && marks.some(mark => !Number.isFinite(mark) || mark < 1);
+
+    if (hasInvalidMarks) {
+      Alert.alert(
+        'Missing Marks',
+        'Add marks for every exam question. Marks should be at least 1.',
+      );
+      return;
+    }
+
     const question = filled.map(q => q.expression.trim());
 
     setIsSaving(true);
@@ -381,10 +440,13 @@ export default function CreateNewTaskScreen() {
         taskId: taskIdentifier,
         question,
         level,
+        type: taskType === 'exam' ? 'exam' : 'homework',
+        ...(taskType === 'exam' ? { marks } : {}),
       }).unwrap();
 
       setTaskId('');
       setLevel(0);
+      setTaskType('homework');
       setQuestions([createEmptyQuestion()]);
 
       Alert.alert(
@@ -415,7 +477,12 @@ export default function CreateNewTaskScreen() {
   const isValid =
     taskId.trim().length > 0 &&
     filledQuestions.length > 0 &&
-    filledQuestions.every(q => q.answer !== null);
+    filledQuestions.every(q => q.answer !== null) &&
+    (taskType === 'homework' ||
+      filledQuestions.every(q => {
+        const marks = Number(q.marks);
+        return Number.isFinite(marks) && marks >= 1;
+      }));
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -468,6 +535,45 @@ export default function CreateNewTaskScreen() {
               </TouchableOpacity>
             </View>
 
+            <View style={styles.taskIdSection}>
+              <Text style={styles.taskIdLabel}>TASK TYPE</Text>
+              <View style={styles.taskTypeRow}>
+                {(['homework', 'exam'] as TaskType[]).map(type => {
+                  const isSelected = taskType === type;
+
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.taskTypeOption,
+                        isSelected && styles.taskTypeOptionActive,
+                      ]}
+                      onPress={() => setTaskType(type)}
+                      activeOpacity={0.82}
+                    >
+                      <MaterialIcons
+                        name={
+                          isSelected
+                            ? 'radio-button-checked'
+                            : 'radio-button-unchecked'
+                        }
+                        size={18}
+                        color={isSelected ? '#2563EB' : '#94A3B8'}
+                      />
+                      <Text
+                        style={[
+                          styles.taskTypeText,
+                          isSelected && styles.taskTypeTextActive,
+                        ]}
+                      >
+                        {type === 'homework' ? 'Homework' : 'Exam'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
             {/* Question List */}
             <FlatList
               data={questions}
@@ -476,7 +582,9 @@ export default function CreateNewTaskScreen() {
                 <QuestionRow
                   item={item}
                   index={index}
+                  showMarks={taskType === 'exam'}
                   onChange={handleExpressionChange}
+                  onMarksChange={handleMarksChange}
                   onDelete={handleDelete}
                 />
               )}
@@ -580,6 +688,17 @@ export default function CreateNewTaskScreen() {
                     keyboardType="number-pad"
                   />
                 </View>
+                {taskType === 'exam' && (
+                  <View style={styles.generatorField}>
+                    <Text style={styles.generatorLabel}>MARKS</Text>
+                    <TextInput
+                      style={styles.generatorInput}
+                      value={genForm.marks}
+                      onChangeText={updateGenField('marks')}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                )}
               </View>
 
               <Text style={styles.generatorLabel}>SYMBOL</Text>
@@ -756,6 +875,35 @@ const styles = StyleSheet.create({
     color: '#1E3A5F',
     fontWeight: '700',
   },
+  taskTypeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  taskTypeOption: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  taskTypeOptionActive: {
+    borderColor: '#2563EB',
+    backgroundColor: '#DBEAFE',
+  },
+  taskTypeText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  taskTypeTextActive: {
+    color: '#1D4ED8',
+  },
   levelModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.44)',
@@ -857,6 +1005,20 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     minWidth: 36,
     textAlign: 'right',
+    marginLeft: 8,
+  },
+  marksInput: {
+    width: 54,
+    height: 34,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    color: '#1E3A5F',
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
+    padding: 0,
     marginLeft: 8,
   },
   dotsText: {
@@ -1041,3 +1203,4 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 });
+

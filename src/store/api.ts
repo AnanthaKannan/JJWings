@@ -43,6 +43,7 @@ type ApiQuestion = {
   _id: string;
   questionId?: string;
   questions?: string[];
+  marks?: number[];
   level?: number;
   updatedAt?: string;
 };
@@ -172,6 +173,7 @@ export type QuestionTask = {
   id: string;
   questionId?: string;
   question: string[];
+  marks?: number[];
   level?: number;
   updatedAt?: string;
 };
@@ -397,6 +399,8 @@ type CreateQuestionArg = {
   taskId: string;
   question: string[];
   level: number;
+  type: 'homework' | 'exam';
+  marks?: number[];
 };
 
 type DeleteQuestionArg = {
@@ -405,6 +409,7 @@ type DeleteQuestionArg = {
 
 type QuestionsArg = {
   level?: number;
+  type?: 'homework' | 'exam';
 };
 
 type UpdateQuestionArg = {
@@ -421,6 +426,7 @@ type AssignHomeworkArg = {
 type AvailableQuestionsArg = {
   studentId: string;
   level?: number;
+  type?: 'homework' | 'exam';
 };
 
 type RankingArg = {
@@ -472,6 +478,7 @@ const mapQuestion = (question: ApiQuestion): QuestionTask => ({
   id: question._id,
   questionId: question.questionId,
   question: question.questions ?? [],
+  marks: question.marks,
   level: question.level,
   updatedAt: question.updatedAt,
 });
@@ -678,6 +685,7 @@ export const jjWingsApi = createApi({
           page: 1,
           limit: DEFAULT_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+          ...(arg?.type ? { type: arg.type } : {}),
         },
       }),
       transformResponse: (response: ApiQuestionsResponse) =>
@@ -693,12 +701,13 @@ export const jjWingsApi = createApi({
 
     getAvailableQuestions: builder.query<QuestionTask[], AvailableQuestionsArg>(
       {
-        query: ({ studentId, level }) => ({
+        query: ({ studentId, level, type }) => ({
           url: `/admin/questions/available/${studentId}`,
           params: {
             page: 1,
             limit: DEFAULT_LIMIT,
             ...(typeof level === 'number' ? { level } : {}),
+            ...(type ? { type } : {}),
           },
         }),
         transformResponse: (response: ApiQuestionsResponse) =>
@@ -977,13 +986,15 @@ export const jjWingsApi = createApi({
     }),
 
     createQuestion: builder.mutation<string, CreateQuestionArg>({
-      query: ({ taskId, question, level }) => ({
+      query: ({ taskId, question, level, type, marks }) => ({
         url: '/admin/questions',
         method: 'POST',
         body: {
           questionId: taskId,
           questions: question,
           level,
+          type,
+          ...(marks ? { marks } : {}),
         },
       }),
       transformResponse: () => 'success',
