@@ -123,6 +123,8 @@ type ApiFileUpload = {
   originalName?: string;
   mimeType?: string;
   size?: number;
+  fileSize?: number;
+  fileFormat?: string;
   type?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -231,6 +233,8 @@ export type QuestionPaper = {
   originalName?: string;
   mimeType?: string;
   size?: number;
+  fileSize?: number;
+  fileFormat?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -532,7 +536,9 @@ const mapQuestionPaper = (file: ApiFileUpload): QuestionPaper => ({
   url: file.url ?? file.fileUrl,
   originalName: file.originalName,
   mimeType: file.mimeType,
-  size: file.size,
+  size: file.fileSize ?? file.size,
+  fileSize: file.fileSize,
+  fileFormat: file.fileFormat,
   createdAt: file.createdAt,
   updatedAt: file.updatedAt,
 });

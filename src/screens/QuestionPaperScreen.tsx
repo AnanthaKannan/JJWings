@@ -41,6 +41,12 @@ const formatFileSize = (size?: number) => {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const formatFileFormat = (format?: string, mimeType?: string) => {
+  const value = format ?? mimeType?.split('/').pop();
+  const cleanValue = value?.split('/').pop();
+  return cleanValue ? cleanValue.toUpperCase() : '';
+};
+
 const PaperSeparator = () => <View style={styles.separator} />;
 const DOWNLOAD_FOLDER = 'JJ Wings';
 
@@ -75,7 +81,13 @@ const QuestionPaperRow = ({
         {item.name}
       </Text>
       <Text style={styles.fileMeta} numberOfLines={1}>
-        {[item.originalName, formatFileSize(item.size)].filter(Boolean).join(' • ')}
+        {[
+          item.originalName,
+          formatFileFormat(item.fileFormat, item.mimeType),
+          formatFileSize(item.fileSize ?? item.size),
+        ]
+          .filter(Boolean)
+          .join(' | ')}
       </Text>
     </View>
     <TouchableOpacity
@@ -508,3 +520,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+
