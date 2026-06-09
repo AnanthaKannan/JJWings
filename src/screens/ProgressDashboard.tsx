@@ -12,14 +12,14 @@ import {
   StatusBar,
   RefreshControl,
 } from 'react-native';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 import { useGetScoreQuery } from '../store/api';
 import { RootState } from '../store/store';
 import { formatDuration } from '../util/fn';
 import { APP_VERSION } from '../util/version';
-import { LoadingState, StudentHeader } from '../component';
+import { AdminHeader, LoadingState, StudentHeader } from '../component';
 
 const { width } = Dimensions.get('window');
 
@@ -184,7 +184,7 @@ const FloatingStar: React.FC<FloatingStarProps> = ({
         useNativeDriver: true,
       }),
     ).start();
-  }, []);
+  }, [delay, floatAnim, rotateAnim]);
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -235,7 +235,7 @@ const PulseBadge: React.FC<PulseBadgeProps> = ({
         }),
       ]),
     ).start();
-  }, []);
+  }, [pulseAnim]);
 
   const color = correct ? '#22c55e' : '#ef4444';
   const bg = correct ? '#dcfce7' : '#fee2e2';
@@ -258,11 +258,19 @@ const PulseBadge: React.FC<PulseBadgeProps> = ({
 // ── Main Dashboard ─────────────────────────────────────────────────────
 const ProgressDashboard: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const isFocused = useIsFocused();
-  const studentId = useSelector((state: RootState) => state.common.studentId);
-  const studentName = useSelector(
+  const routeStudentId = route?.params?.studentId;
+  const routeStudentName = route?.params?.studentName;
+  const isAdminReview = route?.params?.adminReview === true;
+  const loggedInStudentId = useSelector((state: RootState) => state.common.studentId);
+  const loggedInStudentName = useSelector(
     (state: RootState) => state.common.studentName,
   );
+  const studentId = isAdminReview ? routeStudentId : loggedInStudentId;
+  const studentName = isAdminReview
+    ? routeStudentName ?? 'Student'
+    : loggedInStudentName;
   const headerAnim = useRef(new Animated.Value(-60)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(80)).current;
@@ -362,7 +370,7 @@ const ProgressDashboard: React.FC = () => {
         useNativeDriver: true,
       }),
     ).start();
-  }, []);
+  }, [cardOpacity, cardSlide, headerAnim, headerOpacity, waveAnim]);
 
   const waveTranslate = waveAnim.interpolate({
     inputRange: [0, 1],
@@ -372,7 +380,15 @@ const ProgressDashboard: React.FC = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
-      <StudentHeader header="" headerBackgroundColor="#4F46E5" />
+      {isAdminReview ? (
+        <AdminHeader
+          header={`${studentName.trim() || 'Student'} Progress`}
+          showBackButton={true}
+          headerBackgroundColor="#4F46E5"
+        />
+      ) : (
+        <StudentHeader header="" headerBackgroundColor="#4F46E5" />
+      )}
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -390,17 +406,17 @@ const ProgressDashboard: React.FC = () => {
       >
         {/* Decorative floating elements */}
         <FloatingStar
-          style={{ position: 'absolute', top: 30, right: 28 }}
+          style={styles.floatingStarTop}
           delay={0}
           color="#FBBF24"
         />
         <FloatingStar
-          style={{ position: 'absolute', top: 90, right: 70 }}
+          style={styles.floatingStarMiddle}
           delay={2}
           color="#FB7185"
         />
         <FloatingStar
-          style={{ position: 'absolute', top: 60, left: 20 }}
+          style={styles.floatingStarLeft}
           delay={1}
           color="#A78BFA"
         />
@@ -541,7 +557,19 @@ const ProgressDashboard: React.FC = () => {
               <TouchableOpacity
                 style={styles.viewLogBtn}
                 activeOpacity={0.85}
-                onPress={() => navigation.navigate('Homework')}
+                onPress={() => {
+                  if (isAdminReview) {
+                    navigation.navigate('HomeworkScreen', {
+                      studentId,
+                      studentName,
+                      adminReview: true,
+                      type: 'homework',
+                    });
+                    return;
+                  }
+
+                  navigation.navigate('Homework');
+                }}
               >
                 <Text style={styles.viewLogText}>📋 View Homework</Text>
               </TouchableOpacity>
@@ -557,7 +585,7 @@ const ProgressDashboard: React.FC = () => {
             </View>
 
             <Text style={styles.versionText}>v{APP_VERSION}</Text>
-            <View style={{ height: 32 }} />
+            <View style={styles.bottomSpacer} />
           </Animated.View>
         )}
       </ScrollView>
@@ -633,6 +661,24 @@ const styles = StyleSheet.create({
   floatingStar: {
     fontSize: 22,
     opacity: 0.85,
+  },
+  floatingStarTop: {
+    position: 'absolute',
+    top: 30,
+    right: 28,
+  },
+  floatingStarMiddle: {
+    position: 'absolute',
+    top: 90,
+    right: 70,
+  },
+  floatingStarLeft: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+  },
+  bottomSpacer: {
+    height: 32,
   },
   card: {
     backgroundColor: '#FFFFFF',

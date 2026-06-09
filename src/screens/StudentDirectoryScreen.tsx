@@ -223,11 +223,37 @@ export default function StudentDirectoryScreen() {
     });
   };
 
-  const handlePerformancePress = (student: Student) => {
+  const handleProgressPress = (student: Student) => {
+    navigation.navigate('StudentProgress', {
+      studentId: student.id,
+      studentName: student.name,
+      adminReview: true,
+    });
+  };
+
+  const handleHomeworkPress = (student: Student) => {
     navigation.navigate('HomeworkScreen', {
       studentId: student.id,
       studentName: student.name,
       adminReview: true,
+      type: 'homework',
+    });
+  };
+
+  const handlePracticePress = (student: Student) => {
+    navigation.navigate('PracticeScreen', {
+      studentId: student.id,
+      studentName: student.name,
+      adminReview: true,
+    });
+  };
+
+  const handleExamPress = (student: Student) => {
+    navigation.navigate('HomeworkScreen', {
+      studentId: student.id,
+      studentName: student.name,
+      adminReview: true,
+      type: 'exam',
     });
   };
 
@@ -245,7 +271,28 @@ export default function StudentDirectoryScreen() {
     if (!selectedStudent) return;
 
     closeActionsModal();
-    handlePerformancePress(selectedStudent);
+    handleProgressPress(selectedStudent);
+  };
+
+  const handleModalHomeworkPress = () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+    handleHomeworkPress(selectedStudent);
+  };
+
+  const handleModalPracticePress = () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+    handlePracticePress(selectedStudent);
+  };
+
+  const handleModalExamPress = () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+    handleExamPress(selectedStudent);
   };
 
   const handleModalAssignPress = () => {
@@ -471,7 +518,25 @@ export default function StudentDirectoryScreen() {
               style={styles.modalSecondaryAction}
               onPress={handleModalPerformancePress}
             >
-              <Text style={styles.modalSecondaryActionText}>Performance</Text>
+              <Text style={styles.modalSecondaryActionText}>Progress</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleModalHomeworkPress}
+            >
+              <Text style={styles.modalSecondaryActionText}>Homework</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleModalPracticePress}
+            >
+              <Text style={styles.modalSecondaryActionText}>Practice</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleModalExamPress}
+            >
+              <Text style={styles.modalSecondaryActionText}>Exam</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalPrimaryAction}
