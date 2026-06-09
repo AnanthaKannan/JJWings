@@ -242,6 +242,8 @@ export type QuestionPaper = {
   updatedAt?: string;
 };
 
+export type Achievement = QuestionPaper;
+
 type LoginArg = {
   username: string;
   password: string;
@@ -293,6 +295,10 @@ type UploadQuestionPaperArg = {
   name: string;
 };
 
+type UploadAchievementArg = {
+  file: UploadFile;
+};
+
 type UploadProfilePicArg = {
   file: UploadFile;
 };
@@ -338,7 +344,7 @@ type DownloadResponse =
 type HomeworkArg = {
   studentId: string;
   state: 'PROGRESS' | 'NEW' | 'COMPLETED';
-  type?: 'homework' | 'exam';
+  type?: 'homework' | 'exam' | 'practice';
 };
 
 type HomeworkByIdArg = {
@@ -351,6 +357,10 @@ type ScoreArg = {
 
 type StudentByIdArg = {
   studentId: string;
+};
+
+type StudentsArg = {
+  level?: number;
 };
 
 type AddStudentArg = {
@@ -402,8 +412,9 @@ type CreateQuestionArg = {
   taskId: string;
   question: string[];
   level: number;
-  type: 'homework' | 'exam';
+  type: 'homework' | 'exam' | 'practice';
   marks?: number[];
+  oral?: boolean;
 };
 
 type DeleteQuestionArg = {
@@ -412,7 +423,7 @@ type DeleteQuestionArg = {
 
 type QuestionsArg = {
   level?: number;
-  type?: 'homework' | 'exam';
+  type?: 'homework' | 'exam' | 'practice';
 };
 
 type UpdateQuestionArg = {
@@ -429,7 +440,7 @@ type AssignHomeworkArg = {
 type AvailableQuestionsArg = {
   studentId: string;
   level?: number;
-  type?: 'homework' | 'exam';
+  type?: 'homework' | 'exam' | 'practice';
 };
 
 type RankingArg = {
@@ -554,6 +565,11 @@ const mapQuestionPaper = (file: ApiFileUpload): QuestionPaper => ({
   updatedAt: file.updatedAt,
 });
 
+const mapAchievement = (file: ApiFileUpload): Achievement => ({
+  ...mapQuestionPaper(file),
+  name: file.name ?? file.originalName ?? 'Celebration',
+});
+
 const getNextStudentId = (students: Student[]): IdGenData => {
   const lastId = students.reduce((highest, student) => {
     const numericId = Number(student.studentId?.replace(/\D/g, '') ?? 0);
@@ -664,10 +680,14 @@ export const jjWingsApi = createApi({
       }),
     }),
 
-    getStudents: builder.query<Student[], void>({
-      query: () => ({
+    getStudents: builder.query<Student[], StudentsArg | void>({
+      query: arg => ({
         url: '/admin/students',
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+        },
       }),
       transformResponse: (response: ApiStudentsResponse) =>
         response.students.map(mapStudent),
@@ -796,6 +816,18 @@ export const jjWingsApi = createApi({
           .map(mapQuestionPaper)
           .filter(file => file.id.length > 0),
       providesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
+    getAchievements: builder.query<Achievement[], void>({
+      query: () => ({
+        url: '/file-uploads',
+        params: { type: 'celebration' },
+      }),
+      transformResponse: (response: ApiFileUploadsResponse) =>
+        getFileUploadsFromResponse(response)
+          .map(mapAchievement)
+          .filter(file => file.id.length > 0),
+      providesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
     }),
 
     sendNotification: builder.mutation<string, SendNotificationArg>({
@@ -955,6 +987,27 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
     }),
 
+    uploadAchievement: builder.mutation<string, UploadAchievementArg>({
+      query: ({ file }) => {
+        const formData = new FormData();
+        formData.append('path', 'celebration');
+        formData.append('name', 'celebration');
+        formData.append('file', {
+          uri: file.uri,
+          type: file.type ?? 'image/jpeg',
+          name: file.name ?? 'celebration.jpg',
+        } as any);
+
+        return {
+          url: '/uploads',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+    }),
+
     deleteQuestionPaper: builder.mutation<string, string>({
       query: id => ({
         url: `/admin/file-uploads/${id}`,
@@ -962,6 +1015,15 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
+    deleteAchievement: builder.mutation<string, string>({
+      query: id => ({
+        url: `/admin/file-uploads/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
     }),
 
     getQuestionPaperDownload: builder.query<string, string>({
@@ -995,7 +1057,7 @@ export const jjWingsApi = createApi({
     }),
 
     createQuestion: builder.mutation<string, CreateQuestionArg>({
-      query: ({ taskId, question, level, type, marks }) => ({
+      query: ({ taskId, question, level, type, marks, oral }) => ({
         url: '/admin/questions',
         method: 'POST',
         body: {
@@ -1004,6 +1066,7 @@ export const jjWingsApi = createApi({
           level,
           type,
           ...(marks ? { marks } : {}),
+          ...(oral ? { oral } : {}),
         },
       }),
       transformResponse: () => 'success',
@@ -1107,4 +1170,7 @@ export const {
   useUploadQuestionPaperMutation,
   useDeleteQuestionPaperMutation,
   useLazyGetQuestionPaperDownloadQuery,
+  useGetAchievementsQuery,
+  useUploadAchievementMutation,
+  useDeleteAchievementMutation,
 } = jjWingsApi;

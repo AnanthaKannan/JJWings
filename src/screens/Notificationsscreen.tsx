@@ -117,6 +117,7 @@ export default function NotificationsScreen() {
     <AdminHeader
       header={headerTitle}
       showBackButton={isStudentNotificationReview}
+      headerBackgroundColor="#EEF2FF"
     />
   ) : (
     <StudentHeader

@@ -30,7 +30,7 @@ type Question = {
   marks: string;
 };
 
-type TaskType = 'homework' | 'exam';
+type TaskType = 'homework' | 'exam' | 'practice';
 
 type GenForm = {
   count: string;
@@ -68,6 +68,12 @@ const sanitizeMathInput = (value: string) =>
   value.replace(/[^\d+\-*/().\s]/g, '');
 
 const SYMBOLS = ['+', '-', '*', '/'];
+
+const getTaskTypeLabel = (type: TaskType) => {
+  if (type === 'exam') return 'Exam';
+  if (type === 'practice') return 'Practice';
+  return 'Homework';
+};
 
 const randomInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
@@ -247,6 +253,7 @@ export default function CreateNewTaskScreen() {
   const [taskId, setTaskId] = useState('');
   const [level, setLevel] = useState(0);
   const [taskType, setTaskType] = useState<TaskType>('homework');
+  const [isOral, setIsOral] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenModalVisible, setIsGenModalVisible] = useState(false);
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
@@ -260,6 +267,7 @@ export default function CreateNewTaskScreen() {
     setTaskId('');
     setLevel(0);
     setTaskType('homework');
+    setIsOral(false);
     setIsSaving(false);
     setIsGenModalVisible(false);
     setIsLevelPickerOpen(false);
@@ -440,13 +448,15 @@ export default function CreateNewTaskScreen() {
         taskId: taskIdentifier,
         question,
         level,
-        type: taskType === 'exam' ? 'exam' : 'homework',
+        type: taskType,
         ...(taskType === 'exam' ? { marks } : {}),
+        ...(isOral ? { oral: true } : {}),
       }).unwrap();
 
       setTaskId('');
       setLevel(0);
       setTaskType('homework');
+      setIsOral(false);
       setQuestions([createEmptyQuestion()]);
 
       Alert.alert(
@@ -478,7 +488,7 @@ export default function CreateNewTaskScreen() {
     taskId.trim().length > 0 &&
     filledQuestions.length > 0 &&
     filledQuestions.every(q => q.answer !== null) &&
-    (taskType === 'homework' ||
+    (taskType !== 'exam' ||
       filledQuestions.every(q => {
         const marks = Number(q.marks);
         return Number.isFinite(marks) && marks >= 1;
@@ -495,7 +505,7 @@ export default function CreateNewTaskScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* ── Page Title ── */}
-        <AdminHeader header="Create New Task" />
+        <AdminHeader header="Create New Task" headerBackgroundColor="#EEF0F8" />
 
         {/* ── Card ── */}
         <ScrollView
@@ -519,59 +529,72 @@ export default function CreateNewTaskScreen() {
               />
             </View>
 
-            <View style={styles.taskIdSection}>
-              <Text style={styles.taskIdLabel}>LEVEL</Text>
+            <View style={styles.levelOralRow}>
+              <View style={[styles.taskIdSection, styles.levelSection]}>
+                <TouchableOpacity
+                  style={styles.levelDropdown}
+                  onPress={() => setIsLevelPickerOpen(true)}
+                  activeOpacity={0.82}
+                >
+                  <Text style={styles.levelDropdownText}>Level {level}</Text>
+                  <MaterialIcons
+                    name="keyboard-arrow-down"
+                    size={22}
+                    color="#4F46E5"
+                  />
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity
-                style={styles.levelDropdown}
-                onPress={() => setIsLevelPickerOpen(true)}
+                style={styles.oralOption}
+                onPress={() => setIsOral(prev => !prev)}
                 activeOpacity={0.82}
               >
-                <Text style={styles.levelDropdownText}>Level {level}</Text>
-                <MaterialIcons
-                  name="keyboard-arrow-down"
-                  size={22}
-                  color="#4F46E5"
-                />
+                <View style={styles.oralOptionBody}>
+                  <MaterialIcons
+                    name={isOral ? 'check-box' : 'check-box-outline-blank'}
+                    size={22}
+                    color={isOral ? '#2563EB' : '#94A3B8'}
+                  />
+                  <Text
+                    style={[
+                      styles.oralOptionText,
+                      isOral && styles.oralOptionTextActive,
+                    ]}
+                  >
+                    Oral
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.taskIdSection}>
-              <Text style={styles.taskIdLabel}>TASK TYPE</Text>
-              <View style={styles.taskTypeRow}>
-                {(['homework', 'exam'] as TaskType[]).map(type => {
-                  const isSelected = taskType === type;
+            <View style={styles.taskTypeRow}>
+              {(['homework', 'practice', 'exam'] as TaskType[]).map(type => {
+                const isSelected = taskType === type;
+                const label = getTaskTypeLabel(type);
 
-                  return (
-                    <TouchableOpacity
-                      key={type}
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.taskTypeOption,
+                      isSelected && styles.taskTypeOptionActive,
+                    ]}
+                    onPress={() => setTaskType(type)}
+                    activeOpacity={0.82}
+                  >
+                    <Text
                       style={[
-                        styles.taskTypeOption,
-                        isSelected && styles.taskTypeOptionActive,
+                        styles.taskTypeText,
+                        isSelected && styles.taskTypeTextActive,
                       ]}
-                      onPress={() => setTaskType(type)}
-                      activeOpacity={0.82}
+                      numberOfLines={1}
                     >
-                      <MaterialIcons
-                        name={
-                          isSelected
-                            ? 'radio-button-checked'
-                            : 'radio-button-unchecked'
-                        }
-                        size={18}
-                        color={isSelected ? '#2563EB' : '#94A3B8'}
-                      />
-                      <Text
-                        style={[
-                          styles.taskTypeText,
-                          isSelected && styles.taskTypeTextActive,
-                        ]}
-                      >
-                        {type === 'homework' ? 'Homework' : 'Exam'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Question List */}
@@ -864,8 +887,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     padding: 0,
   },
+  levelOralRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+    marginBottom: 20,
+  },
+  levelSection: {
+    flex: 1,
+    marginBottom: 0,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
   levelDropdown: {
-    minHeight: 34,
+    minHeight: 30,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -877,31 +912,57 @@ const styles = StyleSheet.create({
   },
   taskTypeRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
+    marginBottom: 20,
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    gap: 4,
   },
   taskTypeOption: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 38,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
+    paddingHorizontal: 8,
   },
   taskTypeOptionActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#FFFFFF',
   },
   taskTypeText: {
+    flexShrink: 1,
     color: '#64748B',
     fontSize: 13,
     fontWeight: '800',
   },
   taskTypeTextActive: {
+    color: '#1D4ED8',
+  },
+  oralOption: {
+    flex: 1,
+    backgroundColor: '#F0F4FA',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  oralOptionBody: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  oralOptionText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  oralOptionTextActive: {
     color: '#1D4ED8',
   },
   levelModalBackdrop: {

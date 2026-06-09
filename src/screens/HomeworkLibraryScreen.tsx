@@ -39,7 +39,7 @@ type Module = {
   updatedAt?: string;
 };
 
-type LibraryTypeFilter = 'homework' | 'exam';
+type LibraryTypeFilter = 'homework' | 'practice' | 'exam';
 
 const ICON_COLORS = [
   { iconBg: '#DBEAFE', iconColor: '#3B82F6', iconType: 'grid' as ModuleIcon },
@@ -63,6 +63,12 @@ const evaluateMath = (expr: string): string => {
   } catch {
     return 'N/A';
   }
+};
+
+const getTaskTypeLabel = (type: LibraryTypeFilter) => {
+  if (type === 'exam') return 'Exam';
+  if (type === 'practice') return 'Practice';
+  return 'Homework';
 };
 
 // ─── Module Icon ──────────────────────────────────────────────────────────────
@@ -193,7 +199,7 @@ export default function HomeworkLibraryScreen() {
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
   const { data: questionsData, isLoading } = useGetQuestionsQuery(
     {
-      type: typeFilter === 'exam' ? 'exam' : 'homework',
+      type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
     },
     {
@@ -240,7 +246,8 @@ export default function HomeworkLibraryScreen() {
       );
     });
   }, [modules, searchTerm]);
-  const selectedTypeLabel = typeFilter === 'exam' ? 'exam' : 'homework';
+  const selectedTypeLabel = getTaskTypeLabel(typeFilter).toLowerCase();
+  const selectedTypeDisplayLabel = getTaskTypeLabel(typeFilter);
 
   const handleModulePress = (item: Module) => {
     setSelectedModule(item);
@@ -330,7 +337,7 @@ export default function HomeworkLibraryScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
-      <AdminHeader header="Homework Library" />
+      <AdminHeader header="Homework Library" headerBackgroundColor="#EEF0F8" />
       <View style={styles.headerGap} />
       <View style={styles.searchFilterRow}>
         <View style={styles.searchWrap}>
@@ -379,8 +386,9 @@ export default function HomeworkLibraryScreen() {
       </View>
       {/* ── Module List ── */}
       <View style={styles.typeFilterRow}>
-        {(['homework', 'exam'] as LibraryTypeFilter[]).map(type => {
+        {(['homework', 'practice', 'exam'] as LibraryTypeFilter[]).map(type => {
           const isSelected = typeFilter === type;
+          const label = getTaskTypeLabel(type);
 
           return (
             <TouchableOpacity
@@ -392,18 +400,14 @@ export default function HomeworkLibraryScreen() {
               onPress={() => setTypeFilter(type)}
               activeOpacity={0.82}
             >
-              <MaterialIcons
-                name={type === 'homework' ? 'assignment' : 'fact-check'}
-                size={17}
-                color={isSelected ? '#FFFFFF' : '#64748B'}
-              />
               <Text
                 style={[
                   styles.typeFilterText,
                   isSelected && styles.typeFilterTextActive,
                 ]}
+                numberOfLines={1}
               >
-                {type === 'homework' ? 'Homework' : 'Exam'}
+                {label}
               </Text>
             </TouchableOpacity>
           );
@@ -436,7 +440,7 @@ export default function HomeworkLibraryScreen() {
               <Text style={styles.emptySubText}>
                 {searchTerm
                   ? 'Try searching another task or question'
-                  : `${typeFilter === 'exam' ? 'Exams' : 'Homework'} will appear here when created`}
+                  : `${selectedTypeDisplayLabel} will appear here when created`}
               </Text>
             </View>
           )
@@ -759,31 +763,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 16,
     marginBottom: 14,
-    gap: 10,
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    gap: 4,
   },
   typeFilterButton: {
     flex: 1,
-    minHeight: 42,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
+    minHeight: 38,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
+    paddingHorizontal: 8,
   },
   typeFilterButtonActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+    backgroundColor: '#FFFFFF',
   },
   typeFilterText: {
+    flexShrink: 1,
     color: '#64748B',
     fontSize: 13,
     fontWeight: '900',
   },
   typeFilterTextActive: {
-    color: '#FFFFFF',
+    color: '#1D4ED8',
   },
 
   // Header

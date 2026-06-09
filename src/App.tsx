@@ -39,6 +39,7 @@ import {
   TopExplorerScreen,
   AdminProfileScreen,
   QuestionPaperScreen,
+  AchievementsScreen,
 } from './screens';
 
 type AnimatedTabIconProps = {
@@ -358,6 +359,22 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    Achievements: {
+      screen: AchievementsScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Achievements',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="emoji-events"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
     Logout: {
       screen: ProfileScreen,
       options: {
@@ -519,6 +536,17 @@ const AdminTabs = createBottomTabNavigator({
         tabBarLabel: 'Question Papers',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="description" color={color} size={size} />
+        ),
+      },
+    },
+    AdminAchievements: {
+      screen: AchievementsScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Achievements',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
         ),
       },
     },

@@ -20,6 +20,7 @@ import { APP_VERSION } from '../util/version';
 type AdminHeaderProps = {
   header: string;
   showBackButton?: boolean;
+  headerBackgroundColor?: string;
 };
 
 const adminNavItems = [
@@ -40,6 +41,11 @@ const adminNavItems = [
     routeName: 'AdminQuestionPapers',
   },
   {
+    label: 'Achievements',
+    icon: 'emoji-events',
+    routeName: 'AdminAchievements',
+  },
+  {
     label: 'Profile',
     icon: 'person',
     routeName: 'AdminProfile',
@@ -49,6 +55,7 @@ const adminNavItems = [
 export default function AdminHeader({
   header,
   showBackButton,
+  headerBackgroundColor,
 }: AdminHeaderProps) {
   const navigation = useNavigation<any>();
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -60,6 +67,10 @@ export default function AdminHeader({
   const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
   const displayName = adminName.trim() || 'Admin';
   const profilePicUrl = getFileUrl(adminProfilePic);
+  const headerStyle = [
+    styles.header,
+    headerBackgroundColor && { backgroundColor: headerBackgroundColor },
+  ];
 
   const handleProfilePress = () => {
     if (isAdmin) {
@@ -73,7 +84,7 @@ export default function AdminHeader({
   };
 
   return (
-    <View style={styles.header}>
+    <View style={headerStyle}>
       <TouchableOpacity
         onPress={() => {
           if (showBackButton) navigation.goBack();

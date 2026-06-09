@@ -35,7 +35,22 @@ type Task = {
   level?: number;
 };
 
-type AssignmentTypeFilter = 'homework' | 'exam';
+type AssignmentTypeFilter = 'homework' | 'practice' | 'exam';
+
+const getAssignmentTypeLabel = (type: AssignmentTypeFilter) => {
+  if (type === 'exam') return 'Exam';
+  if (type === 'practice') return 'Practice';
+  return 'Homework';
+};
+
+const getAssignmentTypeIcon = (type: AssignmentTypeFilter) => {
+  if (type === 'exam') return 'fact-check';
+  if (type === 'practice') return 'edit-note';
+  return 'assignment';
+};
+
+const getAssignmentNotificationHeader = (type: AssignmentTypeFilter) =>
+  `New ${getAssignmentTypeLabel(type).toLowerCase()} assigned`;
 
 const TaskRow = ({
   item,
@@ -137,7 +152,8 @@ export default function AssignHomeworkScreen() {
   const [sendNotification, { isLoading: isSendingNotification }] =
     useSendNotificationMutation();
   const showLoader = isFocused && isLoading;
-  const selectedTypeLabel = typeFilter === 'exam' ? 'exam' : 'homework';
+  const selectedTypeLabel = getAssignmentTypeLabel(typeFilter).toLowerCase();
+  const selectedTypeDisplayLabel = getAssignmentTypeLabel(typeFilter);
 
   useEffect(() => {
     setSelectedLevel(studentLevel);
@@ -210,8 +226,7 @@ export default function AssignHomeworkScreen() {
             id: studentId,
           },
         ],
-        messageHeader:
-          typeFilter === 'exam' ? 'New exam assigned' : 'New homework assigned',
+        messageHeader: getAssignmentNotificationHeader(typeFilter),
         messageBody: `You've got ${questionIds.length} ${selectedTypeLabel} assignment(s): ${names}`,
       }).unwrap();
 
@@ -219,7 +234,7 @@ export default function AssignHomeworkScreen() {
 
       Alert.alert(
         'Assignment Confirmed',
-        `${typeFilter === 'exam' ? 'Exam' : 'Homework'} assigned to ${studentName}:\n${names}`,
+        `${selectedTypeDisplayLabel} assigned to ${studentName}:\n${names}`,
         [{ text: 'Done', onPress: () => navigation.goBack() }],
       );
     } catch (err) {
@@ -297,8 +312,10 @@ export default function AssignHomeworkScreen() {
               </View>
 
               <View style={styles.typeFilterRow}>
-                {(['homework', 'exam'] as AssignmentTypeFilter[]).map(type => {
+                {(['homework', 'practice', 'exam'] as AssignmentTypeFilter[]).map(type => {
                   const isSelected = typeFilter === type;
+                  const label = getAssignmentTypeLabel(type);
+                  const iconName = getAssignmentTypeIcon(type);
 
                   return (
                     <TouchableOpacity
@@ -311,7 +328,7 @@ export default function AssignHomeworkScreen() {
                       activeOpacity={0.82}
                     >
                       <MaterialIcons
-                        name={type === 'homework' ? 'assignment' : 'fact-check'}
+                        name={iconName}
                         size={17}
                         color={isSelected ? '#2563EB' : '#64748B'}
                       />
@@ -320,8 +337,9 @@ export default function AssignHomeworkScreen() {
                           styles.typeFilterText,
                           isSelected && styles.typeFilterTextActive,
                         ]}
+                        numberOfLines={1}
                       >
-                        {type === 'homework' ? 'Homework' : 'Exam'}
+                        {label}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -583,16 +601,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
+    paddingHorizontal: 8,
   },
   typeFilterButtonActive: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.09,
-    shadowRadius: 4,
-    elevation: 2,
   },
   typeFilterText: {
+    flexShrink: 1,
     color: '#64748B',
     fontSize: 13,
     fontWeight: '900',

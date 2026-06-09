@@ -16,3 +16,4 @@ export { default as AdminMessageScreen } from './AdminMessageScreen';
 export { default as TopExplorerScreen } from './TopExplorerScreen';
 export { default as AdminProfileScreen } from './AdminProfileScreen';
 export { default as QuestionPaperScreen } from './QuestionPaperScreen';
+export { default as AchievementsScreen } from './AchievementsScreen';

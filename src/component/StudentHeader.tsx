@@ -35,6 +35,7 @@ type StudentNavItem = {
 const studentNavItems: StudentNavItem[] = [
   { label: 'Same Device', icon: 'devices-other', routeName: 'SameDeviceStudents' },
   { label: 'Question Papers', icon: 'description', routeName: 'QuestionPapers' },
+  { label: 'Achievements', icon: 'emoji-events', routeName: 'Achievements' },
   { label: 'Profile', icon: 'person', routeName: 'StudentProfile' },
   { label: 'Logout', icon: 'logout', routeName: 'Logout' },
 ];

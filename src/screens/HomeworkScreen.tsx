@@ -246,6 +246,7 @@ export default function HomeworkScreen() {
         <AdminHeader
           header={`${studentName ?? 'Student'} Performance`}
           showBackButton={true}
+          headerBackgroundColor="#EEF2FF"
         />
       ) : (
         <StudentHeader header={screenTitle} headerBackgroundColor="#EEF2FF" />

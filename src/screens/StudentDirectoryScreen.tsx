@@ -14,6 +14,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import {
   useGetStudentsQuery,
@@ -169,6 +170,8 @@ export const EmptyState = () => (
 
 export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
@@ -179,18 +182,28 @@ export default function StudentDirectoryScreen() {
     data: students,
     isLoading,
     refetch,
-  } = useGetStudentsQuery(undefined, {
-    skip: !isFocused,
-  });
+  } = useGetStudentsQuery(
+    selectedLevel === null ? undefined : { level: selectedLevel },
+    {
+      skip: !isFocused,
+    },
+  );
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
 
-  const filtered = students?.filter(
-    s =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.studentId?.toLowerCase().includes(search.toLowerCase()) ||
-      s.id.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = students?.filter(s => {
+    const matchesLevel =
+      selectedLevel === null || Number(s.level) === selectedLevel;
+    const cleanSearch = search.trim().toLowerCase();
+    const matchesSearch =
+      cleanSearch.length === 0 ||
+      s.name.toLowerCase().includes(cleanSearch) ||
+      s.studentId?.toLowerCase().includes(cleanSearch) ||
+      s.id.toLowerCase().includes(cleanSearch) ||
+      String(s.level ?? '').includes(cleanSearch);
+
+    return matchesLevel && matchesSearch;
+  });
   const showLoader = isFocused && isLoading && !students;
 
   const onRefresh = useCallback(async () => {
@@ -278,20 +291,44 @@ export default function StudentDirectoryScreen() {
       <AdminHeader header="Student Directory" />
 
       {/* Search */}
-      <View style={styles.searchWrapper}>
+      <View style={styles.filterRow}>
+        <View style={styles.searchWrapper}>
         <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by name, level, or ID..."
-          placeholderTextColor="#A0AEC0"
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, level, or ID..."
+            placeholderTextColor="#A0AEC0"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
             <Text style={styles.clearIcon}>✕</Text>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.levelFilterButton,
+            selectedLevel !== null && styles.levelFilterButtonActive,
+          ]}
+          onPress={() => setIsLevelPickerOpen(true)}
+          activeOpacity={0.82}
+        >
+          <MaterialIcons
+            name="filter-list"
+            size={18}
+            color={selectedLevel === null ? '#64748B' : '#475569'}
+          />
+          <Text
+            style={[
+              styles.levelFilterText,
+              selectedLevel !== null && styles.levelFilterTextActive,
+            ]}
+          >
+            {selectedLevel === null ? 'All' : `L${selectedLevel}`}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Table */}
@@ -337,6 +374,74 @@ export default function StudentDirectoryScreen() {
         visible={isHorizontalUpdating}
         label="Updating student..."
       />
+      <Modal
+        visible={isLevelPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLevelPickerOpen(false)}
+      >
+        <Pressable
+          style={styles.levelModalBackdrop}
+          onPress={() => setIsLevelPickerOpen(false)}
+        >
+          <Pressable style={styles.levelModal}>
+            <View style={styles.levelModalHeader}>
+              <Text style={styles.levelModalTitle}>Filter Level</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setIsLevelPickerOpen(false)}
+              >
+                <MaterialIcons name="close" size={20} color="#334155" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.levelAllOption,
+                selectedLevel === null && styles.levelOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedLevel(null);
+                setIsLevelPickerOpen(false);
+              }}
+              activeOpacity={0.82}
+            >
+              <Text
+                style={[
+                  styles.levelOptionText,
+                  selectedLevel === null && styles.levelOptionTextActive,
+                ]}
+              >
+                All Levels
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.levelGrid}>
+              {Array.from({ length: 11 }, (_, value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.levelOption,
+                    selectedLevel === value && styles.levelOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedLevel(value);
+                    setIsLevelPickerOpen(false);
+                  }}
+                  activeOpacity={0.82}
+                >
+                  <Text
+                    style={[
+                      styles.levelOptionText,
+                      selectedLevel === value && styles.levelOptionTextActive,
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
       <Modal
         visible={selectedStudent !== null}
         transparent
@@ -474,15 +579,22 @@ const styles = StyleSheet.create({
   },
 
   // Search
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    gap: 10,
+  },
   searchWrapper: {
+    flex: 1,
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 16,
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
@@ -490,8 +602,44 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   searchIcon: { fontSize: 14, marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: '#2D3748' },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    paddingVertical: 0,
+    fontSize: 14,
+    color: '#2D3748',
+  },
   clearIcon: { fontSize: 14, color: '#A0AEC0', paddingHorizontal: 4 },
+  levelFilterButton: {
+    height: 48,
+    minWidth: 78,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  levelFilterButtonActive: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
+  },
+  levelFilterText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  levelFilterTextActive: {
+    color: '#475569',
+  },
 
   // Table Card
   tableCard: {
@@ -758,6 +906,73 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
     fontWeight: '800',
+  },
+  levelModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  levelModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  levelModalTitle: {
+    color: '#1A202C',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  levelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  levelAllOption: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  levelOption: {
+    width: 48,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelOptionActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  levelOptionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  levelOptionTextActive: {
+    color: '#FFFFFF',
   },
 
   // Separator
