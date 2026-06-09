@@ -33,6 +33,7 @@ interface HomeworkCardProps {
   result: boolean[];
   answer: number[];
   timer: number;
+  oral: boolean;
   updatedAt?: string;
   isAdminReview?: boolean;
   studentId?: string;
@@ -55,6 +56,7 @@ function HomeworkCard({
   result,
   answer,
   timer = 0,
+  oral,
   updatedAt,
   isAdminReview = false,
   studentId,
@@ -110,6 +112,7 @@ function HomeworkCard({
         answer,
         questionId: questionLabel ?? questionId,
         timer,
+        oral,
       }),
     );
 

@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { NumPad, QuizSuccessModal } from './index';
 import { RootState } from '../store/store';
 import { useUpdateHomeworkMutation } from '../store/api';
 import { HomeworkState } from '../util/enum';
 import { evaluateExpression } from '../util/fn';
+import {
+  speakOralQuestion,
+  stopOralQuestionSpeech,
+} from '../util/oralSpeech';
 
 // ─── Types ───────────────────────────────────────────────
 interface QuizScreenProps {
@@ -73,6 +78,7 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
   const selMarks = useSelector((state: RootState) => state.common.marks);
+  const isOral = useSelector((state: RootState) => state.common.oral);
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const isHorizontal = useSelector((state: RootState) => state.common.vertical);
 
@@ -111,6 +117,16 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
   const shouldShowMarks = typeof currentMarks === 'number' && currentMarks > 0;
   const verticalQuestionParts = getVerticalQuestionParts(currentQuestion);
   const horizontalQuestion = formatHorizontalQuestion(currentQuestion);
+
+  useEffect(() => {
+    if (isOral && currentQuestion) {
+      speakOralQuestion(currentQuestion);
+    }
+
+    return () => {
+      stopOralQuestionSpeech();
+    };
+  }, [currentQuestion, isOral]);
 
   // Progress percentage
   const progress = result.length / questions.length;
@@ -160,6 +176,10 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
     }
   };
 
+  const handleRepeatQuestion = () => {
+    speakOralQuestion(currentQuestion);
+  };
+
   return (
     // <SafeAreaView style={styles.safeArea}>
     <View>
@@ -193,9 +213,25 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
             style={[
               styles.questionRow,
               !isHorizontal && styles.verticalQuestionRow,
+              isOral && styles.oralQuestionRow,
             ]}
           >
-            {isHorizontal ? (
+            {isOral ? (
+              <View style={styles.oralPrompt}>
+                <View style={styles.oralIconWrap}>
+                  <MaterialIcons name="volume-up" size={34} color="#2563EB" />
+                </View>
+                <Text style={styles.oralTitle}>Listen and answer</Text>
+                <TouchableOpacity
+                  style={styles.repeatButton}
+                  onPress={handleRepeatQuestion}
+                  activeOpacity={0.82}
+                >
+                  <MaterialIcons name="replay" size={18} color="#FFFFFF" />
+                  <Text style={styles.repeatButtonText}>Repeat</Text>
+                </TouchableOpacity>
+              </View>
+            ) : isHorizontal ? (
               <Text style={styles.questionText}>{horizontalQuestion} = ?</Text>
             ) : (
               <View style={styles.verticalQuestion}>
@@ -334,6 +370,44 @@ const styles = StyleSheet.create({
   },
   verticalQuestionRow: {
     alignItems: 'center',
+  },
+  oralQuestionRow: {
+    minHeight: 170,
+    justifyContent: 'center',
+  },
+  oralPrompt: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  oralIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  oralTitle: {
+    color: '#1A2259',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  repeatButton: {
+    minHeight: 42,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: 16,
+    marginTop: 2,
+  },
+  repeatButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
   },
   verticalQuestion: {
     alignItems: 'flex-end',

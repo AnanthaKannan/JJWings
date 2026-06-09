@@ -45,6 +45,7 @@ type ApiQuestion = {
   questions?: string[];
   marks?: number[];
   level?: number;
+  oral?: boolean;
   updatedAt?: string;
 };
 
@@ -56,6 +57,7 @@ type ApiHomework = {
   results?: boolean[];
   answers?: Array<number | string>;
   timer?: number;
+  oral?: boolean;
   updatedAt?: string;
 };
 
@@ -176,6 +178,7 @@ export type QuestionTask = {
   question: string[];
   marks?: number[];
   level?: number;
+  oral?: boolean;
   updatedAt?: string;
 };
 
@@ -189,6 +192,7 @@ export type Homework = {
   result: boolean[];
   answer: number[];
   timer: number;
+  oral: boolean;
   updatedAt?: string;
 };
 
@@ -494,6 +498,7 @@ const mapQuestion = (question: ApiQuestion): QuestionTask => ({
   question: question.questions ?? [],
   marks: question.marks,
   level: question.level,
+  oral: question.oral ?? false,
   updatedAt: question.updatedAt,
 });
 
@@ -518,6 +523,7 @@ const mapHomework = (homework: ApiHomework): Homework => {
     result: homework.results ?? [],
     answer: (homework.answers ?? []).map(Number),
     timer: homework.timer ?? 0,
+    oral: question?.oral ?? homework.oral ?? false,
     updatedAt: homework.updatedAt,
   };
 };

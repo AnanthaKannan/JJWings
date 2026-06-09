@@ -35,17 +35,15 @@ type Task = {
   level?: number;
 };
 
-type AssignmentTypeFilter = 'homework' | 'practice' | 'exam';
+type AssignmentTypeFilter = 'homework' | 'exam';
 
 const getAssignmentTypeLabel = (type: AssignmentTypeFilter) => {
   if (type === 'exam') return 'Exam';
-  if (type === 'practice') return 'Practice';
   return 'Homework';
 };
 
 const getAssignmentTypeIcon = (type: AssignmentTypeFilter) => {
   if (type === 'exam') return 'fact-check';
-  if (type === 'practice') return 'edit-note';
   return 'assignment';
 };
 
@@ -312,7 +310,7 @@ export default function AssignHomeworkScreen() {
               </View>
 
               <View style={styles.typeFilterRow}>
-                {(['homework', 'practice', 'exam'] as AssignmentTypeFilter[]).map(type => {
+                {(['homework', 'exam'] as AssignmentTypeFilter[]).map(type => {
                   const isSelected = typeFilter === type;
                   const label = getAssignmentTypeLabel(type);
                   const iconName = getAssignmentTypeIcon(type);

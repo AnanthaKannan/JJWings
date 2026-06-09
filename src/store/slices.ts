@@ -12,6 +12,7 @@ interface AuthState {
   result: boolean[];
   answer: number[];
   timer: number;
+  oral: boolean;
   homeworkId: string | null;
   questionId: string | null;
   studentName: string;
@@ -41,6 +42,7 @@ const initialState: AuthState = {
   homeworkId: null,
   questionId: '',
   timer: 0,
+  oral: false,
   token: null,
   adminId: '',
   adminCode: null,
@@ -113,6 +115,7 @@ const commonSlice = createSlice({
         result: boolean[];
         answer: number[];
         timer: number;
+        oral?: boolean;
       }>,
     ) => {
       state.questions = action.payload.questions;
@@ -122,6 +125,7 @@ const commonSlice = createSlice({
       state.result = action.payload.result;
       state.answer = action.payload.answer;
       state.timer = action.payload.timer;
+      state.oral = action.payload.oral ?? false;
     },
     logout: state => {
       state.studentId = null;
