@@ -22,7 +22,12 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
 
-import { AdminHeader, LoadingOverlay, LoadingState, StudentHeader } from '../component';
+import {
+  AdminHeader,
+  LoadingOverlay,
+  LoadingState,
+  StudentHeader,
+} from '../component';
 import {
   QuestionPaper,
   useDeleteQuestionPaperMutation,
@@ -56,9 +61,21 @@ const getDownloadFileName = (paper: QuestionPaper) => {
 
   if (/\.[a-z0-9]{2,}$/i.test(safeName)) return safeName;
 
+  const fileType = paper.fileFormat ?? paper.mimeType;
   const extension =
-    paper.mimeType === 'application/pdf' ? 'pdf' : paper.mimeType?.split('/').pop();
+    fileType === 'application/pdf' ? 'pdf' : fileType?.split('/').pop();
   return extension ? `${safeName}.${extension}` : safeName;
+};
+
+const getDownloadMimeType = (paper: QuestionPaper) => {
+  const fileType = paper.fileFormat ?? paper.mimeType;
+
+  if (!fileType) return 'application/pdf';
+  if (fileType.includes('/')) return fileType;
+
+  return fileType.toLowerCase() === 'pdf'
+    ? 'application/pdf'
+    : 'application/octet-stream';
 };
 
 const QuestionPaperRow = ({
@@ -124,7 +141,8 @@ export default function QuestionPaperScreen() {
   } = useGetQuestionPapersQuery();
   const [uploadQuestionPaper, uploadResult] = useUploadQuestionPaperMutation();
   const [deleteQuestionPaper, deleteResult] = useDeleteQuestionPaperMutation();
-  const [getDownloadUrl, downloadResult] = useLazyGetQuestionPaperDownloadQuery();
+  const [getDownloadUrl, downloadResult] =
+    useLazyGetQuestionPaperDownloadQuery();
   const isBusy =
     uploadResult.isLoading ||
     deleteResult.isLoading ||
@@ -224,7 +242,7 @@ export default function QuestionPaperScreen() {
       }
 
       const fileName = getDownloadFileName(paper);
-      const mimeType = paper.mimeType ?? 'application/pdf';
+      const mimeType = getDownloadMimeType(paper);
       const headers: Record<string, string> | undefined = token
         ? { Accept: mimeType, 'x-access-token': token }
         : { Accept: mimeType };
@@ -235,9 +253,9 @@ export default function QuestionPaperScreen() {
             useDownloadManager: true,
             notification: true,
             mediaScannable: true,
-            storeInDownloads: true,
-            title: `${DOWNLOAD_FOLDER}/${fileName}`,
+            title: fileName,
             description: 'Question paper downloaded',
+            path: `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${DOWNLOAD_FOLDER}/${fileName}`,
             mime: mimeType,
           },
         }).fetch('GET', downloadUrl, headers);
@@ -259,7 +277,10 @@ export default function QuestionPaperScreen() {
                 ReactNativeBlobUtil.android
                   .actionViewIntent(downloadedUri, mimeType)
                   .catch(error => {
-                    console.error('Failed to open downloaded question paper', error);
+                    console.error(
+                      'Failed to open downloaded question paper',
+                      error,
+                    );
                   });
               },
             },
@@ -295,10 +316,7 @@ export default function QuestionPaperScreen() {
   const header = isAdmin ? (
     <AdminHeader header="Question Papers" />
   ) : (
-    <StudentHeader
-      header="Question Papers"
-      headerBackgroundColor="#EEF2FF"
-    />
+    <StudentHeader header="Question Papers" headerBackgroundColor="#EEF2FF" />
   );
 
   return (
@@ -520,4 +538,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-

@@ -957,9 +957,9 @@ export const jjWingsApi = createApi({
 
     getQuestionPaperDownload: builder.query<string, string>({
       query: id => ({
-        url: `/admin/file-uploads/${id}/download`,
+        url: `/file-uploads/${id}/download`,
         responseHandler: async response => {
-          const fallbackUrl = `${API_URL}/admin/file-uploads/${id}/download`;
+          const fallbackUrl = `${API_URL}/file-uploads/${id}/download`;
           const contentType = response.headers.get('content-type') ?? '';
 
           if (contentType.includes('application/json')) {
