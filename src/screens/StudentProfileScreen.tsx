@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -18,9 +18,12 @@ import {
   useDeleteProfilePicMutation,
   useUploadProfilePicMutation,
 } from '../store/api';
+import { IMAGE_UPLOAD_LIMITS } from '../config/imageUpload';
 import { setStudentProfilePic } from '../store/slices';
 import { RootState } from '../store/store';
 import { getFileUrl } from '../util/fileUrl';
+import { formatUploadLimit } from '../util/formatUploadLimit';
+import { compressProfileImage } from '../util/profileImage';
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <View style={styles.detailRow}>
@@ -48,10 +51,12 @@ export default function StudentProfileScreen() {
   );
   const [uploadProfilePic, uploadResult] = useUploadProfilePicMutation();
   const [deleteProfilePic, deleteResult] = useDeleteProfilePicMutation();
+  const [isPreparingPhoto, setIsPreparingPhoto] = useState(false);
   const displayName = studentName.trim() || 'Student';
   const initial = (displayName[0] ?? 'S').toUpperCase();
   const profilePicUrl = getFileUrl(studentProfilePic);
-  const isBusy = uploadResult.isLoading || deleteResult.isLoading;
+  const isBusy =
+    isPreparingPhoto || uploadResult.isLoading || deleteResult.isLoading;
 
   const details = useMemo(
     () => [
@@ -94,7 +99,14 @@ export default function StudentProfileScreen() {
       return;
     }
 
+    setIsPreparingPhoto(true);
+
     try {
+      const compressedImage = await compressProfileImage({
+        uri: asset.uri,
+        fileName: asset.fileName,
+      });
+
       if (studentProfilePic) {
         await deleteProfilePic().unwrap();
         dispatch(setStudentProfilePic(null));
@@ -102,20 +114,26 @@ export default function StudentProfileScreen() {
 
       const uploadedUrl = await uploadProfilePic({
         file: {
-          uri: asset.uri,
-          type: asset.type,
-          name: asset.fileName,
+          uri: compressedImage.uri,
+          type: compressedImage.type,
+          name: compressedImage.name,
         },
       }).unwrap();
 
-      dispatch(setStudentProfilePic(uploadedUrl ?? asset.uri));
+      dispatch(setStudentProfilePic(uploadedUrl ?? compressedImage.uri));
       Alert.alert('Profile photo updated', 'Your profile picture was uploaded.');
     } catch (error) {
       console.error('Failed to upload profile picture', error);
       Alert.alert(
         'Upload failed',
-        'Please try uploading your profile picture again.',
+        error instanceof Error && error.message === 'PROFILE_IMAGE_TOO_LARGE'
+          ? `Please choose a smaller photo. The profile picture must be under ${formatUploadLimit(
+              IMAGE_UPLOAD_LIMITS.profileMaxBytes,
+            )}.`
+          : 'Please try uploading your profile picture again.',
       );
+    } finally {
+      setIsPreparingPhoto(false);
     }
   };
 

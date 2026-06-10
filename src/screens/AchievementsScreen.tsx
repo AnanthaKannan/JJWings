@@ -34,8 +34,11 @@ import {
   useGetAchievementsQuery,
   useUploadAchievementMutation,
 } from '../store/api';
+import { IMAGE_UPLOAD_LIMITS } from '../config/imageUpload';
 import { RootState } from '../store/store';
 import { getFileUrl } from '../util/fileUrl';
+import { formatUploadLimit } from '../util/formatUploadLimit';
+import { compressAchievementImage } from '../util/profileImage';
 
 const { width: screenWidth } = Dimensions.get('window');
 const carouselWidth = Math.max(screenWidth - 32, 280);
@@ -55,7 +58,9 @@ export default function AchievementsScreen() {
   } = useGetAchievementsQuery();
   const [uploadAchievement, uploadResult] = useUploadAchievementMutation();
   const [deleteAchievement, deleteResult] = useDeleteAchievementMutation();
-  const isBusy = uploadResult.isLoading || deleteResult.isLoading;
+  const [isPreparingImage, setIsPreparingImage] = useState(false);
+  const isBusy =
+    isPreparingImage || uploadResult.isLoading || deleteResult.isLoading;
   const showLoader = isLoading && achievements.length === 0;
 
   const visibleAchievements = useMemo(
@@ -94,11 +99,17 @@ export default function AchievementsScreen() {
         return;
       }
 
+      setIsPreparingImage(true);
+      const compressedImage = await compressAchievementImage({
+        uri: file.uri,
+        fileName: file.name ?? undefined,
+      });
+
       await uploadAchievement({
         file: {
-          uri: file.uri,
-          type: file.type ?? undefined,
-          name: file.name ?? 'celebration.jpg',
+          uri: compressedImage.uri,
+          type: compressedImage.type,
+          name: compressedImage.name,
         },
       }).unwrap();
 
@@ -114,8 +125,14 @@ export default function AchievementsScreen() {
       console.error('Failed to upload achievement image', error);
       Alert.alert(
         'Upload failed',
-        'Please try uploading the achievement image again.',
+        error instanceof Error && error.message === 'ACHIEVEMENT_IMAGE_TOO_LARGE'
+          ? `Please choose a smaller image. Achievement images must be under ${formatUploadLimit(
+              IMAGE_UPLOAD_LIMITS.achievementMaxBytes,
+            )}.`
+          : 'Please try uploading the achievement image again.',
       );
+    } finally {
+      setIsPreparingImage(false);
     }
   };
 
