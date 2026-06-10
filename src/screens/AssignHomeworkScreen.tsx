@@ -25,7 +25,6 @@ import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
   useAssignHomeworkMutation,
   useGetAvailableQuestionsQuery,
-  useSendNotificationMutation,
 } from '../store/api';
 
 type Task = {
@@ -46,9 +45,6 @@ const getAssignmentTypeIcon = (type: AssignmentTypeFilter) => {
   if (type === 'exam') return 'fact-check';
   return 'assignment';
 };
-
-const getAssignmentNotificationHeader = (type: AssignmentTypeFilter) =>
-  `New ${getAssignmentTypeLabel(type).toLowerCase()} assigned`;
 
 const TaskRow = ({
   item,
@@ -147,8 +143,6 @@ export default function AssignHomeworkScreen() {
   );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
-  const [sendNotification, { isLoading: isSendingNotification }] =
-    useSendNotificationMutation();
   const showLoader = isFocused && isLoading;
   const selectedTypeLabel = getAssignmentTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getAssignmentTypeLabel(typeFilter);
@@ -216,16 +210,6 @@ export default function AssignHomeworkScreen() {
       await assignHomework({
         studentId,
         questionIds,
-      }).unwrap();
-
-      await sendNotification({
-        studentIds: [
-          {
-            id: studentId,
-          },
-        ],
-        messageHeader: getAssignmentNotificationHeader(typeFilter),
-        messageBody: `You've got ${questionIds.length} ${selectedTypeLabel} assignment(s): ${names}`,
       }).unwrap();
 
       setSelectedIds(new Set());
@@ -480,7 +464,7 @@ export default function AssignHomeworkScreen() {
         </Pressable>
       </Modal>
       <LoadingOverlay
-        visible={isAssigning || isSendingNotification}
+        visible={isAssigning}
         label="Assigning homework..."
       />
     </SafeAreaView>

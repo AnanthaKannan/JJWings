@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -17,11 +18,19 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
-import { useGetHomeworksQuery } from '../store/api';
+import {
+  useGetHomeworksQuery,
+  useUnassignHomeworkMutation,
+} from '../store/api';
 import { setQuestions } from '../store/slices';
 import { BadgeType } from '../util/types';
 import { HomeworkState } from '../util/enum';
-import { AdminHeader, LoadingState, StudentHeader } from '../component';
+import {
+  AdminHeader,
+  LoadingOverlay,
+  LoadingState,
+  StudentHeader,
+} from '../component';
 
 interface HomeworkCardProps {
   questionId: string;
@@ -38,6 +47,8 @@ interface HomeworkCardProps {
   isAdminReview?: boolean;
   studentId?: string;
   studentName?: string;
+  isUnassigning?: boolean;
+  onUnassign?: (questionId: string) => void;
 }
 
 const FILTERS: { label: string; value: BadgeType }[] = [
@@ -61,6 +72,8 @@ function HomeworkCard({
   isAdminReview = false,
   studentId,
   studentName,
+  isUnassigning = false,
+  onUnassign,
 }: HomeworkCardProps) {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
@@ -179,6 +192,18 @@ function HomeworkCard({
               </Text>
             </TouchableOpacity>
           )}
+          {isAdminReview && state === HomeworkState.NEW && onUnassign && (
+            <TouchableOpacity
+              style={[styles.unassignBtn, isUnassigning && styles.disabledButton]}
+              activeOpacity={0.85}
+              onPress={() => onUnassign(questionId)}
+              disabled={isUnassigning}
+            >
+              <Text style={styles.unassignBtnText}>
+                {isUnassigning ? 'Removing' : 'Unassign'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -210,6 +235,9 @@ export default function HomeworkScreen() {
     isAdminReview ? HomeworkState.COMPLETED : HomeworkState.NEW,
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [unassigningQuestionId, setUnassigningQuestionId] = useState<
+    string | null
+  >(null);
   const loggedInStudentId = useSelector(
     (state: RootState) => state.common.studentId,
   );
@@ -226,6 +254,8 @@ export default function HomeworkScreen() {
       skip: !isFocused || !studentId,
     },
   );
+  const [unassignHomework, { isLoading: isUnassigning }] =
+    useUnassignHomeworkMutation();
 
   const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
@@ -241,6 +271,38 @@ export default function HomeworkScreen() {
       setRefreshing(false);
     }
   }, [refetch, studentId]);
+
+  const handleUnassignQuestion = (questionId: string) => {
+    if (!studentId || unassigningQuestionId) return;
+
+    Alert.alert(
+      'Unassign?',
+      `Remove this ${contentLabel} from ${studentName ?? 'the student'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unassign',
+          onPress: async () => {
+            setUnassigningQuestionId(questionId);
+            try {
+              await unassignHomework({
+                studentId,
+                questionIds: [questionId],
+              }).unwrap();
+              Alert.alert('Unassigned', `The ${contentLabel} was removed.`);
+            } catch {
+              Alert.alert(
+                'Unassign Failed',
+                `Unable to remove this ${contentLabel}.`,
+              );
+            } finally {
+              setUnassigningQuestionId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -308,6 +370,8 @@ export default function HomeworkScreen() {
               isAdminReview={isAdminReview}
               studentId={studentId}
               studentName={studentName}
+              isUnassigning={unassigningQuestionId === task.questionId}
+              onUnassign={handleUnassignQuestion}
             />
           ))}
 
@@ -319,6 +383,10 @@ export default function HomeworkScreen() {
           </View>
         )}
       </ScrollView>
+      <LoadingOverlay
+        visible={isUnassigning}
+        label={`Removing ${contentLabel}...`}
+      />
     </SafeAreaView>
   );
 }
@@ -477,6 +545,7 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     alignItems: 'flex-start',
+    gap: 8,
     marginBottom: 15,
   },
   questionRow: {
@@ -545,6 +614,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  unassignBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    minWidth: 82,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  unassignBtnText: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
 });
 

@@ -452,6 +452,12 @@ type UpdateQuestionArg = {
 };
 
 type AssignHomeworkArg = {
+  studentId?: string;
+  levels?: number[];
+  questionIds: string[];
+};
+
+type UnassignHomeworkArg = {
   studentId: string;
   questionIds: string[];
 };
@@ -1159,9 +1165,35 @@ export const jjWingsApi = createApi({
     }),
 
     assignHomework: builder.mutation<string, AssignHomeworkArg>({
-      query: ({ studentId, questionIds }) => ({
+      query: ({ studentId, levels, questionIds }) => ({
         url: '/admin/questions/assign',
         method: 'POST',
+        body: {
+          questionIds,
+          ...(studentId ? { studentId } : {}),
+          ...(levels ? { levels } : {}),
+        },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        ...(studentId
+          ? [
+              {
+                type: 'Homework' as const,
+                id: `${studentId}_${HomeworkState.NEW}`,
+              },
+              { type: 'Score' as const, id: studentId },
+              { type: 'Questions' as const, id: `AVAILABLE_${studentId}` },
+            ]
+          : []),
+        { type: 'Students', id: 'LIST' },
+      ],
+    }),
+
+    unassignHomework: builder.mutation<string, UnassignHomeworkArg>({
+      query: ({ studentId, questionIds }) => ({
+        url: '/admin/questions/assign',
+        method: 'DELETE',
         body: { studentId, questionIds },
       }),
       transformResponse: () => 'success',
@@ -1270,6 +1302,7 @@ export const {
   useDeleteQuestionMutation,
   useUpdateQuestionMutation,
   useAssignHomeworkMutation,
+  useUnassignHomeworkMutation,
   useAssignPracticeQuestionsMutation,
   useUnassignPracticeQuestionsMutation,
   useGetIdGenQuery,

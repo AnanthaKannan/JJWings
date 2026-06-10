@@ -40,6 +40,7 @@ import {
   HomeworkLibraryScreen,
   CreateNewTaskScreen,
   AssignHomeworkScreen,
+  AssignByLevelScreen,
   ProgressDashboard,
   NotificationsScreen,
   AdminMessageScreen,
@@ -533,6 +534,16 @@ const AdminTabs = createBottomTabNavigator({
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="playlist-add" color={color} size={size} />
+        ),
+      },
+    },
+    AssignByLevel: {
+      screen: AssignByLevelScreen,
+      options: {
+        tabBarLabel: 'Assign',
+        unmountOnBlur: true,
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="assignment-turned-in" color={color} size={size} />
         ),
       },
     },
