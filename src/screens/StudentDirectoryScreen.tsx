@@ -37,6 +37,7 @@ type Student = {
   assigned: number;
   completed: number;
   new: number;
+  progress: number;
   horizontal: boolean;
   success: number;
   failure: number;
@@ -98,7 +99,14 @@ const ProgressStat = ({
 }) => (
   <View style={[styles.progressStat, { backgroundColor: color + '14' }]}>
     <Text style={[styles.progressValue, { color }]}>{value}</Text>
-    <Text style={styles.progressLabel}>{label}</Text>
+    <Text
+      style={styles.progressLabel}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.7}
+    >
+      {label}
+    </Text>
   </View>
 );
 
@@ -133,8 +141,8 @@ const StudentRow = ({
           color="#22c55e"
         />
         <ProgressStat
-          label="Assigned"
-          value={item.assigned || 0}
+          label="Progress"
+          value={item.progress || 0}
           color="#4F46E5"
         />
         <ProgressStat label="New" value={item.new || 0} color="#f59e0b" />
@@ -822,6 +830,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   progressLabel: {
+    width: '100%',
     fontSize: 8,
     color: '#64748B',
     fontWeight: '700',

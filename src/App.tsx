@@ -550,6 +550,8 @@ const AdminTabs = createBottomTabNavigator({
     AdminMessages: {
       screen: AdminMessageScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Message',
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
@@ -614,6 +616,8 @@ const AdminTabs = createBottomTabNavigator({
     Logout: {
       screen: ProfileScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Logout',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="logout" color={color} size={size} />

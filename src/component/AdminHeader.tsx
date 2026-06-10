@@ -46,9 +46,19 @@ const adminNavItems = [
     routeName: 'AdminAchievements',
   },
   {
+    label: 'Message',
+    icon: 'mail',
+    routeName: 'AdminMessages',
+  },
+  {
     label: 'Profile',
     icon: 'person',
     routeName: 'AdminProfile',
+  },
+  {
+    label: 'Logout',
+    icon: 'logout',
+    routeName: 'Logout',
   },
 ];
 

@@ -160,6 +160,7 @@ export type Student = {
   assigned: number;
   completed: number;
   new: number;
+  progress: number;
   success: number;
   failure: number;
 };
@@ -457,6 +458,35 @@ type AssignHomeworkArg = {
   questionIds: string[];
 };
 
+export type AssignmentQuestion = {
+  id: string;
+  questionId?: string;
+  type?: 'homework' | 'exam' | 'practice' | string;
+};
+
+export type AssignmentStudentResult = {
+  id: string;
+  studentId?: string;
+  name: string;
+  level?: number;
+  assignedQuestionIds: string[];
+  assignedQuestions: AssignmentQuestion[];
+  skippedQuestionIds: string[];
+  skippedQuestions: AssignmentQuestion[];
+};
+
+export type AssignHomeworkResult = {
+  success: boolean;
+  message?: string;
+  assignedCount: number;
+  skippedCount: number;
+  students: AssignmentStudentResult[];
+  notifications?: {
+    sentCount?: number;
+    totalRequested?: number;
+  };
+};
+
 type UnassignHomeworkArg = {
   studentId: string;
   questionIds: string[];
@@ -509,6 +539,7 @@ const mapStudent = (student: ApiStudent): Student => ({
   assigned: student.score?.assigned ?? 0,
   completed: student.score?.completed ?? 0,
   new: student.score?.new ?? 0,
+  progress: student.score?.progress ?? 0,
   success: student.score?.correct ?? 0,
   failure: student.score?.wrong ?? 0,
 });
@@ -1164,7 +1195,7 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    assignHomework: builder.mutation<string, AssignHomeworkArg>({
+    assignHomework: builder.mutation<AssignHomeworkResult, AssignHomeworkArg>({
       query: ({ studentId, levels, questionIds }) => ({
         url: '/admin/questions/assign',
         method: 'POST',
@@ -1174,7 +1205,6 @@ export const jjWingsApi = createApi({
           ...(levels ? { levels } : {}),
         },
       }),
-      transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { studentId }) => [
         ...(studentId
           ? [

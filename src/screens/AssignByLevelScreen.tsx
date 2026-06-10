@@ -5,6 +5,7 @@ import {
   Modal,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,6 +18,8 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
+  AssignmentStudentResult,
+  AssignHomeworkResult,
   QuestionTask,
   useAssignHomeworkMutation,
   useGetQuestionsQuery,
@@ -31,6 +34,17 @@ const getAssignmentTypeLabel = (type: AssignmentTypeFilter) =>
 
 const getAssignmentTypeIcon = (type: AssignmentTypeFilter) =>
   type === 'exam' ? 'fact-check' : 'assignment';
+
+const getStudentLabel = (student: AssignmentStudentResult) =>
+  `${student.name || 'Student'}${student.studentId ? ` (${student.studentId})` : ''}`;
+
+const getQuestionLabels = (
+  questions: AssignmentStudentResult['assignedQuestions'],
+  fallbackIds: string[],
+) => {
+  const labels = questions.map(question => question.questionId ?? question.id);
+  return labels.length > 0 ? labels : fallbackIds;
+};
 
 const QuestionRow = ({
   item,
@@ -82,6 +96,8 @@ export default function AssignByLevelScreen() {
   );
   const [selectedLevels, setSelectedLevels] = useState<Set<number>>(new Set());
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
+  const [assignmentResult, setAssignmentResult] =
+    useState<AssignHomeworkResult | null>(null);
 
   const cleanSearch = search.trim();
   const {
@@ -136,6 +152,16 @@ export default function AssignByLevelScreen() {
       : selectedLevelList.length <= 4
         ? selectedLevelList.map(level => `L${level}`).join(', ')
         : `${selectedLevelList.length} levels selected`;
+  const newlyAssignedStudents = assignmentResult
+    ? assignmentResult.students.filter(
+        student => student.assignedQuestionIds.length > 0,
+      )
+    : [];
+  const alreadyAssignedStudents = assignmentResult
+    ? assignmentResult.students.filter(
+        student => student.skippedQuestionIds.length > 0,
+      )
+    : [];
 
   const toggleQuestion = (id: string) => {
     setSelectedQuestionIds(prev => {
@@ -173,20 +199,14 @@ export default function AssignByLevelScreen() {
     const levels = Array.from(selectedLevels).sort((a, b) => a - b);
 
     try {
-      await assignHomework({
+      const result = await assignHomework({
         questionIds,
         levels,
       }).unwrap();
 
       setSelectedQuestionIds(new Set());
       setSelectedLevels(new Set());
-
-      Alert.alert(
-        'Assignment Confirmed',
-        `${questionIds.length} ${selectedTypeLabel} question(s) assigned to level ${levels.join(
-          ', ',
-        )}.`,
-      );
+      setAssignmentResult(result);
     } catch (err) {
       const errorMessage =
         err && typeof err === 'object' && 'error' in err
@@ -428,6 +448,147 @@ export default function AssignByLevelScreen() {
             </View>
           </Pressable>
         </Pressable>
+      </Modal>
+
+      <Modal
+        visible={assignmentResult !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAssignmentResult(null)}
+      >
+        <View style={styles.resultModalBackdrop}>
+          <View style={styles.resultModal}>
+            <View style={styles.resultModalHeader}>
+              <View style={styles.resultTitleRow}>
+                <View style={styles.resultIconBox}>
+                  <MaterialIcons name="assignment-turned-in" size={20} color="#15803D" />
+                </View>
+                <View style={styles.resultTitleCopy}>
+                  <Text style={styles.resultModalTitle}>Assignment Details</Text>
+                  <Text style={styles.resultModalSubtitle}>
+                    {assignmentResult?.message ?? 'Questions assigned'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setAssignmentResult(null)}
+              >
+                <MaterialIcons name="close" size={20} color="#334155" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.resultStats}>
+              <View style={styles.resultStat}>
+                <Text style={styles.resultStatValue}>
+                  {newlyAssignedStudents.length}
+                </Text>
+                <Text style={styles.resultStatLabel}>New students</Text>
+              </View>
+              <View style={styles.resultStat}>
+                <Text style={styles.resultStatValue}>
+                  {alreadyAssignedStudents.length}
+                </Text>
+                <Text style={styles.resultStatLabel}>Already assigned</Text>
+              </View>
+              <View style={styles.resultStat}>
+                <Text style={styles.resultStatValue}>
+                  {assignmentResult?.notifications?.sentCount ?? 0}
+                </Text>
+                <Text style={styles.resultStatLabel}>Notified</Text>
+              </View>
+            </View>
+            <Text style={styles.resultCountSummary}>
+              {assignmentResult?.assignedCount ?? 0} question assignment
+              {(assignmentResult?.assignedCount ?? 0) === 1 ? '' : 's'} added,{' '}
+              {assignmentResult?.skippedCount ?? 0} already existed.
+            </Text>
+
+            <ScrollView
+              style={styles.resultScroll}
+              contentContainerStyle={styles.resultScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.resultSection}>
+                <Text style={styles.resultSectionTitle}>
+                  Now assigned to {newlyAssignedStudents.length} student
+                  {newlyAssignedStudents.length === 1 ? '' : 's'}
+                </Text>
+                {newlyAssignedStudents.length > 0 ? (
+                  newlyAssignedStudents.map(student => {
+                    const labels = getQuestionLabels(
+                      student.assignedQuestions,
+                      student.assignedQuestionIds,
+                    );
+
+                    return (
+                      <View key={`assigned-${student.id}`} style={styles.resultStudentRow}>
+                        <View style={styles.resultStudentTop}>
+                          <Text style={styles.resultStudentName}>
+                            {getStudentLabel(student)}
+                          </Text>
+                          <Text style={styles.resultStudentLevel}>
+                            Level {typeof student.level === 'number' ? student.level : '-'}
+                          </Text>
+                        </View>
+                        <Text style={styles.resultQuestionText}>
+                          {labels.join(', ')}
+                        </Text>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.resultEmptyText}>
+                    No new students received these questions.
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.resultSection}>
+                <Text style={styles.resultSectionTitle}>
+                  Already assigned for {alreadyAssignedStudents.length} student
+                  {alreadyAssignedStudents.length === 1 ? '' : 's'}
+                </Text>
+                {alreadyAssignedStudents.length > 0 ? (
+                  alreadyAssignedStudents.map(student => {
+                    const labels = getQuestionLabels(
+                      student.skippedQuestions,
+                      student.skippedQuestionIds,
+                    );
+
+                    return (
+                      <View key={`skipped-${student.id}`} style={styles.resultStudentRow}>
+                        <View style={styles.resultStudentTop}>
+                          <Text style={styles.resultStudentName}>
+                            {getStudentLabel(student)}
+                          </Text>
+                          <Text style={styles.resultStudentLevel}>
+                            Level {typeof student.level === 'number' ? student.level : '-'}
+                          </Text>
+                        </View>
+                        <Text style={styles.resultQuestionText}>
+                          {labels.join(', ')}
+                        </Text>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.resultEmptyText}>
+                    No duplicate assignments were found.
+                  </Text>
+                )}
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.resultDoneButton}
+              activeOpacity={0.86}
+              onPress={() => setAssignmentResult(null)}
+            >
+              <Text style={styles.resultDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       <LoadingOverlay visible={isAssigning} label="Assigning questions..." />
@@ -804,6 +965,163 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   levelDoneText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  resultModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.48)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  resultModal: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '84%',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  resultModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 14,
+  },
+  resultTitleRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  resultIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultTitleCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resultModalTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  resultModalSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  resultStats: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  resultStat: {
+    flex: 1,
+    minHeight: 66,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  resultStatValue: {
+    color: '#1E293B',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  resultStatLabel: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '800',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  resultCountSummary: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 14,
+  },
+  resultScroll: {
+    maxHeight: 390,
+  },
+  resultScrollContent: {
+    paddingBottom: 4,
+    gap: 14,
+  },
+  resultSection: {
+    gap: 8,
+  },
+  resultSectionTitle: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  resultStudentRow: {
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+  },
+  resultStudentTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 6,
+  },
+  resultStudentName: {
+    flex: 1,
+    minWidth: 0,
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  resultStudentLevel: {
+    color: '#4F46E5',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  resultQuestionText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  resultEmptyText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+    paddingVertical: 4,
+  },
+  resultDoneButton: {
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  resultDoneText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '900',
