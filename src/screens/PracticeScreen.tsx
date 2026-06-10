@@ -28,6 +28,7 @@ import {
   useAssignPracticeQuestionsMutation,
   useGetHomeworksQuery,
   useGetPracticeQuestionsQuery,
+  useUnassignPracticeQuestionsMutation,
 } from '../store/api';
 import { setQuestions } from '../store/slices';
 import { RootState } from '../store/store';
@@ -48,6 +49,8 @@ interface PracticeCardProps {
   timer: number;
   oral: boolean;
   updatedAt?: string;
+  isUnassigning?: boolean;
+  onUnassign?: (questionId: string) => void;
 }
 
 const FILTERS: { label: string; value: PracticeFilter }[] = [
@@ -93,6 +96,8 @@ function PracticeCard({
   timer = 0,
   oral,
   updatedAt,
+  isUnassigning = false,
+  onUnassign,
 }: PracticeCardProps) {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
@@ -168,15 +173,29 @@ function PracticeCard({
             </View>
           )}
         </View>
-        <TouchableOpacity
-          style={styles.attendBtn}
-          activeOpacity={0.85}
-          onPress={handleAttend}
-        >
-          <Text style={styles.attendBtnText}>
-            {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.attendBtn}
+            activeOpacity={0.85}
+            onPress={handleAttend}
+          >
+            <Text style={styles.attendBtnText}>
+              {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
+            </Text>
+          </TouchableOpacity>
+          {state === HomeworkState.NEW && onUnassign && (
+            <TouchableOpacity
+              style={[styles.unassignBtn, isUnassigning && styles.disabledButton]}
+              activeOpacity={0.85}
+              onPress={() => onUnassign(questionId)}
+              disabled={isUnassigning}
+            >
+              <Text style={styles.unassignBtnText}>
+                {isUnassigning ? 'Removing' : 'Unassign'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.progressTrack}>
@@ -256,6 +275,9 @@ export default function PracticeScreen() {
   const [assigningQuestionId, setAssigningQuestionId] = useState<string | null>(
     null,
   );
+  const [unassigningQuestionId, setUnassigningQuestionId] = useState<
+    string | null
+  >(null);
   const isQuestionsTab = selectedFilter === 'QUESTIONS';
 
   useEffect(() => {
@@ -303,6 +325,7 @@ export default function PracticeScreen() {
     },
   );
   const [assignPracticeQuestions] = useAssignPracticeQuestionsMutation();
+  const [unassignPracticeQuestions] = useUnassignPracticeQuestionsMutation();
 
   const filteredQuestions = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -359,6 +382,39 @@ export default function PracticeScreen() {
     } finally {
       setAssigningQuestionId(null);
     }
+  };
+
+  const handleUnassignQuestion = (questionId: string) => {
+    if (!studentId || unassigningQuestionId) return;
+
+    Alert.alert(
+      'Unassign Practice?',
+      'This will remove the question from the New practice list.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unassign',
+          style: 'destructive',
+          onPress: async () => {
+            setUnassigningQuestionId(questionId);
+            try {
+              await unassignPracticeQuestions({
+                questionIds: [questionId],
+                studentId,
+              }).unwrap();
+              Alert.alert('Practice Unassigned', 'The question was removed.');
+            } catch {
+              Alert.alert(
+                'Unassign Failed',
+                'Unable to remove this practice question.',
+              );
+            } finally {
+              setUnassigningQuestionId(null);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -463,6 +519,8 @@ export default function PracticeScreen() {
               homeworkId={task.id}
               question={task?.question?.question ?? []}
               marks={task?.question?.marks}
+              isUnassigning={unassigningQuestionId === task.questionId}
+              onUnassign={handleUnassignQuestion}
             />
           ))}
 
@@ -806,6 +864,25 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
+  },
+  cardActions: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  unassignBtn: {
+    minHeight: 34,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  unassignBtnText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '900',
   },
   assignBtn: {
     minHeight: 38,

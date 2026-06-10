@@ -461,6 +461,11 @@ type AssignPracticeQuestionsArg = {
   studentId?: string;
 };
 
+type UnassignPracticeQuestionsArg = {
+  questionIds: string[];
+  studentId?: string;
+};
+
 type AvailableQuestionsArg = {
   studentId: string;
   level?: number;
@@ -1192,6 +1197,31 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    unassignPracticeQuestions: builder.mutation<
+      string,
+      UnassignPracticeQuestionsArg
+    >({
+      query: ({ questionIds }) => ({
+        url: '/student/questions/practice/assign',
+        method: 'DELETE',
+        body: { questionIds },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Questions', id: 'PRACTICE_LIST' },
+        ...(studentId
+          ? [
+              {
+                type: 'Homework' as const,
+                id: `${studentId}_${HomeworkState.NEW}`,
+              },
+              { type: 'Score' as const, id: studentId },
+              { type: 'Students' as const, id: 'LIST' },
+            ]
+          : []),
+      ],
+    }),
+
     updateHomework: builder.mutation<string, UpdateHomeworkArg>({
       query: ({ homeworkId, state, result, answer, timer }) => ({
         url: `/homework/${homeworkId}`,
@@ -1241,6 +1271,7 @@ export const {
   useUpdateQuestionMutation,
   useAssignHomeworkMutation,
   useAssignPracticeQuestionsMutation,
+  useUnassignPracticeQuestionsMutation,
   useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
