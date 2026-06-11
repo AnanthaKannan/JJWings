@@ -21,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import {
+  CommonActions,
   useIsFocused,
   useNavigation,
   useRoute,
@@ -407,6 +408,24 @@ export default function AdminMessageScreen() {
     [readMessages],
   );
 
+  const handleChatBack = useCallback(() => {
+    if (isAdmin) {
+      setActiveRecipientId(null);
+      return;
+    }
+
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Progress',
+      }),
+    );
+  }, [isAdmin, navigation]);
+
   const renderAdminStudentList = () => (
     <View style={styles.studentListPane}>
       <FlatList
@@ -459,10 +478,10 @@ export default function AdminMessageScreen() {
           <View style={styles.content}>
             <View style={styles.chatPane}>
               <View style={styles.chatHeader}>
-                {isAdmin ? (
+                {isAdmin || isStudent ? (
                   <TouchableOpacity
                     style={styles.chatBackButton}
-                    onPress={() => setActiveRecipientId(null)}
+                    onPress={handleChatBack}
                     activeOpacity={0.78}
                   >
                     <MaterialIcons

@@ -12,7 +12,11 @@ import {
   StatusBar,
   RefreshControl,
 } from 'react-native';
-import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useIsFocused,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 import { useGetScoreQuery } from '../store/api';
@@ -263,7 +267,9 @@ const ProgressDashboard: React.FC = () => {
   const routeStudentId = route?.params?.studentId;
   const routeStudentName = route?.params?.studentName;
   const isAdminReview = route?.params?.adminReview === true;
-  const loggedInStudentId = useSelector((state: RootState) => state.common.studentId);
+  const loggedInStudentId = useSelector(
+    (state: RootState) => state.common.studentId,
+  );
   const loggedInStudentName = useSelector(
     (state: RootState) => state.common.studentName,
   );
@@ -473,9 +479,6 @@ const ProgressDashboard: React.FC = () => {
               >
                 {dashboardTitle}
               </Text>
-              {/* <Text style={styles.headerSubtitle}>
-                🌟 You're making amazing progress this week!
-              </Text> */}
             </View>
           </View>
         </Animated.View>

@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
+  AppState,
+  AppStateStatus,
   StatusBar,
   StyleSheet,
   Text,
@@ -387,8 +389,6 @@ const MainTabs = createBottomTabNavigator({
     StudentMessages: {
       screen: AdminMessageScreen,
       options: {
-        tabBarButton: () => null,
-        tabBarItemStyle: { display: 'none' },
         tabBarStyle: { display: 'none' },
         tabBarLabel: 'Messages',
         tabBarIcon: ({ color, size, focused }) => (
@@ -468,6 +468,8 @@ const MainTabs = createBottomTabNavigator({
     Logout: {
       screen: ProfileScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Logout',
         tabBarIcon: ({ color, size, focused }) => (
           <AnimatedTabIcon
@@ -745,32 +747,54 @@ function PushNotificationRegistrar() {
 
 function PushNotificationListener() {
   const dispatch = useDispatch();
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.common.isAuthenticated,
+  );
+  const appState = useRef<AppStateStatus>(AppState.currentState);
   const [getUnreadMessageCount] = useLazyGetUnreadMessageCountQuery();
+  const syncUnreadMessageCount = useCallback(() => {
+    if (!isAuthenticated) return;
+
+    getUnreadMessageCount()
+      .unwrap()
+      .then(unreadCount => {
+        dispatch(setMessageUnreadCount(unreadCount));
+        dispatch(
+          jjWingsApi.util.invalidateTags([
+            { type: 'Messages', id: 'STUDENTS' },
+          ]),
+        );
+      })
+      .catch(error => {
+        console.error('Failed to load unread message count', error);
+      });
+  }, [dispatch, getUnreadMessageCount, isAuthenticated]);
 
   useEffect(() => {
     const unsubscribeMessage = onPushMessage(message => {
       if (message.title === 'New message') {
-        getUnreadMessageCount()
-          .unwrap()
-          .then(unreadCount => {
-            dispatch(setMessageUnreadCount(unreadCount));
-            dispatch(
-              jjWingsApi.util.invalidateTags([
-                { type: 'Messages', id: 'STUDENTS' },
-              ]),
-            );
-          })
-          .catch(error => {
-            console.error('Failed to load unread message count', error);
-          });
+        syncUnreadMessageCount();
         return;
+      } else if (message.title) {
+        dispatch(showNotificationAttention());
       }
-
-      dispatch(showNotificationAttention());
     });
 
     return unsubscribeMessage;
-  }, [dispatch, getUnreadMessageCount]);
+  }, [dispatch, syncUnreadMessageCount]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      const wasInactive = appState.current.match(/inactive|background/);
+      appState.current = nextAppState;
+
+      if (wasInactive && nextAppState === 'active') {
+        syncUnreadMessageCount();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [syncUnreadMessageCount]);
 
   return null;
 }
