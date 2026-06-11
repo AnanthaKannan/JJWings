@@ -479,6 +479,9 @@ const ProgressDashboard: React.FC = () => {
               >
                 {dashboardTitle}
               </Text>
+              {/* <Text style={styles.headerSubtitle}>
+                🌟 You're making amazing progress this week!
+              </Text> */}
             </View>
           </View>
         </Animated.View>

@@ -796,6 +796,10 @@ function PushNotificationListener() {
     return () => subscription.remove();
   }, [syncUnreadMessageCount]);
 
+  useEffect(() => {
+    syncUnreadMessageCount();
+  }, [syncUnreadMessageCount]);
+
   return null;
 }
 
