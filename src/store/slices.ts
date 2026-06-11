@@ -25,6 +25,7 @@ interface AuthState {
   isAdmin: boolean;
   vertical: boolean;
   hasNotificationAttention: boolean;
+  messageUnreadCount: number;
 }
 
 const initialState: AuthState = {
@@ -51,6 +52,7 @@ const initialState: AuthState = {
   isAdmin: false,
   vertical: false,
   hasNotificationAttention: false,
+  messageUnreadCount: 0,
 };
 
 const commonSlice = createSlice({
@@ -142,12 +144,22 @@ const commonSlice = createSlice({
       state.isAuthenticated = false;
       state.token = null;
       state.hasNotificationAttention = false;
+      state.messageUnreadCount = 0;
     },
     showNotificationAttention: state => {
       state.hasNotificationAttention = true;
     },
     clearNotificationAttention: state => {
       state.hasNotificationAttention = false;
+    },
+    setMessageUnreadCount: (state, action: PayloadAction<number>) => {
+      state.messageUnreadCount = Math.max(0, action.payload);
+    },
+    reduceMessageUnreadCount: (state, action: PayloadAction<number>) => {
+      state.messageUnreadCount = Math.max(
+        0,
+        state.messageUnreadCount - action.payload,
+      );
     },
     setStudentProfilePic: (
       state,
@@ -168,6 +180,8 @@ export const {
   setQuestions,
   showNotificationAttention,
   clearNotificationAttention,
+  setMessageUnreadCount,
+  reduceMessageUnreadCount,
   setStudentProfilePic,
   setAdminProfilePic,
 } = commonSlice.actions;

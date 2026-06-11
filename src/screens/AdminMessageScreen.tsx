@@ -47,6 +47,8 @@ type Conversation = {
   messages: ChatMessage[];
 };
 
+const EMPTY_CHAT_MESSAGES: ChatMessage[] = [];
+
 const formatMessageTime = (dateValue?: string) => {
   if (!dateValue) return '';
 
@@ -134,21 +136,20 @@ const StudentRow = ({
         <Text style={styles.conversationName} numberOfLines={1}>
           {student.name}
         </Text>
-        {student.unreadMessageCount > 0 ? (
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadBadgeText}>
-              {student.unreadMessageCount > 99
-                ? '99+'
-                : student.unreadMessageCount}
-            </Text>
-          </View>
-        ) : null}
       </View>
       <Text style={styles.conversationPreview} numberOfLines={1}>
         {student.studentId ?? `Level ${student.level ?? '-'}`}
       </Text>
     </View>
-    <MaterialIcons name="chevron-right" size={24} color="#94A3B8" />
+    {student.unreadMessageCount > 0 ? (
+      <View style={styles.unreadBadge}>
+        <Text style={styles.unreadBadgeText}>
+          {student.unreadMessageCount > 99
+            ? '99+'
+            : student.unreadMessageCount}
+        </Text>
+      </View>
+    ) : null}
   </TouchableOpacity>
 );
 
@@ -202,6 +203,7 @@ export default function AdminMessageScreen() {
     refetch: refetchMessages,
   } = useGetMessagesQuery(undefined, {
     skip: !isFocused || !currentUserId || (isAdmin && !activeRecipientId),
+    pollingInterval: 20000,
   });
   const {
     data: messageStudents = [],
@@ -299,11 +301,20 @@ export default function AdminMessageScreen() {
     studentAdminParticipant,
   ]);
 
-  const chatMessages = activeConversation?.messages ?? [];
+  const chatMessages = activeConversation?.messages ?? EMPTY_CHAT_MESSAGES;
+  const invertedChatMessages = useMemo(
+    () => [...chatMessages].reverse(),
+    [chatMessages],
+  );
   const activeParticipant = activeConversation?.participant;
   const activeParticipantCode =
     activeParticipant?.model === 'Admin' ? undefined : activeParticipant?.code;
   const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
+  const scrollToChatBottom = useCallback((animated = false) => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated });
+    });
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) return undefined;
@@ -330,12 +341,28 @@ export default function AdminMessageScreen() {
   useEffect(() => {
     if (chatMessages.length === 0) return;
 
-    const timer = setTimeout(() => {
-      listRef.current?.scrollToEnd({ animated: true });
-    }, 80);
+    scrollToChatBottom(false);
+    const firstTimer = setTimeout(() => scrollToChatBottom(false), 120);
+    const secondTimer = setTimeout(() => scrollToChatBottom(true), 320);
 
-    return () => clearTimeout(timer);
-  }, [chatMessages.length]);
+    return () => {
+      clearTimeout(firstTimer);
+      clearTimeout(secondTimer);
+    };
+  }, [activeRecipientId, chatMessages.length, scrollToChatBottom]);
+
+  useEffect(() => {
+    if (!isFocused) return undefined;
+
+    const readStudentId = isAdmin ? activeRecipientId : studentId;
+    if (!readStudentId) return undefined;
+
+    return () => {
+      readMessages({ studentId: readStudentId })
+        .unwrap()
+        .catch(() => undefined);
+    };
+  }, [activeRecipientId, isAdmin, isFocused, readMessages, studentId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -464,13 +491,16 @@ export default function AdminMessageScreen() {
 
               <FlatList
                 ref={listRef}
-                data={chatMessages}
+                data={invertedChatMessages}
+                inverted
                 keyExtractor={item => item.id}
                 renderItem={({ item }) => (
                   <MessageBubble item={item} currentUserId={currentUserId} />
                 )}
                 contentContainerStyle={styles.messageList}
                 keyboardShouldPersistTaps="handled"
+                onContentSizeChange={() => scrollToChatBottom(false)}
+                onLayout={() => scrollToChatBottom(false)}
                 refreshControl={
                   <RefreshControl
                     refreshing={refreshing}
@@ -627,18 +657,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   unreadBadge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#EF4444',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#475569',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
+    alignSelf: 'center',
+    marginLeft: 10,
   },
   unreadBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 9,
+    lineHeight: 11,
     fontWeight: '900',
+    textAlign: 'center',
   },
   chatPane: {
     flex: 1,

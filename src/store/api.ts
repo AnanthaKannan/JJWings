@@ -2,6 +2,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { HomeworkState } from '../util/enum';
+import { reduceMessageUnreadCount } from './slices';
 import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
@@ -144,6 +145,13 @@ type ApiMessageStudent = {
 type ApiMessageStudentsResponse = {
   students: ApiMessageStudent[];
   meta: ApiMeta;
+};
+
+type ApiUnreadMessageCountResponse = {
+  unreadCount?: number;
+  data?: {
+    unreadCount?: number;
+  };
 };
 
 type ApiRankingStudent = {
@@ -1025,6 +1033,12 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Messages', id: 'STUDENTS' }],
     }),
 
+    getUnreadMessageCount: builder.query<number, void>({
+      query: () => '/messages/unread-count',
+      transformResponse: (response: ApiUnreadMessageCountResponse) =>
+        response.data?.unreadCount ?? response.unreadCount ?? 0,
+    }),
+
     getRanking: builder.query<RankingStudent[], RankingArg | void>({
       query: arg => ({
         url: '/ranking',
@@ -1369,7 +1383,29 @@ export const jjWingsApi = createApi({
         body,
       }),
       transformResponse: () => 'success',
-      invalidatesTags: [{ type: 'Messages', id: 'STUDENTS' }],
+      async onQueryStarted({ studentId }, { dispatch, queryFulfilled }) {
+        let readCount = 0;
+        const patchResult = dispatch(
+          jjWingsApi.util.updateQueryData(
+            'getMessageStudents',
+            undefined,
+            students => {
+              const student = students.find(item => item.id === studentId);
+              if (student) {
+                readCount = student.unreadMessageCount;
+                student.unreadMessageCount = 0;
+              }
+            },
+          ),
+        );
+
+        try {
+          await queryFulfilled;
+          dispatch(reduceMessageUnreadCount(readCount));
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
 
     unassignHomework: builder.mutation<string, UnassignHomeworkArg>({
@@ -1493,6 +1529,7 @@ export const {
   useGetAdminNotificationsQuery,
   useGetMessagesQuery,
   useGetMessageStudentsQuery,
+  useLazyGetUnreadMessageCountQuery,
   useGetRankingQuery,
   useReadMessagesMutation,
   useSendNotificationMutation,

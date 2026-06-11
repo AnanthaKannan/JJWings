@@ -3,6 +3,7 @@ import {
   Animated,
   StatusBar,
   StyleSheet,
+  Text,
   View,
   useColorScheme,
 } from 'react-native';
@@ -17,8 +18,15 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
-import { useUpdateStudentFcmTokenMutation } from './store/api';
-import { showNotificationAttention } from './store/slices';
+import {
+  jjWingsApi,
+  useLazyGetUnreadMessageCountQuery,
+  useUpdateStudentFcmTokenMutation,
+} from './store/api';
+import {
+  setMessageUnreadCount,
+  showNotificationAttention,
+} from './store/slices';
 import {
   getStudentPushToken as getPushToken,
   onStudentPushMessage as onPushMessage,
@@ -164,6 +172,24 @@ function NotificationTabIcon({
 // ─────────────────────────────────────────────────────────────────────────────
 // STUDENT NAVIGATOR
 // ─────────────────────────────────────────────────────────────────────────────
+
+function MessageTabIcon({ color, size }: { color: string; size: number }) {
+  const unreadCount = useSelector(
+    (state: RootState) => state.common.messageUnreadCount,
+  );
+  const displayCount = unreadCount > 99 ? '99+' : `${unreadCount}`;
+
+  return (
+    <View>
+      <MaterialIcons name="mail" color={color} size={size} />
+      {unreadCount > 0 ? (
+        <View style={styles.messageUnreadBadge}>
+          <Text style={styles.messageUnreadBadgeText}>{displayCount}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 const HomeworkStack = createNativeStackNavigator({
   screenOptions: { headerShown: false },
@@ -573,7 +599,7 @@ const AdminTabs = createBottomTabNavigator({
         tabBarLabel: 'Message',
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="mail" color={color} size={size} />
+          <MessageTabIcon color={color} size={size} />
         ),
       },
     },
@@ -719,14 +745,32 @@ function PushNotificationRegistrar() {
 
 function PushNotificationListener() {
   const dispatch = useDispatch();
+  const [getUnreadMessageCount] = useLazyGetUnreadMessageCountQuery();
 
   useEffect(() => {
-    const unsubscribeMessage = onPushMessage(() => {
+    const unsubscribeMessage = onPushMessage(message => {
+      if (message.title === 'New message') {
+        getUnreadMessageCount()
+          .unwrap()
+          .then(unreadCount => {
+            dispatch(setMessageUnreadCount(unreadCount));
+            dispatch(
+              jjWingsApi.util.invalidateTags([
+                { type: 'Messages', id: 'STUDENTS' },
+              ]),
+            );
+          })
+          .catch(error => {
+            console.error('Failed to load unread message count', error);
+          });
+        return;
+      }
+
       dispatch(showNotificationAttention());
     });
 
     return unsubscribeMessage;
-  }, [dispatch]);
+  }, [dispatch, getUnreadMessageCount]);
 
   return null;
 }
@@ -760,6 +804,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
     borderWidth: 1,
     borderColor: '#FFFFFF',
+  },
+  messageUnreadBadge: {
+    position: 'absolute',
+    top: -7,
+    right: -11,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  messageUnreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '900',
+    textAlign: 'center',
   },
 });
 

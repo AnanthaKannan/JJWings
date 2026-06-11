@@ -35,6 +35,8 @@ export const onStudentPushMessage = (
   listener: (message: { title?: string; body?: string }) => void,
 ) =>
   messaging().onMessage(async remoteMessage => {
+    console.log('Push notification received', remoteMessage);
+
     listener({
       title: remoteMessage.notification?.title,
       body: remoteMessage.notification?.body,
