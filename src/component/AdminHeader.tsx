@@ -46,9 +46,9 @@ const adminNavItems = [
     routeName: 'AdminAchievements',
   },
   {
-    label: 'Message',
-    icon: 'mail',
-    routeName: 'AdminMessages',
+    label: 'Notification Send',
+    icon: 'campaign',
+    routeName: 'AdminNotificationSend',
   },
   {
     label: 'Profile',
@@ -119,7 +119,10 @@ export default function AdminHeader({
           activeOpacity={0.78}
         >
           {profilePicUrl ? (
-            <Image source={{ uri: profilePicUrl }} style={styles.profileImage} />
+            <Image
+              source={{ uri: profilePicUrl }}
+              style={styles.profileImage}
+            />
           ) : (
             <Text style={styles.profileInitial}>{adminInitial}</Text>
           )}
@@ -147,7 +150,9 @@ export default function AdminHeader({
                       style={styles.largeProfileImage}
                     />
                   ) : (
-                    <Text style={styles.largeProfileInitial}>{adminInitial}</Text>
+                    <Text style={styles.largeProfileInitial}>
+                      {adminInitial}
+                    </Text>
                   )}
                 </View>
                 <View style={styles.adminTextWrap}>
@@ -177,11 +182,7 @@ export default function AdminHeader({
                     onPress={() => handleNavigate(item.routeName, item.params)}
                     activeOpacity={0.78}
                   >
-                    <MaterialIcons
-                      name={item.icon}
-                      size={21}
-                      color="#4F46E5"
-                    />
+                    <MaterialIcons name={item.icon} size={21} color="#4F46E5" />
                     <Text style={styles.navItemText}>{item.label}</Text>
                     <MaterialIcons
                       name="chevron-right"

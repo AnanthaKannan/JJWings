@@ -106,6 +106,46 @@ type ApiNotificationsResponse = {
   meta: ApiMeta;
 };
 
+type ApiMessageParticipant = {
+  _id: string;
+  name?: string;
+  adminId?: string;
+  studentId?: string;
+  profilePic?: string;
+  profilePicPath?: string;
+};
+
+type ApiMessage = {
+  _id: string;
+  message?: string;
+  sendBy: ApiMessageParticipant;
+  sendByModel: 'Admin' | 'Student' | string;
+  receivedTo: ApiMessageParticipant;
+  receivedToModel: 'Admin' | 'Student' | string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ApiMessagesResponse = {
+  data: ApiMessage[];
+  meta: ApiMeta;
+};
+
+type ApiMessageStudent = {
+  _id: string;
+  studentId?: string;
+  name?: string;
+  level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
+  unreadMessageCount?: number;
+};
+
+type ApiMessageStudentsResponse = {
+  students: ApiMessageStudent[];
+  meta: ApiMeta;
+};
+
 type ApiRankingStudent = {
   totalCorrect?: number;
   totalQuestions?: number;
@@ -259,6 +299,34 @@ export type QuestionPaper = {
   fileFormat?: string;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type MessageParticipant = {
+  id: string;
+  name: string;
+  code?: string;
+  model: string;
+  profilePic?: string;
+  profilePicPath?: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  message: string;
+  sendBy: MessageParticipant;
+  receivedTo: MessageParticipant;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type MessageStudent = {
+  id: string;
+  studentId?: string;
+  name: string;
+  level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
+  unreadMessageCount: number;
 };
 
 export type Achievement = QuestionPaper;
@@ -524,6 +592,15 @@ type SendNotificationArg = {
   messageBody: string;
 };
 
+type SendMessageArg = {
+  message: string;
+  receivedTo: string;
+};
+
+type ReadMessagesArg = {
+  studentId: string;
+};
+
 const mapStudent = (student: ApiStudent): Student => ({
   id: student._id,
   name: student.name ?? '',
@@ -599,6 +676,40 @@ const mapNotification = (notification: ApiNotification): Notification => ({
   updatedAt: notification.updatedAt,
 });
 
+const mapMessageParticipant = (
+  participant: ApiMessageParticipant,
+  model: string,
+): MessageParticipant => ({
+  id: participant._id,
+  name: participant.name ?? (model === 'Admin' ? 'Admin' : 'Student'),
+  code: participant.adminId ?? participant.studentId,
+  model,
+  profilePic: participant.profilePicPath ?? participant.profilePic,
+  profilePicPath: participant.profilePicPath,
+});
+
+const mapMessage = (message: ApiMessage): ChatMessage => ({
+  id: message._id,
+  message: message.message ?? '',
+  sendBy: mapMessageParticipant(message.sendBy, message.sendByModel),
+  receivedTo: mapMessageParticipant(
+    message.receivedTo,
+    message.receivedToModel,
+  ),
+  createdAt: message.createdAt,
+  updatedAt: message.updatedAt,
+});
+
+const mapMessageStudent = (student: ApiMessageStudent): MessageStudent => ({
+  id: student._id,
+  studentId: student.studentId,
+  name: student.name ?? 'Student',
+  level: student.level,
+  profilePic: student.profilePicPath ?? student.profilePic,
+  profilePicPath: student.profilePicPath,
+  unreadMessageCount: student.unreadMessageCount ?? 0,
+});
+
 const mapRankingStudent = (student: ApiRankingStudent): RankingStudent => ({
   id: student.studentId,
   rank: student.rank,
@@ -658,6 +769,7 @@ export const jjWingsApi = createApi({
     'Homework',
     'Score',
     'Notifications',
+    'Messages',
     'Ranking',
     'FileUploads',
   ],
@@ -891,6 +1003,26 @@ export const jjWingsApi = createApi({
       transformResponse: (response: ApiNotificationsResponse) =>
         response.data.map(mapNotification),
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
+    }),
+
+    getMessages: builder.query<ChatMessage[], void>({
+      query: () => ({
+        url: '/messages',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiMessagesResponse) =>
+        response.data.map(mapMessage),
+      providesTags: [{ type: 'Messages', id: 'LIST' }],
+    }),
+
+    getMessageStudents: builder.query<MessageStudent[], void>({
+      query: () => ({
+        url: '/admin/messages/students',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiMessageStudentsResponse) =>
+        response.students.map(mapMessageStudent),
+      providesTags: [{ type: 'Messages', id: 'STUDENTS' }],
     }),
 
     getRanking: builder.query<RankingStudent[], RankingArg | void>({
@@ -1220,6 +1352,26 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    sendMessage: builder.mutation<string, SendMessageArg>({
+      query: body => ({
+        url: '/messages',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Messages', id: 'LIST' }],
+    }),
+
+    readMessages: builder.mutation<string, ReadMessagesArg>({
+      query: body => ({
+        url: '/messages/read',
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Messages', id: 'STUDENTS' }],
+    }),
+
     unassignHomework: builder.mutation<string, UnassignHomeworkArg>({
       query: ({ studentId, questionIds }) => ({
         url: '/admin/questions/assign',
@@ -1339,8 +1491,12 @@ export const {
   useGetScoreQuery,
   useGetNotificationsQuery,
   useGetAdminNotificationsQuery,
+  useGetMessagesQuery,
+  useGetMessageStudentsQuery,
   useGetRankingQuery,
+  useReadMessagesMutation,
   useSendNotificationMutation,
+  useSendMessageMutation,
   useGetQuestionPapersQuery,
   useUploadQuestionPaperMutation,
   useDeleteQuestionPaperMutation,

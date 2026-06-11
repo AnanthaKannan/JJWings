@@ -44,6 +44,7 @@ import {
   ProgressDashboard,
   NotificationsScreen,
   AdminMessageScreen,
+  AdminNotificationSendScreen,
   TopExplorerScreen,
   AdminProfileScreen,
   QuestionPaperScreen,
@@ -155,9 +156,7 @@ function NotificationTabIcon({
       <Animated.View style={{ transform: [{ rotate }] }}>
         <MaterialIcons name="notifications" color={color} size={size} />
       </Animated.View>
-      {shouldRing && (
-        <View style={styles.notificationAttentionDot} />
-      )}
+      {shouldRing && <View style={styles.notificationAttentionDot} />}
     </View>
   );
 }
@@ -359,6 +358,23 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    StudentMessages: {
+      screen: AdminMessageScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarStyle: { display: 'none' },
+        tabBarLabel: 'Messages',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="chat"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
     SameDeviceStudents: {
       screen: SameDeviceStudentsScreen,
       options: {
@@ -543,19 +559,33 @@ const AdminTabs = createBottomTabNavigator({
         tabBarLabel: 'Assign',
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="assignment-turned-in" color={color} size={size} />
+          <MaterialIcons
+            name="assignment-turned-in"
+            color={color}
+            size={size}
+          />
         ),
       },
     },
     AdminMessages: {
       screen: AdminMessageScreen,
       options: {
-        tabBarButton: () => null,
-        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Message',
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="mail" color={color} size={size} />
+        ),
+      },
+    },
+    AdminNotificationSend: {
+      screen: AdminNotificationSendScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Notification Send',
+        unmountOnBlur: true,
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="campaign" color={color} size={size} />
         ),
       },
     },
