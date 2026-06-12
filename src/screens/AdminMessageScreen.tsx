@@ -615,7 +615,7 @@ export default function AdminMessageScreen() {
                 }
                 ListEmptyComponent={
                   isLoading ? (
-                    <LoadingState label="Loading messages..." />
+                    <LoadingState label="...." />
                   ) : (
                     <View style={styles.emptyChat}>
                       <MaterialIcons

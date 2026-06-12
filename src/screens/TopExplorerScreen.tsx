@@ -79,7 +79,7 @@ const formatAccuracy = (accuracy: number) =>
   `${Number.isInteger(accuracy) ? accuracy.toFixed(0) : accuracy.toFixed(1)}%`;
 
 const formatLevel = (student: RankingStudent) =>
-  `${student.studentCode ?? 'Explorer'} • ${student.completedCount}/${
+  `${student.studentCode ?? 'Explorer'} • ${student.totalCorrect}/${
     student.totalQuestions
   } Solved`;
 
@@ -608,6 +608,7 @@ const TopExplorerScreen: React.FC = () => {
   const secondPlace = sortedRanking.find(student => student.rank === 2);
   const thirdPlace = sortedRanking.find(student => student.rank === 3);
   const risingStars = sortedRanking.filter(student => student.rank > 3);
+
   const averageAccuracy =
     sortedRanking.length > 0
       ? sortedRanking.reduce((total, student) => total + student.accuracy, 0) /
