@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -34,6 +35,8 @@ export default function LoginScreen() {
   const [code, setCode] = useState('');
   const [showCode, setShowCode] = useState(false);
   const [checkingSavedLogin, setCheckingSavedLogin] = useState(true);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   const [login, loginRes] = useLazyGetLoginQuery();
   const [updateStudentDeviceId] = useUpdateStudentDeviceIdMutation();
@@ -135,6 +138,20 @@ export default function LoginScreen() {
     };
   }, [finishLogin]);
 
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
   const handleLogin = async () => {
     const loggedIn = await finishLogin(name, code, true);
 
@@ -163,7 +180,12 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scroll,
+            keyboardVisible && styles.scrollKeyboardOpen,
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -205,6 +227,11 @@ export default function LoginScreen() {
                 onChangeText={setCode}
                 secureTextEntry={!showCode}
                 autoCapitalize="none"
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 250);
+                }}
               />
               <TouchableOpacity
                 onPress={() => setShowCode(prev => !prev)}
@@ -261,6 +288,9 @@ const styles = StyleSheet.create({
   keyboardAvoiding: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   scroll: {
     flexGrow: 1,
     alignItems: 'center',
@@ -268,6 +298,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 36,
     paddingBottom: 32,
+  },
+  scrollKeyboardOpen: {
+    justifyContent: 'flex-start',
   },
   bannerImage: {
     width: '110%',

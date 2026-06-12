@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
@@ -28,6 +29,7 @@ import {
 } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
@@ -49,6 +51,7 @@ type Conversation = {
 };
 
 const EMPTY_CHAT_MESSAGES: ChatMessage[] = [];
+const KEYBOARD_COMPOSER_GAP = 32;
 
 const formatMessageTime = (dateValue?: string) => {
   if (!dateValue) return '';
@@ -145,9 +148,7 @@ const StudentRow = ({
     {student.unreadMessageCount > 0 ? (
       <View style={styles.unreadBadge}>
         <Text style={styles.unreadBadgeText}>
-          {student.unreadMessageCount > 99
-            ? '99+'
-            : student.unreadMessageCount}
+          {student.unreadMessageCount > 99 ? '99+' : student.unreadMessageCount}
         </Text>
       </View>
     ) : null}
@@ -183,6 +184,7 @@ export default function AdminMessageScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const insets = useSafeAreaInsets();
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const isStudent = useSelector((state: RootState) => state.common.isStudent);
   const adminId = useSelector((state: RootState) => state.common.adminId);
@@ -196,7 +198,12 @@ export default function AdminMessageScreen() {
   );
   const [draft, setDraft] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [composerKeyboardOffset, setComposerKeyboardOffset] = useState(0);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const composerRef = useRef<View>(null);
+  const keyboardTopRef = useRef<number | null>(null);
+  const composerKeyboardOffsetRef = useRef(0);
 
   const {
     data: messages = [],
@@ -215,6 +222,9 @@ export default function AdminMessageScreen() {
   });
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [readMessages] = useReadMessagesMutation();
+  const composerBottomPadding = keyboardVisible
+    ? 10
+    : Math.max(10, insets.bottom);
 
   const sortedMessages = useMemo(() => sortByCreatedAt(messages), [messages]);
 
@@ -317,6 +327,35 @@ export default function AdminMessageScreen() {
     });
   }, []);
 
+  const resetKeyboardCorrection = useCallback(() => {
+    keyboardTopRef.current = null;
+    composerKeyboardOffsetRef.current = 0;
+    setKeyboardVisible(false);
+    setComposerKeyboardOffset(0);
+  }, []);
+
+  const updateComposerKeyboardOffset = useCallback((keyboardTop: number) => {
+    if (Platform.OS !== 'android') return;
+
+    requestAnimationFrame(() => {
+      composerRef.current?.measureInWindow((_, y, __, height) => {
+        const composerBottom = y + height;
+        const overlap = composerBottom + KEYBOARD_COMPOSER_GAP - keyboardTop;
+        const nextOffset = Math.max(
+          0,
+          composerKeyboardOffsetRef.current + overlap,
+        );
+
+        if (Math.abs(nextOffset - composerKeyboardOffsetRef.current) < 1) {
+          return;
+        }
+
+        composerKeyboardOffsetRef.current = nextOffset;
+        setComposerKeyboardOffset(nextOffset);
+      });
+    });
+  }, []);
+
   useEffect(() => {
     if (!isAdmin) return undefined;
 
@@ -351,6 +390,44 @@ export default function AdminMessageScreen() {
       clearTimeout(secondTimer);
     };
   }, [activeRecipientId, chatMessages.length, scrollToChatBottom]);
+
+  useEffect(() => {
+    const keyboardShowSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      event => {
+        setKeyboardVisible(true);
+        keyboardTopRef.current = event.endCoordinates.screenY;
+        composerKeyboardOffsetRef.current = 0;
+        setComposerKeyboardOffset(0);
+
+        if (Platform.OS === 'android') {
+          setTimeout(
+            () => updateComposerKeyboardOffset(event.endCoordinates.screenY),
+            80,
+          );
+          setTimeout(
+            () => updateComposerKeyboardOffset(event.endCoordinates.screenY),
+            260,
+          );
+        }
+
+        scrollToChatBottom(true);
+      },
+    );
+    const keyboardHideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      resetKeyboardCorrection,
+    );
+
+    return () => {
+      keyboardShowSubscription.remove();
+      keyboardHideSubscription.remove();
+    };
+  }, [
+    resetKeyboardCorrection,
+    scrollToChatBottom,
+    updateComposerKeyboardOffset,
+  ]);
 
   useEffect(() => {
     if (!isFocused) return undefined;
@@ -477,7 +554,15 @@ export default function AdminMessageScreen() {
         ) : (
           <View style={styles.content}>
             <View style={styles.chatPane}>
-              <View style={styles.chatHeader}>
+              <View
+                style={[
+                  styles.chatHeader,
+                  Platform.OS === 'android' && {
+                    paddingTop: insets.top,
+                    minHeight: 62 + insets.top,
+                  },
+                ]}
+              >
                 {isAdmin || isStudent ? (
                   <TouchableOpacity
                     style={styles.chatBackButton}
@@ -549,7 +634,25 @@ export default function AdminMessageScreen() {
                 }
               />
 
-              <View style={styles.composer}>
+              <View
+                ref={composerRef}
+                onLayout={() => {
+                  if (
+                    Platform.OS === 'android' &&
+                    keyboardVisible &&
+                    keyboardTopRef.current
+                  ) {
+                    updateComposerKeyboardOffset(keyboardTopRef.current);
+                  }
+                }}
+                style={[
+                  styles.composer,
+                  { paddingBottom: composerBottomPadding },
+                  Platform.OS === 'android' && composerKeyboardOffset > 0
+                    ? { marginBottom: composerKeyboardOffset }
+                    : null,
+                ]}
+              >
                 <TextInput
                   style={styles.composerInput}
                   placeholder={
@@ -560,7 +663,14 @@ export default function AdminMessageScreen() {
                   placeholderTextColor="#94A3B8"
                   value={draft}
                   onChangeText={setDraft}
+                  onFocus={() => {
+                    composerKeyboardOffsetRef.current = 0;
+                    setComposerKeyboardOffset(0);
+                    setTimeout(() => scrollToChatBottom(true), 300);
+                  }}
+                  onBlur={resetKeyboardCorrection}
                   multiline
+                  blurOnSubmit={false}
                   editable={Boolean(activeParticipant?.id) && !isSending}
                 />
                 <TouchableOpacity
@@ -784,6 +894,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+    zIndex: 2,
+    elevation: 8,
   },
   composerInput: {
     flex: 1,

@@ -8,10 +8,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootState } from '../store/store';
 import { getFileUrl } from '../util/fileUrl';
@@ -68,6 +70,7 @@ export default function AdminHeader({
   headerBackgroundColor,
 }: AdminHeaderProps) {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const adminName = useSelector((state: RootState) => state.common.adminName);
   const adminProfilePic = useSelector(
@@ -77,8 +80,13 @@ export default function AdminHeader({
   const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
   const displayName = adminName.trim() || 'Admin';
   const profilePicUrl = getFileUrl(adminProfilePic);
+  const androidHeaderTopPadding =
+    Platform.OS === 'android' ? Math.max(12, insets.top) : 12;
+  const androidSideNavTopPadding =
+    Platform.OS === 'android' ? Math.max(18, insets.top) : 18;
   const headerStyle = [
     styles.header,
+    Platform.OS === 'android' && { paddingTop: androidHeaderTopPadding },
     headerBackgroundColor && { backgroundColor: headerBackgroundColor },
   ];
 
@@ -141,7 +149,14 @@ export default function AdminHeader({
               style={styles.backdrop}
               onPress={() => setIsNavOpen(false)}
             />
-            <View style={styles.sideNav}>
+            <View
+              style={[
+                styles.sideNav,
+                Platform.OS === 'android' && {
+                  paddingTop: androidSideNavTopPadding,
+                },
+              ]}
+            >
               <View style={styles.sideNavHeader}>
                 <View style={styles.largeProfileCircle}>
                   {profilePicUrl ? (
