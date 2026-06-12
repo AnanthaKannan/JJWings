@@ -391,13 +391,8 @@ const MainTabs = createBottomTabNavigator({
       options: {
         tabBarStyle: { display: 'none' },
         tabBarLabel: 'Messages',
-        tabBarIcon: ({ color, size, focused }) => (
-          <AnimatedTabIcon
-            name="chat"
-            color={color}
-            size={size}
-            focused={focused}
-          />
+        tabBarIcon: ({ color, size }) => (
+          <MessageTabIcon color={color} size={size} />
         ),
       },
     },
@@ -761,6 +756,7 @@ function PushNotificationListener() {
         dispatch(setMessageUnreadCount(unreadCount));
         dispatch(
           jjWingsApi.util.invalidateTags([
+            { type: 'Messages', id: 'LIST' },
             { type: 'Messages', id: 'STUDENTS' },
           ]),
         );

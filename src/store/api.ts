@@ -2,7 +2,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { HomeworkState } from '../util/enum';
-import { reduceMessageUnreadCount } from './slices';
+import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
 import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
@@ -1037,6 +1037,7 @@ export const jjWingsApi = createApi({
       query: () => '/messages/unread-count',
       transformResponse: (response: ApiUnreadMessageCountResponse) =>
         response.data?.unreadCount ?? response.unreadCount ?? 0,
+      providesTags: [{ type: 'Messages', id: 'UNREAD_COUNT' }],
     }),
 
     getRanking: builder.query<RankingStudent[], RankingArg | void>({
@@ -1383,6 +1384,10 @@ export const jjWingsApi = createApi({
         body,
       }),
       transformResponse: () => 'success',
+      invalidatesTags: [
+        { type: 'Messages', id: 'LIST' },
+        { type: 'Messages', id: 'STUDENTS' },
+      ],
       async onQueryStarted({ studentId }, { dispatch, queryFulfilled }) {
         let readCount = 0;
         const patchResult = dispatch(
@@ -1402,6 +1407,13 @@ export const jjWingsApi = createApi({
         try {
           await queryFulfilled;
           dispatch(reduceMessageUnreadCount(readCount));
+          const unreadCount = await dispatch(
+            jjWingsApi.endpoints.getUnreadMessageCount.initiate(undefined, {
+              forceRefetch: true,
+              subscribe: false,
+            }),
+          ).unwrap();
+          dispatch(setMessageUnreadCount(unreadCount));
         } catch {
           patchResult.undo();
         }
