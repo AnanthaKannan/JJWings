@@ -629,6 +629,17 @@ const TopExplorerScreen: React.FC = () => {
     }
   }, [refetch]);
 
+  const getMonthRange = () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const format = (date: Date) =>
+      date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+    return `${format(firstDay)} - ${format(lastDay)}`;
+  };
+
   return (
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF4FF" />
@@ -670,7 +681,7 @@ const TopExplorerScreen: React.FC = () => {
           ]}
         >
           <View>
-            <Text style={styles.headerSub}>🏅 Last 7 days</Text>
+            <Text style={styles.headerSub}>🏅 {getMonthRange()}</Text>
             <Text style={styles.headerTitle}>Top Explorers</Text>
           </View>
           {isAdmin && (

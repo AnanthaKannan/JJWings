@@ -211,7 +211,7 @@ export default function AdminMessageScreen() {
     refetch: refetchMessages,
   } = useGetMessagesQuery(undefined, {
     skip: !isFocused || !currentUserId || (isAdmin && !activeRecipientId),
-    pollingInterval: 20000,
+    // pollingInterval: 20000,
   });
   const {
     data: messageStudents = [],
@@ -436,7 +436,8 @@ export default function AdminMessageScreen() {
     if (!readStudentId) return undefined;
 
     return () => {
-      readMessages({ studentId: readStudentId })
+      const data = isAdmin ? { studentId: readStudentId } : {};
+      readMessages(data)
         .unwrap()
         .catch(() => undefined);
     };
