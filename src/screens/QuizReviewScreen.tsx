@@ -8,7 +8,7 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useRoute } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 import { useGetHomeworkByIdQuery } from '../store/api';
@@ -50,7 +50,7 @@ const formatTime = (seconds = 0) => {
     .padStart(2, '0');
   const remainingSeconds = (safeSeconds % 60).toString().padStart(2, '0');
 
-  return `${minutes} : ${remainingSeconds}`;
+  return `${minutes}:${remainingSeconds}`;
 };
 
 const QuestionCard = ({
@@ -154,6 +154,7 @@ export default function QuizReviewScreen() {
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const isFocused = useIsFocused();
+  const route = useRoute<any>();
 
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const questions = useSelector((state: RootState) => state.common.questions);
@@ -195,6 +196,7 @@ export default function QuizReviewScreen() {
       : 0;
   const correctAnswers = hw?.result?.filter(val => val === true)?.length ?? 0;
   const totalQuestions = hw?.result?.length ?? 0;
+  const isExam = route.params?.type === 'exam';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -233,7 +235,7 @@ export default function QuizReviewScreen() {
             <View style={styles.heroLeft}>
               <Text style={styles.heroTitle}>Great Job!</Text>
               <View style={styles.heroStatsLayout}>
-                <View>
+                <View style={styles.statBlock}>
                   <View style={styles.scorePill}>
                     <Text style={styles.scorePillLabel}>
                       {hasMarks ? 'FINAL MARKS' : 'FINAL SCORE'}
@@ -255,8 +257,13 @@ export default function QuizReviewScreen() {
                       </View>
                     </Animated.View>
                   </View>
+                  {isExam && hasMarks ? (
+                    <Text style={styles.scoreSubText}>
+                      Questions {correctAnswers}/{totalQuestions}
+                    </Text>
+                  ) : null}
                 </View>
-                <View>
+                <View style={[styles.statBlock, styles.timeStatBlock]}>
                   <View style={styles.scorePill}>
                     <Text style={styles.scorePillLabel}>TIME TAKEN</Text>
                   </View>
@@ -265,8 +272,13 @@ export default function QuizReviewScreen() {
                       transform: [{ scale: scoreAnim }],
                     }}
                   >
-                    <View style={styles.scoreRow}>
-                      <Text style={styles.timerShow}>
+                    <View style={styles.timerRow}>
+                      <Text
+                        style={styles.timerShow}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.82}
+                      >
                         {formatTime(hw?.timer)}
                       </Text>
                     </View>
@@ -356,6 +368,16 @@ const styles = StyleSheet.create({
   heroStatsLayout: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 14,
+  },
+  statBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  timeStatBlock: {
+    flex: 0,
+    minWidth: 92,
+    alignItems: 'flex-end',
   },
   heroSub: {
     fontSize: 13,
@@ -382,6 +404,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 2,
   },
+  timerRow: {
+    alignItems: 'flex-end',
+    minWidth: 92,
+  },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -399,8 +425,16 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
     color: '#fff',
-    letterSpacing: -2,
+    letterSpacing: 0,
     lineHeight: 54,
+    minWidth: 92,
+    textAlign: 'right',
+  },
+  scoreSubText: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: -4,
   },
   scoreTotal: {
     fontSize: 22,

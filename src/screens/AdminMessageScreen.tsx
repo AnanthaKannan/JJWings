@@ -436,8 +436,7 @@ export default function AdminMessageScreen() {
     if (!readStudentId) return undefined;
 
     return () => {
-      const data = isAdmin ? { studentId: readStudentId } : {};
-      readMessages(data)
+      readMessages({ studentId: readStudentId })
         .unwrap()
         .catch(() => undefined);
     };

@@ -47,6 +47,7 @@ interface HomeworkCardProps {
   isAdminReview?: boolean;
   studentId?: string;
   studentName?: string;
+  contentType?: 'homework' | 'exam';
   isUnassigning?: boolean;
   onUnassign?: (questionId: string) => void;
 }
@@ -72,6 +73,7 @@ function HomeworkCard({
   isAdminReview = false,
   studentId,
   studentName,
+  contentType = 'homework',
   isUnassigning = false,
   onUnassign,
 }: HomeworkCardProps) {
@@ -132,11 +134,13 @@ function HomeworkCard({
     if (state === HomeworkState.COMPLETED) {
       navigation.navigate('QuizReview', {
         preferGoBack: true,
+        type: contentType,
         returnToHomeworkParams: isAdminReview
           ? {
               studentId,
               studentName,
               adminReview: true,
+              type: contentType,
             }
           : undefined,
       });
@@ -374,6 +378,7 @@ export default function HomeworkScreen() {
               isAdminReview={isAdminReview}
               studentId={studentId}
               studentName={studentName}
+              contentType={contentType}
               isUnassigning={unassigningQuestionId === task.questionId}
               onUnassign={handleUnassignQuestion}
             />

@@ -396,7 +396,7 @@ export default function QuestionPaperScreen() {
         </View>
       </View>
 
-      <LoadingOverlay visible={isBusy} label="Updating question papers..." />
+      <LoadingOverlay visible={isBusy} label="Processing question papers..." />
     </SafeAreaView>
   );
 }
