@@ -19,6 +19,11 @@ export default function Header({ heading, sideHead, onBack }: HeaderProps) {
     }
 
     if (heading === 'Quiz Review') {
+      if (route.params?.preferGoBack && navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+
       const returnToHomeworkParams = route.params?.returnToHomeworkParams;
       const returnRouteName = route.params?.returnRouteName ?? 'HomeworkScreen';
 

@@ -131,6 +131,7 @@ function HomeworkCard({
 
     if (state === HomeworkState.COMPLETED) {
       navigation.navigate('QuizReview', {
+        preferGoBack: true,
         returnToHomeworkParams: isAdminReview
           ? {
               studentId,
@@ -194,7 +195,10 @@ function HomeworkCard({
           )}
           {isAdminReview && state === HomeworkState.NEW && onUnassign && (
             <TouchableOpacity
-              style={[styles.unassignBtn, isUnassigning && styles.disabledButton]}
+              style={[
+                styles.unassignBtn,
+                isUnassigning && styles.disabledButton,
+              ]}
               activeOpacity={0.85}
               onPress={() => onUnassign(questionId)}
               disabled={isUnassigning}
@@ -635,4 +639,3 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
 });
-
