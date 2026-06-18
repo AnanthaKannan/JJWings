@@ -25,3 +25,7 @@ adb connect 10.70.190.83:5555
 1. Go to Settings on your Android device.
 2. Navigate to "Network & Internet" or "Wi-Fi" settings.
 3. Tap on the connected Wi-Fi network to view its details.
+
+## Keystore
+keystore.properties - android\keystore.properties
+jjwings-upload-key.keystore - android\app\jjwings-upload-key.keystore
