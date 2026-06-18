@@ -5,13 +5,16 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
-    "android:release": "cd android && gradlew.bat assembleRelease",
+    "android:release:apk": "cd android && gradlew.bat assembleRelease",
+    "android:release:aab": "cd android && gradlew.bat bundleRelease",
     "android:clean": "cd android && ./gradlew clean",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest"
   },
   "dependencies": {
+    "@bam.tech/react-native-image-resizer": "^3.0.11",
+    "@react-native-documents/picker": "^12.0.1",
     "@react-native-firebase/app": "^24.0.0",
     "@react-native-firebase/messaging": "^24.0.0",
     "@react-native/new-app-screen": "0.84.1",
@@ -22,8 +25,10 @@
     "@reduxjs/toolkit": "^2.11.2",
     "react": "19.2.3",
     "react-native": "0.84.1",
+    "react-native-blob-util": "^0.24.9",
     "react-native-config": "^1.6.1",
     "react-native-device-info": "^15.0.2",
+    "react-native-image-picker": "^8.2.1",
     "react-native-keychain": "^10.0.0",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "^4.24.0",

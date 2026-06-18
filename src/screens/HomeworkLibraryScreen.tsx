@@ -30,6 +30,7 @@ type Module = {
   id: string;
   title: string;
   questions: string[];
+  marks?: number[];
   iconType: ModuleIcon;
   iconBg: string;
   iconColor: string;
@@ -37,6 +38,8 @@ type Module = {
   level?: number;
   updatedAt?: string;
 };
+
+type LibraryTypeFilter = 'homework' | 'practice' | 'exam';
 
 const ICON_COLORS = [
   { iconBg: '#DBEAFE', iconColor: '#3B82F6', iconType: 'grid' as ModuleIcon },
@@ -60,6 +63,12 @@ const evaluateMath = (expr: string): string => {
   } catch {
     return 'N/A';
   }
+};
+
+const getTaskTypeLabel = (type: LibraryTypeFilter) => {
+  if (type === 'exam') return 'Exam';
+  if (type === 'practice') return 'Practice';
+  return 'Homework';
 };
 
 // ─── Module Icon ──────────────────────────────────────────────────────────────
@@ -154,7 +163,10 @@ const ModuleCard = ({
           </View>
           <View style={styles.cardActions}>
             <TouchableOpacity
-              style={[styles.updateButton, isUpdating && styles.actionButtonOff]}
+              style={[
+                styles.updateButton,
+                isUpdating && styles.actionButtonOff,
+              ]}
               onPress={event => {
                 event.stopPropagation();
                 onUpdatePress();
@@ -165,7 +177,10 @@ const ModuleCard = ({
               <MaterialIcons name="edit" size={19} color="#2563EB" />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.deleteButton, isDeleting && styles.actionButtonOff]}
+              style={[
+                styles.deleteButton,
+                isDeleting && styles.actionButtonOff,
+              ]}
               onPress={event => {
                 event.stopPropagation();
                 onDeletePress();
@@ -187,8 +202,17 @@ const ModuleCard = ({
 export default function HomeworkLibraryScreen() {
   const isFocused = useIsFocused();
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
-  const { data: questionsData, isLoading } = useGetQuestionsQuery(
-    selectedLevel === null ? undefined : { level: selectedLevel },
+  const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
+  const {
+    data: questionsData,
+    currentData: currentQuestionsData,
+    isLoading,
+    isFetching,
+  } = useGetQuestionsQuery(
+    {
+      type: typeFilter,
+      ...(selectedLevel === null ? {} : { level: selectedLevel }),
+    },
     {
       skip: !isFocused,
     },
@@ -208,17 +232,19 @@ export default function HomeworkLibraryScreen() {
   const [isFilterLevelPickerOpen, setIsFilterLevelPickerOpen] = useState(false);
 
   const modules = useMemo(() => {
-    if (!questionsData) return [];
+    const activeQuestionsData = currentQuestionsData ?? questionsData;
+    if (!activeQuestionsData) return [];
 
-    return questionsData.map((q, index) => ({
+    return activeQuestionsData.map((q, index) => ({
       id: q.id,
       title: q.questionId ?? q.id,
       questions: q.question,
+      marks: q.marks,
       level: q.level,
       updatedAt: q.updatedAt,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));
-  }, [questionsData]);
+  }, [currentQuestionsData, questionsData]);
 
   const filteredModules = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -232,6 +258,16 @@ export default function HomeworkLibraryScreen() {
       );
     });
   }, [modules, searchTerm]);
+  const selectedTypeLabel = getTaskTypeLabel(typeFilter).toLowerCase();
+  const selectedTypeDisplayLabel = getTaskTypeLabel(typeFilter);
+  const showLoader = isFocused && (isLoading || isFetching);
+
+  const handleTypeFilterPress = (type: LibraryTypeFilter) => {
+    setTypeFilter(type);
+    setSearchTerm('');
+    setSelectedModule(null);
+    setModalVisible(false);
+  };
 
   const handleModulePress = (item: Module) => {
     setSelectedModule(item);
@@ -321,7 +357,7 @@ export default function HomeworkLibraryScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
-      <AdminHeader header="Homework Library" />
+      <AdminHeader header="Homework Library" headerBackgroundColor="#EEF0F8" />
       <View style={styles.headerGap} />
       <View style={styles.searchFilterRow}>
         <View style={styles.searchWrap}>
@@ -330,7 +366,7 @@ export default function HomeworkLibraryScreen() {
             style={styles.searchInput}
             value={searchTerm}
             onChangeText={setSearchTerm}
-            placeholder="Search homework"
+            placeholder={`Search ${selectedTypeLabel}`}
             placeholderTextColor="#94A3B8"
             autoCapitalize="none"
             autoCorrect={false}
@@ -369,8 +405,36 @@ export default function HomeworkLibraryScreen() {
         </TouchableOpacity>
       </View>
       {/* ── Module List ── */}
+      <View style={styles.typeFilterRow}>
+        {(['homework', 'practice', 'exam'] as LibraryTypeFilter[]).map(type => {
+          const isSelected = typeFilter === type;
+          const label = getTaskTypeLabel(type);
+
+          return (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.typeFilterButton,
+                isSelected && styles.typeFilterButtonActive,
+              ]}
+              onPress={() => handleTypeFilterPress(type)}
+              activeOpacity={0.82}
+            >
+              <Text
+                style={[
+                  styles.typeFilterText,
+                  isSelected && styles.typeFilterTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
       <FlatList
-        data={filteredModules}
+        data={showLoader ? [] : filteredModules}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -385,18 +449,20 @@ export default function HomeworkLibraryScreen() {
           />
         )}
         ListEmptyComponent={
-          isFocused && isLoading ? (
-            <LoadingState label="Loading questions..." />
+          showLoader ? (
+            <LoadingState label={`Loading ${selectedTypeLabel}...`} />
           ) : (
             <View style={styles.emptyState}>
               <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
               <Text style={styles.emptyText}>
-                {searchTerm ? 'No homework found' : 'No questions yet'}
+                {searchTerm
+                  ? `No ${selectedTypeLabel} found`
+                  : `No ${selectedTypeLabel} yet`}
               </Text>
               <Text style={styles.emptySubText}>
                 {searchTerm
                   ? 'Try searching another task or question'
-                  : 'Questions will appear here when created'}
+                  : `${selectedTypeDisplayLabel} will appear here when created`}
               </Text>
             </View>
           )
@@ -437,6 +503,14 @@ export default function HomeworkLibraryScreen() {
                     <Text style={styles.answerValue}>
                       {evaluateMath(question)}
                     </Text>
+                    {typeFilter === 'exam' &&
+                    typeof selectedModule?.marks?.[idx] === 'number' ? (
+                      <View style={styles.markBadge}>
+                        <Text style={styles.markText}>
+                          {selectedModule.marks[idx]} pts
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
               ))}
@@ -706,6 +780,40 @@ const styles = StyleSheet.create({
   },
   levelFilterTextActive: {
     color: '#475569',
+  },
+  typeFilterRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 14,
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    gap: 4,
+  },
+  typeFilterButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: 8,
+  },
+  typeFilterButtonActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  typeFilterText: {
+    flexShrink: 1,
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  typeFilterTextActive: {
+    color: '#1D4ED8',
   },
 
   // Header
@@ -1157,5 +1265,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#1E3A8A',
+  },
+  markBadge: {
+    minHeight: 28,
+    borderRadius: 9,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markText: {
+    color: '#92400E',
+    fontSize: 12,
+    fontWeight: '900',
   },
 });

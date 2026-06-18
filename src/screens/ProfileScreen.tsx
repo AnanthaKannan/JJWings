@@ -109,74 +109,76 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.backgroundCircleOne} />
-      <View style={styles.backgroundCircleTwo} />
-
-      <Animated.View
-        style={[
-          styles.card,
-          {
-            opacity,
-            transform: [{ scale }],
-          },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.iconWrap,
-            {
-              transform: [{ translateY: float }],
-            },
-          ]}
-        >
-          <MaterialIcons name="rocket-launch" size={58} color="#FFFFFF" />
-        </Animated.View>
+      <View style={styles.content}>
+        <View style={styles.backgroundCircleOne} />
+        <View style={styles.backgroundCircleTwo} />
 
         <Animated.View
           style={[
-            styles.sparkleOne,
+            styles.card,
             {
-              opacity: sparkleOpacity,
-              transform: [{ scale: sparkleScale }],
+              opacity,
+              transform: [{ scale }],
             },
           ]}
         >
-          <MaterialIcons name="auto-awesome" size={22} color="#FBBF24" />
+          <Animated.View
+            style={[
+              styles.iconWrap,
+              {
+                transform: [{ translateY: float }],
+              },
+            ]}
+          >
+            <MaterialIcons name="rocket-launch" size={58} color="#FFFFFF" />
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.sparkleOne,
+              {
+                opacity: sparkleOpacity,
+                transform: [{ scale: sparkleScale }],
+              },
+            ]}
+          >
+            <MaterialIcons name="auto-awesome" size={22} color="#FBBF24" />
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.sparkleTwo,
+              {
+                opacity: sparkleOpacity,
+                transform: [{ scale: sparkleScale }],
+              },
+            ]}
+          >
+            <MaterialIcons name="stars" size={24} color="#38BDF8" />
+          </Animated.View>
+
+          <Text style={styles.title}>Ready to fly away?</Text>
+          <Text style={styles.subtitle}>
+            Your progress is saved. Come back anytime for the next challenge.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleLogout}
+            activeOpacity={0.88}
+          >
+            <Text style={styles.primaryText}>Yes, Logout</Text>
+            <MaterialIcons name="logout" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={handleCancel}
+            activeOpacity={0.82}
+          >
+            <Text style={styles.secondaryText}>Keep Playing</Text>
+          </TouchableOpacity>
         </Animated.View>
-        <Animated.View
-          style={[
-            styles.sparkleTwo,
-            {
-              opacity: sparkleOpacity,
-              transform: [{ scale: sparkleScale }],
-            },
-          ]}
-        >
-          <MaterialIcons name="stars" size={24} color="#38BDF8" />
-        </Animated.View>
-
-        <Text style={styles.title}>Ready to fly away?</Text>
-        <Text style={styles.subtitle}>
-          Your progress is saved. Come back anytime for the next challenge.
-        </Text>
-
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={handleLogout}
-          activeOpacity={0.88}
-        >
-          <Text style={styles.primaryText}>Yes, Logout</Text>
-          <MaterialIcons name="logout" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={handleCancel}
-          activeOpacity={0.82}
-        >
-          <Text style={styles.secondaryText}>Keep Playing</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -184,9 +186,12 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
+    backgroundColor: '#EEF4FF',
+  },
+  content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF4FF',
     padding: 22,
     overflow: 'hidden',
   },

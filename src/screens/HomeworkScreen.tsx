@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -17,25 +18,38 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
-import { useGetHomeworksQuery } from '../store/api';
+import {
+  useGetHomeworksQuery,
+  useUnassignHomeworkMutation,
+} from '../store/api';
 import { setQuestions } from '../store/slices';
 import { BadgeType } from '../util/types';
 import { HomeworkState } from '../util/enum';
-import { LoadingState } from '../component';
+import {
+  AdminHeader,
+  LoadingOverlay,
+  LoadingState,
+  StudentHeader,
+} from '../component';
 
 interface HomeworkCardProps {
   questionId: string;
   questionLabel?: string;
   homeworkId: string;
   question: string[];
+  marks?: number[];
   state: BadgeType;
   result: boolean[];
   answer: number[];
   timer: number;
+  oral: boolean;
   updatedAt?: string;
   isAdminReview?: boolean;
   studentId?: string;
   studentName?: string;
+  contentType?: 'homework' | 'exam';
+  isUnassigning?: boolean;
+  onUnassign?: (questionId: string) => void;
 }
 
 const FILTERS: { label: string; value: BadgeType }[] = [
@@ -49,19 +63,33 @@ function HomeworkCard({
   questionId,
   questionLabel,
   question,
+  marks,
   state,
   result,
   answer,
   timer = 0,
+  oral,
   updatedAt,
   isAdminReview = false,
   studentId,
   studentName,
+  contentType = 'homework',
+  isUnassigning = false,
+  onUnassign,
 }: HomeworkCardProps) {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const canUseAction = !isAdminReview || state === HomeworkState.COMPLETED;
   const correctCount = result.filter(Boolean).length;
+  const hasMarks = Array.isArray(marks) && marks.length > 0;
+  const totalMarks = hasMarks
+    ? marks.reduce((total, mark) => total + mark, 0)
+    : 0;
+  const earnedMarks = hasMarks
+    ? result.reduce((total, isCorrect, index) => {
+        return total + (isCorrect ? marks[index] ?? 0 : 0);
+      }, 0)
+    : 0;
 
   const formatTime = (seconds: number = 0) => {
     const safeSeconds = Math.max(0, seconds);
@@ -93,21 +121,26 @@ function HomeworkCard({
     dispatch(
       setQuestions({
         questions: question,
+        marks,
         homeworkId,
         result,
         answer,
         questionId: questionLabel ?? questionId,
         timer,
+        oral,
       }),
     );
 
     if (state === HomeworkState.COMPLETED) {
       navigation.navigate('QuizReview', {
+        preferGoBack: true,
+        type: contentType,
         returnToHomeworkParams: isAdminReview
           ? {
               studentId,
               studentName,
               adminReview: true,
+              type: contentType,
             }
           : undefined,
       });
@@ -127,7 +160,9 @@ function HomeworkCard({
               <View style={styles.completedCorrectRow}>
                 <Text style={styles.questionIcon}>✅</Text>
                 <Text style={styles.questionCount}>
-                  {correctCount}/{question.length} correct
+                  {hasMarks
+                    ? `${earnedMarks}/${totalMarks} marks`
+                    : `${correctCount}/${question.length} correct`}
                 </Text>
               </View>
               <View style={styles.completedMetaRow}>
@@ -162,6 +197,21 @@ function HomeworkCard({
               </Text>
             </TouchableOpacity>
           )}
+          {isAdminReview && state === HomeworkState.NEW && onUnassign && (
+            <TouchableOpacity
+              style={[
+                styles.unassignBtn,
+                isUnassigning && styles.disabledButton,
+              ]}
+              activeOpacity={0.85}
+              onPress={() => onUnassign(questionId)}
+              disabled={isUnassigning}
+            >
+              <Text style={styles.unassignBtnText}>
+                {isUnassigning ? 'Removing' : 'Unassign'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -181,16 +231,21 @@ function HomeworkCard({
 }
 
 export default function HomeworkScreen() {
-  const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const isFocused = useIsFocused();
   const routeStudentId = route?.params?.studentId;
   const studentName = route?.params?.studentName;
   const isAdminReview = route?.params?.adminReview === true;
+  const contentType = route?.params?.type === 'exam' ? 'exam' : 'homework';
+  const contentLabel = contentType === 'exam' ? 'examination' : 'homework';
+  const screenTitle = contentType === 'exam' ? 'Examination' : 'Homework';
   const [selectedFilter, setSelectedFilter] = useState<BadgeType>(
     isAdminReview ? HomeworkState.COMPLETED : HomeworkState.NEW,
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [unassigningQuestionId, setUnassigningQuestionId] = useState<
+    string | null
+  >(null);
   const loggedInStudentId = useSelector(
     (state: RootState) => state.common.studentId,
   );
@@ -202,21 +257,17 @@ export default function HomeworkScreen() {
     isFetching,
     refetch,
   } = useGetHomeworksQuery(
-    { studentId: studentId ?? '', state: selectedFilter },
+    { studentId: studentId ?? '', state: selectedFilter, type: contentType },
     {
       skip: !isFocused || !studentId,
     },
   );
+  const [unassignHomework, { isLoading: isUnassigning }] =
+    useUnassignHomeworkMutation();
 
   const filteredHomeworks = homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
   const showLoader = isFocused && (isLoading || isFetching) && !refreshing;
-  const handleAdminBack = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'StudentDirectory' }],
-    });
-  };
 
   const onRefresh = useCallback(async () => {
     if (!studentId) return;
@@ -229,9 +280,50 @@ export default function HomeworkScreen() {
     }
   }, [refetch, studentId]);
 
+  const handleUnassignQuestion = (questionId: string) => {
+    if (!studentId || unassigningQuestionId) return;
+
+    Alert.alert(
+      'Unassign?',
+      `Remove this ${contentLabel} from ${studentName ?? 'the student'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unassign',
+          onPress: async () => {
+            setUnassigningQuestionId(questionId);
+            try {
+              await unassignHomework({
+                studentId,
+                questionIds: [questionId],
+              }).unwrap();
+              Alert.alert('Unassigned', `The ${contentLabel} was removed.`);
+            } catch {
+              Alert.alert(
+                'Unassign Failed',
+                `Unable to remove this ${contentLabel}.`,
+              );
+            } finally {
+              setUnassigningQuestionId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF2FF" />
+      {isAdminReview ? (
+        <AdminHeader
+          header={`${studentName ?? 'Student'} Performance`}
+          showBackButton={true}
+          headerBackgroundColor="#EEF2FF"
+        />
+      ) : (
+        <StudentHeader header={screenTitle} headerBackgroundColor="#EEF2FF" />
+      )}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -246,29 +338,6 @@ export default function HomeworkScreen() {
           />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTitleRow}>
-            {isAdminReview && (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleAdminBack}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.backButtonText}>‹</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={styles.headerTitle}>
-              {isAdminReview
-                ? `${studentName ?? 'Student'} Performance`
-                : 'Homework'}
-            </Text>
-          </View>
-          {/* <Text style={styles.headerSubtitle}>
-            You have {tasks.length} tasks to explore today
-          </Text> */}
-        </View>
-
         <View style={styles.filterBar}>
           {FILTERS.map(filter => {
             const isSelected = selectedFilter === filter.value;
@@ -296,7 +365,7 @@ export default function HomeworkScreen() {
           })}
         </View>
 
-        {showLoader && <LoadingState label="Loading homework..." />}
+        {showLoader && <LoadingState label={`Loading ${contentLabel}...`} />}
 
         {!showLoader &&
           filteredHomeworks.map(task => (
@@ -305,18 +374,28 @@ export default function HomeworkScreen() {
               {...task}
               homeworkId={task.id}
               question={task?.question?.question ?? []}
+              marks={task?.question?.marks}
               isAdminReview={isAdminReview}
               studentId={studentId}
               studentName={studentName}
+              contentType={contentType}
+              isUnassigning={unassigningQuestionId === task.questionId}
+              onUnassign={handleUnassignQuestion}
             />
           ))}
 
         {!showLoader && filteredHomeworks.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No {emptyStateLabel} homework</Text>
+            <Text style={styles.emptyText}>
+              No {emptyStateLabel} {contentLabel}
+            </Text>
           </View>
         )}
       </ScrollView>
+      <LoadingOverlay
+        visible={isUnassigning}
+        label={`Removing ${contentLabel}...`}
+      />
     </SafeAreaView>
   );
 }
@@ -475,6 +554,7 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     alignItems: 'flex-start',
+    gap: 8,
     marginBottom: 15,
   },
   questionRow: {
@@ -543,5 +623,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  unassignBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    minWidth: 82,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  unassignBtnText: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
 });

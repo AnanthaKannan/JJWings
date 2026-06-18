@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -22,7 +23,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import DeviceInfo from 'react-native-device-info';
 
-import { LoadingOverlay, LoadingState } from '../component';
+import { LoadingOverlay, LoadingState, StudentHeader } from '../component';
 import {
   SameDeviceStudent,
   useDeleteStudentDeviceIdMutation,
@@ -34,6 +35,7 @@ import {
 import { logout, setStudentCredentials } from '../store/slices';
 import { RootState } from '../store/store';
 import { clearSavedLoginCredentials } from '../util/authStorage';
+import { getFileUrl } from '../util/fileUrl';
 
 const AVATAR_COLORS = [
   '#4F46E5',
@@ -71,46 +73,56 @@ const StudentCard = ({
   isSwitching: boolean;
   onPress: () => void;
   onDeletePress: () => void;
-}) => (
-  <TouchableOpacity
-    style={[styles.card, isSwitching && styles.cardDisabled]}
-    onPress={onPress}
-    disabled={isDeleting || isSwitching}
-    activeOpacity={0.82}
-  >
-    <View
-      style={[styles.avatar, { backgroundColor: getAvatarColor(student.id) }]}
-    >
-      <Text style={styles.avatarText}>{getInitials(student.name)}</Text>
-    </View>
+}) => {
+  const profilePicUrl = getFileUrl(
+    student.profilePicPath ?? student.profilePic,
+  );
 
-    <View style={styles.studentInfo}>
-      <Text style={styles.studentName} numberOfLines={1}>
-        {student.name || 'Student'}
-      </Text>
-      <Text style={styles.studentMeta} numberOfLines={1}>
-        #{student.studentId ?? student.id}
-      </Text>
-    </View>
-
-    <View style={styles.countBadge}>
-      <Text style={styles.countValue}>{student.deviceIds.length}</Text>
-      <Text style={styles.countLabel}>devices</Text>
-    </View>
-
+  return (
     <TouchableOpacity
-      style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
-      onPress={event => {
-        event.stopPropagation();
-        onDeletePress();
-      }}
-      disabled={isDeleting}
+      style={[styles.card, isSwitching && styles.cardDisabled]}
+      onPress={onPress}
+      disabled={isDeleting || isSwitching}
       activeOpacity={0.82}
     >
-      <MaterialIcons name="delete-outline" size={20} color="#B91C1C" />
+      <View
+        style={[styles.avatar, { backgroundColor: getAvatarColor(student.id) }]}
+      >
+        {profilePicUrl ? (
+          <Image source={{ uri: profilePicUrl }} style={styles.avatarImage} />
+        ) : (
+          <Text style={styles.avatarText}>{getInitials(student.name)}</Text>
+        )}
+      </View>
+
+      <View style={styles.studentInfo}>
+        <Text style={styles.studentName} numberOfLines={1}>
+          {student.name || 'Student'}
+        </Text>
+        <Text style={styles.studentMeta} numberOfLines={1}>
+          #{student.studentId ?? student.id}
+        </Text>
+      </View>
+
+      <View style={styles.countBadge}>
+        <Text style={styles.countValue}>{student.deviceIds.length}</Text>
+        <Text style={styles.countLabel}>devices</Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+        onPress={event => {
+          event.stopPropagation();
+          onDeletePress();
+        }}
+        disabled={isDeleting}
+        activeOpacity={0.82}
+      >
+        <MaterialIcons name="delete-outline" size={20} color="#B91C1C" />
+      </TouchableOpacity>
     </TouchableOpacity>
-  </TouchableOpacity>
-);
+  );
+};
 
 export default function SameDeviceStudentsScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -135,7 +147,6 @@ export default function SameDeviceStudentsScreen() {
     refetch,
   } = useGetSameDeviceStudentsQuery(undefined, {
     skip: !isFocused,
-    refetchOnMountOrArgChange: true,
   });
 
   const [deleteStudentDeviceId, { isLoading: isDeleting }] =
@@ -240,9 +251,11 @@ export default function SameDeviceStudentsScreen() {
     setLoginError('');
 
     try {
+      const deviceId = await DeviceInfo.getUniqueId();
       const result = await login({
         username: cleanStudentId,
         password,
+        deviceId,
       });
 
       if (
@@ -254,7 +267,6 @@ export default function SameDeviceStudentsScreen() {
         return;
       }
 
-      const deviceId = await DeviceInfo.getUniqueId();
       console.log('deviceId', deviceId);
       await updateStudentDeviceId({
         deviceId,
@@ -291,10 +303,12 @@ export default function SameDeviceStudentsScreen() {
         dispatch(
           setStudentCredentials({
             studentId: result.id,
+            studentCode: result.studentCode,
             vertical: result.vertical,
             isStudent: true,
             studentName: result.name,
             studentLevel: result.level,
+            studentProfilePic: result.profilePicPath ?? result.profilePic,
             token: result.token,
           }),
         );
@@ -322,17 +336,7 @@ export default function SameDeviceStudentsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Same Device Students</Text>
-          <Text style={styles.headerSubtitle}>
-            Students logged on this device
-          </Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons name="devices-other" size={22} color="#4F46E5" />
-        </View>
-      </View>
+      <StudentHeader header="Same Device Students" />
 
       {showLoader ? (
         <View style={styles.loaderWrap}>
@@ -663,6 +667,11 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     color: '#FFFFFF',

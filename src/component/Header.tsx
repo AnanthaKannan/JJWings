@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+
+import StudentHeader from './StudentHeader';
 
 interface HeaderProps {
   heading: string;
@@ -18,13 +19,19 @@ export default function Header({ heading, sideHead, onBack }: HeaderProps) {
     }
 
     if (heading === 'Quiz Review') {
+      if (route.params?.preferGoBack && navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+
       const returnToHomeworkParams = route.params?.returnToHomeworkParams;
+      const returnRouteName = route.params?.returnRouteName ?? 'HomeworkScreen';
 
       navigation.reset({
         index: 0,
         routes: [
           {
-            name: 'HomeworkScreen',
+            name: returnRouteName,
             params: returnToHomeworkParams,
           },
         ],
@@ -41,57 +48,11 @@ export default function Header({ heading, sideHead, onBack }: HeaderProps) {
   };
 
   return (
-    <View style={styles.topBar}>
-      <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-        <Text style={styles.backArrow}>‹</Text>
-        <Text style={styles.backText}>{heading}</Text>
-      </TouchableOpacity>
-      <View style={styles.levelBadge}>
-        <Text style={styles.levelText}>{sideHead}</Text>
-      </View>
-    </View>
+    <StudentHeader
+      header={heading}
+      sideHead={sideHead}
+      showBackButton={true}
+      onBack={handleBack}
+    />
   );
 }
-
-const TEXT = '#1E293B';
-
-const styles = StyleSheet.create({
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F0F4FF',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  backArrow: {
-    fontSize: 28,
-    color: TEXT,
-    lineHeight: 32,
-    marginTop: -2,
-  },
-  backText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: TEXT,
-    letterSpacing: -0.3,
-  },
-  levelBadge: {
-    backgroundColor: '#FFF7ED',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderWidth: 1.5,
-    borderColor: '#FED7AA',
-  },
-  levelText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#C2410C',
-  },
-});

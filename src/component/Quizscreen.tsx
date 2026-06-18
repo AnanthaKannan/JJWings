@@ -1,22 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Animated,
+  Easing,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { NumPad, QuizSuccessModal } from './index';
 import { RootState } from '../store/store';
 import { useUpdateHomeworkMutation } from '../store/api';
 import { HomeworkState } from '../util/enum';
 import { evaluateExpression } from '../util/fn';
+import {
+  formatQuestionForSpeech,
+  ORAL_SPEECH_RATE,
+  speakOralQuestion,
+  stopOralQuestionSpeech,
+} from '../util/oralSpeech';
 
 // ─── Types ───────────────────────────────────────────────
 interface QuizScreenProps {
   timer: number;
+  returnRouteName?: string;
 }
 
 type QuizData = {
   questions: string[];
+  marks: number[];
   answer: number[]; // or string[] depending on your use
   result: boolean[]; // or boolean[] if it's correct/incorrect
 };
@@ -24,7 +40,7 @@ type QuizData = {
 type RootStackParamList = {
   Home: undefined;
   HomeworkScreen: undefined;
-  QuizReview: undefined;
+  QuizReview: { returnRouteName?: string } | undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -68,9 +84,17 @@ const formatHorizontalQuestion = (question = '') => {
   return parts.join(' ');
 };
 
-export default function QuizScreen({ timer }: QuizScreenProps) {
+const getOralSpeechDuration = (question = '') => {
+  const wordCount = formatQuestionForSpeech(question).split(/\s+/).filter(Boolean)
+    .length;
+  return Math.min(Math.max((wordCount * 430) / ORAL_SPEECH_RATE, 1800), 4200);
+};
+
+export default function QuizScreen({ timer, returnRouteName }: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
+  const selMarks = useSelector((state: RootState) => state.common.marks);
+  const isOral = useSelector((state: RootState) => state.common.oral);
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const isHorizontal = useSelector((state: RootState) => state.common.vertical);
 
@@ -81,6 +105,7 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
 
   const [data, setData] = useState<QuizData>({
     questions: [],
+    marks: [],
     answer: [],
     result: [],
   });
@@ -88,23 +113,87 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
     timeTaken: '00:00',
     accuracy: '0%',
   });
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speakerPulse = useRef(new Animated.Value(0)).current;
+  const speechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setData(prev => ({
       ...prev,
       result: selResult,
       questions: selQuestions,
+      marks: selMarks,
       answer: selAnswer,
     }));
-  }, [selQuestions, selResult, selAnswer]);
+  }, [selQuestions, selResult, selAnswer, selMarks]);
 
   const [modalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation<NavigationProp>();
-  const { questions, answer, result } = data;
+  const { questions, marks, answer, result } = data;
   const currentQuestion = questions[result.length] ?? '';
+  const currentMarks = marks[result.length];
+  const shouldShowMarks = typeof currentMarks === 'number' && currentMarks > 0;
   const verticalQuestionParts = getVerticalQuestionParts(currentQuestion);
   const horizontalQuestion = formatHorizontalQuestion(currentQuestion);
+
+  const stopSpeakerAnimation = useCallback(() => {
+    if (speechTimerRef.current) {
+      clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
+    setIsSpeaking(false);
+  }, []);
+
+  const playOralQuestion = useCallback((question: string) => {
+    if (!speakOralQuestion(question)) return;
+
+    stopSpeakerAnimation();
+    setIsSpeaking(true);
+    speechTimerRef.current = setTimeout(
+      stopSpeakerAnimation,
+      getOralSpeechDuration(question),
+    );
+  }, [stopSpeakerAnimation]);
+
+  useEffect(() => {
+    if (!isSpeaking) {
+      speakerPulse.stopAnimation();
+      speakerPulse.setValue(0);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(speakerPulse, {
+          toValue: 1,
+          duration: 520,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(speakerPulse, {
+          toValue: 0,
+          duration: 520,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [isSpeaking, speakerPulse]);
+
+  useEffect(() => {
+    if (isOral && currentQuestion) {
+      playOralQuestion(currentQuestion);
+    }
+
+    return () => {
+      stopSpeakerAnimation();
+      stopOralQuestionSpeech();
+    };
+  }, [currentQuestion, isOral, playOralQuestion, stopSpeakerAnimation]);
 
   // Progress percentage
   const progress = result.length / questions.length;
@@ -154,6 +243,23 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
     }
   };
 
+  const handleRepeatQuestion = () => {
+    playOralQuestion(currentQuestion);
+  };
+
+  const speakerScale = speakerPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.12],
+  });
+  const speakerHaloScale = speakerPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.72, 1.28],
+  });
+  const speakerHaloOpacity = speakerPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.28, 0],
+  });
+
   return (
     // <SafeAreaView style={styles.safeArea}>
     <View>
@@ -162,7 +268,10 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
         onClose={() => setModalVisible(false)}
         onSeeResults={() => {
           setModalVisible(false);
-          navigation.navigate('QuizReview');
+          navigation.navigate(
+            'QuizReview',
+            returnRouteName ? { returnRouteName } : undefined,
+          );
         }}
         timeTaken={completionStats.timeTaken}
         accuracy={completionStats.accuracy}
@@ -176,15 +285,53 @@ export default function QuizScreen({ timer }: QuizScreenProps) {
               Question {result.length + 1} of {questions.length}
             </Text>
           </View>
+          {shouldShowMarks && (
+            <View style={styles.pointsBadge}>
+              <Text style={styles.pointsText}>{currentMarks} pts</Text>
+            </View>
+          )}
 
           {/* Question row */}
           <View
             style={[
               styles.questionRow,
               !isHorizontal && styles.verticalQuestionRow,
+              isOral && styles.oralQuestionRow,
             ]}
           >
-            {isHorizontal ? (
+            {isOral ? (
+              <View style={styles.oralPrompt}>
+                <Animated.View
+                  style={[
+                    styles.oralIconHalo,
+                    {
+                      opacity: speakerHaloOpacity,
+                      transform: [{ scale: speakerHaloScale }],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    styles.oralIconWrap,
+                    { transform: [{ scale: speakerScale }] },
+                  ]}
+                >
+                  <MaterialIcons
+                    name={isSpeaking ? 'volume-up' : 'volume-down'}
+                    size={34}
+                    color="#2563EB"
+                  />
+                </Animated.View>
+                <Text style={styles.oralTitle}>Listen and answer</Text>
+                <TouchableOpacity
+                  style={styles.repeatIconButton}
+                  onPress={handleRepeatQuestion}
+                  activeOpacity={0.82}
+                >
+                  <MaterialIcons name="replay" size={24} color="#2563EB" />
+                </TouchableOpacity>
+              </View>
+            ) : isHorizontal ? (
               <Text style={styles.questionText}>{horizontalQuestion} = ?</Text>
             ) : (
               <View style={styles.verticalQuestion}>
@@ -281,6 +428,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 20,
+    position: 'relative',
     shadowColor: '#B0BADF',
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -300,12 +448,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#5A6AA8',
   },
+  pointsBadge: {
+    position: 'absolute',
+    top: 18,
+    right: 18,
+    minHeight: 30,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pointsText: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '900',
+  },
   questionRow: {
     alignItems: 'center',
     marginBottom: 20,
   },
   verticalQuestionRow: {
     alignItems: 'center',
+  },
+  oralQuestionRow: {
+    minHeight: 170,
+    justifyContent: 'center',
+  },
+  oralPrompt: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    position: 'relative',
+  },
+  oralIconHalo: {
+    position: 'absolute',
+    top: 0,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#93C5FD',
+  },
+  oralIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  oralTitle: {
+    color: '#1A2259',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  repeatIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#EAF2FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   verticalQuestion: {
     alignItems: 'flex-end',

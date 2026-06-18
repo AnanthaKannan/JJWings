@@ -22,7 +22,7 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
-import { AdminHeader, LoadingState } from '../component';
+import { AdminHeader, LoadingState, StudentHeader } from '../component';
 import { RankingStudent, useGetRankingQuery } from '../store/api';
 import { RootState } from '../store/store';
 
@@ -79,7 +79,7 @@ const formatAccuracy = (accuracy: number) =>
   `${Number.isInteger(accuracy) ? accuracy.toFixed(0) : accuracy.toFixed(1)}%`;
 
 const formatLevel = (student: RankingStudent) =>
-  `${student.studentCode ?? 'Explorer'} • ${student.completedCount}/${
+  `${student.studentCode ?? 'Explorer'} • ${student.totalCorrect}/${
     student.totalQuestions
   } Solved`;
 
@@ -563,8 +563,7 @@ const TopExplorerScreen: React.FC = () => {
   } = useGetRankingQuery(
     typeof rankingLevel === 'number' ? { level: rankingLevel } : undefined,
     {
-    skip: !isFocused,
-    refetchOnMountOrArgChange: true,
+      skip: !isFocused,
     },
   );
 
@@ -609,6 +608,7 @@ const TopExplorerScreen: React.FC = () => {
   const secondPlace = sortedRanking.find(student => student.rank === 2);
   const thirdPlace = sortedRanking.find(student => student.rank === 3);
   const risingStars = sortedRanking.filter(student => student.rank > 3);
+
   const averageAccuracy =
     sortedRanking.length > 0
       ? sortedRanking.reduce((total, student) => total + student.accuracy, 0) /
@@ -629,6 +629,17 @@ const TopExplorerScreen: React.FC = () => {
     }
   }, [refetch]);
 
+  const getMonthRange = () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const format = (date: Date) =>
+      date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+    return `${format(firstDay)} - ${format(lastDay)}`;
+  };
+
   return (
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF4FF" />
@@ -637,6 +648,7 @@ const TopExplorerScreen: React.FC = () => {
           <AdminHeader header="Rank" showBackButton={true} />
         </View>
       )}
+      {!isAdmin && <StudentHeader header="" headerBackgroundColor="#EEF4FF" />}
 
       {/* Animated background blob */}
       <Animated.View
@@ -669,7 +681,7 @@ const TopExplorerScreen: React.FC = () => {
           ]}
         >
           <View>
-            <Text style={styles.headerSub}>🏅 Last 7 days</Text>
+            <Text style={styles.headerSub}>🏅 {getMonthRange()}</Text>
             <Text style={styles.headerTitle}>Top Explorers</Text>
           </View>
           {isAdmin && (
@@ -687,7 +699,9 @@ const TopExplorerScreen: React.FC = () => {
                   selectedLevel !== null && styles.filterBtnTextActive,
                 ]}
               >
-                {selectedLevel === null ? 'All Levels' : `Level ${selectedLevel}`}
+                {selectedLevel === null
+                  ? 'All Levels'
+                  : `Level ${selectedLevel}`}
               </Text>
             </TouchableOpacity>
           )}
@@ -946,7 +960,7 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   scrollContent: {
-    paddingTop: 28,
+    paddingTop: 0,
     paddingHorizontal: 16,
   },
 

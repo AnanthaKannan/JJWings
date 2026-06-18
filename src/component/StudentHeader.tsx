@@ -10,76 +10,70 @@ import {
   View,
   Platform,
 } from 'react-native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootState } from '../store/store';
 import { getFileUrl } from '../util/fileUrl';
 import { APP_VERSION } from '../util/version';
 
-type AdminHeaderProps = {
+type StudentHeaderProps = {
   header: string;
+  sideHead?: string;
   showBackButton?: boolean;
   headerBackgroundColor?: string;
+  onBack?: () => void;
 };
 
-const adminNavItems = [
+type StudentNavItem = {
+  label: string;
+  icon: string;
+  routeName: string;
+  params?: object;
+};
+
+const studentNavItems: StudentNavItem[] = [
   {
-    label: 'Add Student',
-    icon: 'person-add',
-    routeName: 'AdminStudents',
-    params: { screen: 'AddStudent' },
+    label: 'Examination',
+    icon: 'assignment',
+    routeName: 'Examination',
+    params: {
+      screen: 'HomeworkScreen',
+      params: { type: 'exam' },
+    },
   },
-  {
-    label: 'Rank',
-    icon: 'leaderboard',
-    routeName: 'AdminRanking',
-  },
-  {
-    label: 'Question Papers',
-    icon: 'description',
-    routeName: 'AdminQuestionPapers',
-  },
-  {
-    label: 'Achievements',
-    icon: 'emoji-events',
-    routeName: 'AdminAchievements',
-  },
-  {
-    label: 'Notification Send',
-    icon: 'campaign',
-    routeName: 'AdminNotificationSend',
-  },
-  {
-    label: 'Profile',
-    icon: 'person',
-    routeName: 'AdminProfile',
-  },
-  {
-    label: 'Logout',
-    icon: 'logout',
-    routeName: 'Logout',
-  },
+  { label: 'Same Device', icon: 'devices-other', routeName: 'SameDeviceStudents' },
+  { label: 'Question Papers', icon: 'description', routeName: 'QuestionPapers' },
+  { label: 'Achievements', icon: 'emoji-events', routeName: 'Achievements' },
+  { label: 'Profile', icon: 'person', routeName: 'StudentProfile' },
+  { label: 'Logout', icon: 'logout', routeName: 'Logout' },
 ];
 
-export default function AdminHeader({
+export default function StudentHeader({
   header,
+  sideHead,
   showBackButton,
   headerBackgroundColor,
-}: AdminHeaderProps) {
+  onBack,
+}: StudentHeaderProps) {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const adminName = useSelector((state: RootState) => state.common.adminName);
-  const adminProfilePic = useSelector(
-    (state: RootState) => state.common.adminProfilePic,
+  const studentName = useSelector(
+    (state: RootState) => state.common.studentName,
   );
-  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
-  const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
-  const displayName = adminName.trim() || 'Admin';
-  const profilePicUrl = getFileUrl(adminProfilePic);
+  const studentLevel = useSelector(
+    (state: RootState) => state.common.studentLevel,
+  );
+  const studentProfilePic = useSelector(
+    (state: RootState) => state.common.studentProfilePic,
+  );
+  const isStudent = useSelector((state: RootState) => state.common.isStudent);
+  const studentInitial = (studentName.trim()[0] ?? 'S').toUpperCase();
+  const displayName = studentName.trim() || 'Student';
+  const profilePicUrl = getFileUrl(studentProfilePic);
   const androidHeaderTopPadding =
     Platform.OS === 'android' ? Math.max(12, insets.top) : 12;
   const androidSideNavTopPadding =
@@ -90,23 +84,31 @@ export default function AdminHeader({
     headerBackgroundColor && { backgroundColor: headerBackgroundColor },
   ];
 
-  const handleProfilePress = () => {
-    if (isAdmin) {
-      setIsNavOpen(true);
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    if (navigation.canGoBack()) {
+      navigation.goBack();
     }
   };
 
   const handleNavigate = (routeName: string, params?: object) => {
     setIsNavOpen(false);
-    navigation.navigate(routeName, params);
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: routeName,
+        params,
+      }),
+    );
   };
 
   return (
     <View style={headerStyle}>
       <TouchableOpacity
-        onPress={() => {
-          if (showBackButton) navigation.goBack();
-        }}
+        onPress={handleBack}
         style={styles.leftArea}
         disabled={!showBackButton}
         activeOpacity={0.75}
@@ -114,30 +116,36 @@ export default function AdminHeader({
         {showBackButton && (
           <MaterialIcons name="arrow-back" size={22} color="#1A202C" />
         )}
-        <Text style={styles.brandName} numberOfLines={1}>
-          {header}
-        </Text>
+        {header.trim().length > 0 && (
+          <Text style={styles.brandName} numberOfLines={1}>
+            {header}
+          </Text>
+        )}
       </TouchableOpacity>
 
       <View style={styles.headerRight}>
+        {sideHead && (
+          <View style={styles.sideBadge}>
+            <Text style={styles.sideBadgeText} numberOfLines={1}>
+              {sideHead}
+            </Text>
+          </View>
+        )}
         <TouchableOpacity
-          onPress={handleProfilePress}
+          onPress={() => isStudent && setIsNavOpen(true)}
           style={styles.profileCircle}
-          disabled={!isAdmin}
+          disabled={!isStudent}
           activeOpacity={0.78}
         >
           {profilePicUrl ? (
-            <Image
-              source={{ uri: profilePicUrl }}
-              style={styles.profileImage}
-            />
+            <Image source={{ uri: profilePicUrl }} style={styles.profileImage} />
           ) : (
-            <Text style={styles.profileInitial}>{adminInitial}</Text>
+            <Text style={styles.profileInitial}>{studentInitial}</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {isAdmin && (
+      {isStudent && (
         <Modal
           visible={isNavOpen}
           transparent
@@ -166,15 +174,17 @@ export default function AdminHeader({
                     />
                   ) : (
                     <Text style={styles.largeProfileInitial}>
-                      {adminInitial}
+                      {studentInitial}
                     </Text>
                   )}
                 </View>
-                <View style={styles.adminTextWrap}>
-                  <Text style={styles.adminName} numberOfLines={1}>
+                <View style={styles.studentTextWrap}>
+                  <Text style={styles.studentName} numberOfLines={1}>
                     {displayName}
                   </Text>
-                  <Text style={styles.adminRole}>Admin</Text>
+                  <Text style={styles.studentRole}>
+                    {studentLevel === null ? 'Student' : `Level ${studentLevel}`}
+                  </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setIsNavOpen(false)}
@@ -190,14 +200,18 @@ export default function AdminHeader({
                 contentContainerStyle={styles.navList}
                 showsVerticalScrollIndicator={false}
               >
-                {adminNavItems.map(item => (
+                {studentNavItems.map(item => (
                   <TouchableOpacity
                     key={item.label}
                     style={styles.navItem}
                     onPress={() => handleNavigate(item.routeName, item.params)}
                     activeOpacity={0.78}
                   >
-                    <MaterialIcons name={item.icon} size={21} color="#4F46E5" />
+                    <MaterialIcons
+                      name={item.icon}
+                      size={21}
+                      color="#4F46E5"
+                    />
                     <Text style={styles.navItemText}>{item.label}</Text>
                     <MaterialIcons
                       name="chevron-right"
@@ -234,8 +248,10 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   headerRight: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     marginLeft: 'auto',
   },
   brandName: {
@@ -243,6 +259,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#1A202C',
+  },
+  sideBadge: {
+    maxWidth: 110,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  sideBadgeText: {
+    color: '#4338CA',
+    fontSize: 12,
+    fontWeight: '800',
   },
   profileCircle: {
     width: 30,
@@ -310,16 +340,16 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '900',
   },
-  adminTextWrap: {
+  studentTextWrap: {
     flex: 1,
     marginLeft: 12,
   },
-  adminName: {
+  studentName: {
     color: '#1E293B',
     fontSize: 15,
     fontWeight: '900',
   },
-  adminRole: {
+  studentRole: {
     color: '#64748B',
     fontSize: 12,
     fontWeight: '700',

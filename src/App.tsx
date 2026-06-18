@@ -1,5 +1,14 @@
-import { useEffect, useRef } from 'react';
-import { Animated, StatusBar, View, useColorScheme } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
+import {
+  Animated,
+  AppState,
+  AppStateStatus,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   CommonActions,
@@ -11,8 +20,15 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { store, RootState } from '../src/store/store';
-import { useUpdateStudentFcmTokenMutation } from './store/api';
-import { showNotificationAttention } from './store/slices';
+import {
+  jjWingsApi,
+  useLazyGetUnreadMessageCountQuery,
+  useUpdateStudentFcmTokenMutation,
+} from './store/api';
+import {
+  setMessageUnreadCount,
+  showNotificationAttention,
+} from './store/slices';
 import {
   getStudentPushToken as getPushToken,
   onStudentPushMessage as onPushMessage,
@@ -23,7 +39,9 @@ import {
   Calculate,
   LoginScreen,
   ProfileScreen,
+  StudentProfileScreen,
   HomeworkScreen,
+  PracticeScreen,
   QuizReviewScreen,
   // ── Admin screens (create these in your screens folder) ──
   StudentDirectoryScreen,
@@ -32,10 +50,15 @@ import {
   HomeworkLibraryScreen,
   CreateNewTaskScreen,
   AssignHomeworkScreen,
+  AssignByLevelScreen,
   ProgressDashboard,
   NotificationsScreen,
   AdminMessageScreen,
+  AdminNotificationSendScreen,
   TopExplorerScreen,
+  AdminProfileScreen,
+  QuestionPaperScreen,
+  AchievementsScreen,
 } from './screens';
 
 type AnimatedTabIconProps = {
@@ -143,21 +166,7 @@ function NotificationTabIcon({
       <Animated.View style={{ transform: [{ rotate }] }}>
         <MaterialIcons name="notifications" color={color} size={size} />
       </Animated.View>
-      {shouldRing && (
-        <View
-          style={{
-            position: 'absolute',
-            top: -2,
-            right: -3,
-            width: 9,
-            height: 9,
-            borderRadius: 5,
-            backgroundColor: '#EF4444',
-            borderWidth: 1,
-            borderColor: '#FFFFFF',
-          }}
-        />
-      )}
+      {shouldRing && <View style={styles.notificationAttentionDot} />}
     </View>
   );
 }
@@ -166,10 +175,37 @@ function NotificationTabIcon({
 // STUDENT NAVIGATOR
 // ─────────────────────────────────────────────────────────────────────────────
 
+function MessageTabIcon({ color, size }: { color: string; size: number }) {
+  const unreadCount = useSelector(
+    (state: RootState) => state.common.messageUnreadCount,
+  );
+  const displayCount = unreadCount > 99 ? '99+' : `${unreadCount}`;
+
+  return (
+    <View>
+      <MaterialIcons name="mail" color={color} size={size} />
+      {unreadCount > 0 ? (
+        <View style={styles.messageUnreadBadge}>
+          <Text style={styles.messageUnreadBadgeText}>{displayCount}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 const HomeworkStack = createNativeStackNavigator({
   screenOptions: { headerShown: false },
   screens: {
     HomeworkScreen: { screen: HomeworkScreen },
+    Calculate: { screen: Calculate },
+    QuizReview: { screen: QuizReviewScreen },
+  },
+});
+
+const PracticeStack = createNativeStackNavigator({
+  screenOptions: { headerShown: false },
+  screens: {
+    PracticeScreen: { screen: PracticeScreen },
     Calculate: { screen: Calculate },
     QuizReview: { screen: QuizReviewScreen },
   },
@@ -233,7 +269,95 @@ const MainTabs = createBottomTabNavigator({
           navigation.dispatch(
             CommonActions.navigate({
               name: 'Homework',
-              params: { screen: 'HomeworkScreen' },
+              params: {
+                screen: 'HomeworkScreen',
+                params: { type: 'homework' },
+              },
+            }),
+          );
+        },
+      }),
+    },
+    Examination: {
+      screen: HomeworkStack,
+      options: ({ route }) => {
+        const routeName =
+          getFocusedRouteNameFromRoute(route) ?? 'HomeworkScreen';
+        const shouldHideTabBar =
+          routeName === 'Calculate' || routeName === 'QuizReview';
+
+        return {
+          tabBarLabel: 'Examination',
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+          unmountOnBlur: true,
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon
+              name="assignment"
+              color={color}
+              size={size}
+              focused={focused}
+            />
+          ),
+        };
+      },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          e.preventDefault();
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: 'Examination',
+              params: {
+                screen: 'HomeworkScreen',
+                params: { type: 'exam' },
+              },
+            }),
+          );
+        },
+      }),
+    },
+    Practice: {
+      screen: PracticeStack,
+      options: ({ route }) => {
+        const routeName =
+          getFocusedRouteNameFromRoute(route) ?? 'PracticeScreen';
+        const shouldHideTabBar =
+          routeName === 'Calculate' || routeName === 'QuizReview';
+
+        return {
+          tabBarLabel: 'Practice',
+          unmountOnBlur: true,
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
+          tabBarIcon: ({ color, size, focused }) => (
+            <AnimatedTabIcon
+              name="psychology"
+              color={color}
+              size={size}
+              focused={focused}
+            />
+          ),
+        };
+      },
+      listeners: ({ navigation }) => ({
+        tabPress: e => {
+          e.preventDefault();
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: 'Practice',
+              params: {
+                screen: 'PracticeScreen',
+              },
             }),
           );
         },
@@ -262,9 +386,21 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    StudentMessages: {
+      screen: AdminMessageScreen,
+      options: {
+        tabBarStyle: { display: 'none' },
+        tabBarLabel: 'Messages',
+        tabBarIcon: ({ color, size }) => (
+          <MessageTabIcon color={color} size={size} />
+        ),
+      },
+    },
     SameDeviceStudents: {
       screen: SameDeviceStudentsScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Same Device',
         tabBarIcon: ({ color, size, focused }) => (
           <AnimatedTabIcon
@@ -276,9 +412,59 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    StudentProfile: {
+      screen: StudentProfileScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Profile',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="person"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
+    QuestionPapers: {
+      screen: QuestionPaperScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Question Papers',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="description"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
+    Achievements: {
+      screen: AchievementsScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Achievements',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="emoji-events"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
     Logout: {
       screen: ProfileScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Logout',
         tabBarIcon: ({ color, size, focused }) => (
           <AnimatedTabIcon
@@ -306,7 +492,9 @@ const AdminStudentsStack = createNativeStackNavigator({
     HomeworkLibrary: { screen: HomeworkLibraryScreen },
     CreateNewTask: { screen: CreateNewTaskScreen },
     AssignHomework: { screen: AssignHomeworkScreen },
+    StudentProgress: { screen: ProgressDashboard },
     HomeworkScreen: { screen: HomeworkScreen },
+    PracticeScreen: { screen: PracticeScreen },
     QuizReview: { screen: QuizReviewScreen },
     StudentNotifications: { screen: NotificationsScreen },
   },
@@ -388,13 +576,39 @@ const AdminTabs = createBottomTabNavigator({
         ),
       },
     },
+    AssignByLevel: {
+      screen: AssignByLevelScreen,
+      options: {
+        tabBarLabel: 'Assign',
+        unmountOnBlur: true,
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons
+            name="assignment-turned-in"
+            color={color}
+            size={size}
+          />
+        ),
+      },
+    },
     AdminMessages: {
       screen: AdminMessageScreen,
       options: {
         tabBarLabel: 'Message',
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="mail" color={color} size={size} />
+          <MessageTabIcon color={color} size={size} />
+        ),
+      },
+    },
+    AdminNotificationSend: {
+      screen: AdminNotificationSendScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Notification Send',
+        unmountOnBlur: true,
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="campaign" color={color} size={size} />
         ),
       },
     },
@@ -418,10 +632,45 @@ const AdminTabs = createBottomTabNavigator({
         ),
       },
     },
+    AdminProfile: {
+      screen: AdminProfileScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Profile',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="person" color={color} size={size} />
+        ),
+      },
+    },
+    AdminQuestionPapers: {
+      screen: QuestionPaperScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Question Papers',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="description" color={color} size={size} />
+        ),
+      },
+    },
+    AdminAchievements: {
+      screen: AchievementsScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Achievements',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
+        ),
+      },
+    },
     // Tab — Settings / Logout
     Logout: {
       screen: ProfileScreen,
       options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
         tabBarLabel: 'Logout',
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="logout" color={color} size={size} />
@@ -493,14 +742,59 @@ function PushNotificationRegistrar() {
 
 function PushNotificationListener() {
   const dispatch = useDispatch();
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.common.isAuthenticated,
+  );
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+  const [getUnreadMessageCount] = useLazyGetUnreadMessageCountQuery();
+  const syncUnreadMessageCount = useCallback(() => {
+    if (!isAuthenticated) return;
+
+    getUnreadMessageCount()
+      .unwrap()
+      .then(unreadCount => {
+        dispatch(setMessageUnreadCount(unreadCount));
+        dispatch(
+          jjWingsApi.util.invalidateTags([
+            { type: 'Messages', id: 'LIST' },
+            { type: 'Messages', id: 'STUDENTS' },
+          ]),
+        );
+      })
+      .catch(error => {
+        console.error('Failed to load unread message count', error);
+      });
+  }, [dispatch, getUnreadMessageCount, isAuthenticated]);
 
   useEffect(() => {
-    const unsubscribeMessage = onPushMessage(() => {
-      dispatch(showNotificationAttention());
+    const unsubscribeMessage = onPushMessage(message => {
+      if (message.title === 'New message') {
+        syncUnreadMessageCount();
+        return;
+      } else if (message.title) {
+        dispatch(showNotificationAttention());
+      }
     });
 
     return unsubscribeMessage;
-  }, [dispatch]);
+  }, [dispatch, syncUnreadMessageCount]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      const wasInactive = appState.current.match(/inactive|background/);
+      appState.current = nextAppState;
+
+      if (wasInactive && nextAppState === 'active') {
+        syncUnreadMessageCount();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [syncUnreadMessageCount]);
+
+  useEffect(() => {
+    syncUnreadMessageCount();
+  }, [syncUnreadMessageCount]);
 
   return null;
 }
@@ -522,5 +816,40 @@ function App() {
     </Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  notificationAttentionDot: {
+    position: 'absolute',
+    top: -2,
+    right: -3,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  messageUnreadBadge: {
+    position: 'absolute',
+    top: -7,
+    right: -11,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  messageUnreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    lineHeight: 11,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+});
 
 export default App;

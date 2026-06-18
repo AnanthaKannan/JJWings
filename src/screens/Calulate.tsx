@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, ScrollView, SafeAreaView, StatusBar } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useRoute } from '@react-navigation/native';
 
 import { QuizScreen, Header } from '../component/index';
 import Timer from '../component/Timer';
@@ -8,8 +9,10 @@ import { RootState } from '../store/store';
 import { useEffect } from 'react';
 
 export default function Calculate() {
+  const route = useRoute<any>();
   const questionId = useSelector((state: RootState) => state.common.questionId);
   const timer = useSelector((state: RootState) => state.common.timer);
+  const returnRouteName = route.params?.returnRouteName;
 
   const [timeLeft, setTimeLeft] = useState(0);
 
@@ -28,7 +31,7 @@ export default function Calculate() {
         keyboardShouldPersistTaps="handled" // taps work while keyboard open
       >
         <Timer timeLeft={timeLeft} setTimeLeft={setTimeLeft} />
-        <QuizScreen timer={timeLeft} />
+        <QuizScreen timer={timeLeft} returnRouteName={returnRouteName} />
       </ScrollView>
     </SafeAreaView>
   );

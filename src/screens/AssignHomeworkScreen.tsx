@@ -25,7 +25,6 @@ import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
   useAssignHomeworkMutation,
   useGetAvailableQuestionsQuery,
-  useSendNotificationMutation,
 } from '../store/api';
 
 type Task = {
@@ -33,6 +32,18 @@ type Task = {
   questionId?: string;
   question: string[];
   level?: number;
+};
+
+type AssignmentTypeFilter = 'homework' | 'exam';
+
+const getAssignmentTypeLabel = (type: AssignmentTypeFilter) => {
+  if (type === 'exam') return 'Exam';
+  return 'Homework';
+};
+
+const getAssignmentTypeIcon = (type: AssignmentTypeFilter) => {
+  if (type === 'exam') return 'fact-check';
+  return 'assignment';
 };
 
 const TaskRow = ({
@@ -116,11 +127,14 @@ export default function AssignHomeworkScreen() {
   const [selectedLevel, setSelectedLevel] = useState<number | null>(
     studentLevel,
   );
+  const [typeFilter, setTypeFilter] =
+    useState<AssignmentTypeFilter>('homework');
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { data: tasks = [], isLoading } = useGetAvailableQuestionsQuery(
     {
       studentId: studentId ?? '',
+      type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
     },
     {
@@ -129,12 +143,13 @@ export default function AssignHomeworkScreen() {
   );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
-  const [sendNotification, { isLoading: isSendingNotification }] =
-    useSendNotificationMutation();
   const showLoader = isFocused && isLoading;
+  const selectedTypeLabel = getAssignmentTypeLabel(typeFilter).toLowerCase();
+  const selectedTypeDisplayLabel = getAssignmentTypeLabel(typeFilter);
 
   useEffect(() => {
     setSelectedLevel(studentLevel);
+    setTypeFilter('homework');
     setSelectedIds(new Set());
   }, [studentId, studentLevel]);
 
@@ -172,6 +187,11 @@ export default function AssignHomeworkScreen() {
     setIsLevelPickerOpen(false);
   };
 
+  const handleTypeFilterChange = (type: AssignmentTypeFilter) => {
+    setTypeFilter(type);
+    setSelectedIds(new Set());
+  };
+
   const handleConfirm = async () => {
     if (selectedIds.size === 0 || isAssigning) return;
 
@@ -192,21 +212,11 @@ export default function AssignHomeworkScreen() {
         questionIds,
       }).unwrap();
 
-      await sendNotification({
-        studentIds: [
-          {
-            id: studentId,
-          },
-        ],
-        messageHeader: 'New homework assigned',
-        messageBody: `You've got  ${questionIds.length} assignments — let's crush them! : ${names}`,
-      }).unwrap();
-
       setSelectedIds(new Set());
 
       Alert.alert(
         'Assignment Confirmed',
-        `Assigned to ${studentName}:\n${names}`,
+        `${selectedTypeDisplayLabel} assigned to ${studentName}:\n${names}`,
         [{ text: 'Done', onPress: () => navigation.goBack() }],
       );
     } catch (err) {
@@ -247,7 +257,7 @@ export default function AssignHomeworkScreen() {
                   <MaterialIcons name="search" size={18} color="#94A3B8" />
                   <TextInput
                     style={styles.searchInput}
-                    placeholder="Search tasks or questions"
+                    placeholder={`Search ${selectedTypeLabel} or questions`}
                     placeholderTextColor="#B0B8C8"
                     value={search}
                     onChangeText={setSearch}
@@ -283,10 +293,47 @@ export default function AssignHomeworkScreen() {
                 </TouchableOpacity>
               </View>
 
+              <View style={styles.typeFilterRow}>
+                {(['homework', 'exam'] as AssignmentTypeFilter[]).map(type => {
+                  const isSelected = typeFilter === type;
+                  const label = getAssignmentTypeLabel(type);
+                  const iconName = getAssignmentTypeIcon(type);
+
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.typeFilterButton,
+                        isSelected && styles.typeFilterButtonActive,
+                      ]}
+                      onPress={() => handleTypeFilterChange(type)}
+                      activeOpacity={0.82}
+                    >
+                      <MaterialIcons
+                        name={iconName}
+                        size={17}
+                        color={isSelected ? '#2563EB' : '#64748B'}
+                      />
+                      <Text
+                        style={[
+                          styles.typeFilterText,
+                          isSelected && styles.typeFilterTextActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
               <View style={styles.sectionHeader}>
                 <View>
                   <Text style={styles.sectionTitle}>Available</Text>
-                  <Text style={styles.sectionTitle}>Tasks</Text>
+                  <Text style={styles.sectionTitle}>
+                    {typeFilter === 'exam' ? 'Exams' : 'Tasks'}
+                  </Text>
                 </View>
                 <View style={styles.totalBadge}>
                   <Text style={styles.totalBadgeNum}>{filtered.length}</Text>
@@ -417,7 +464,7 @@ export default function AssignHomeworkScreen() {
         </Pressable>
       </Modal>
       <LoadingOverlay
-        visible={isAssigning || isSendingNotification}
+        visible={isAssigning}
         label="Assigning homework..."
       />
     </SafeAreaView>
@@ -516,6 +563,39 @@ const styles = StyleSheet.create({
   },
   levelFilterTextActive: {
     color: '#4F46E5',
+  },
+  typeFilterRow: {
+    flexDirection: 'row',
+    marginBottom: 18,
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    gap: 4,
+  },
+  typeFilterButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: 8,
+  },
+  typeFilterButtonActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  typeFilterText: {
+    flexShrink: 1,
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  typeFilterTextActive: {
+    color: '#1D4ED8',
   },
   searchInput: {
     flex: 1,

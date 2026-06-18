@@ -12,14 +12,18 @@ import {
   StatusBar,
   RefreshControl,
 } from 'react-native';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
+import {
+  useIsFocused,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 import { useGetScoreQuery } from '../store/api';
 import { RootState } from '../store/store';
 import { formatDuration } from '../util/fn';
 import { APP_VERSION } from '../util/version';
-import { LoadingState } from '../component';
+import { AdminHeader, LoadingState, StudentHeader } from '../component';
 
 const { width } = Dimensions.get('window');
 
@@ -184,7 +188,7 @@ const FloatingStar: React.FC<FloatingStarProps> = ({
         useNativeDriver: true,
       }),
     ).start();
-  }, []);
+  }, [delay, floatAnim, rotateAnim]);
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -235,7 +239,7 @@ const PulseBadge: React.FC<PulseBadgeProps> = ({
         }),
       ]),
     ).start();
-  }, []);
+  }, [pulseAnim]);
 
   const color = correct ? '#22c55e' : '#ef4444';
   const bg = correct ? '#dcfce7' : '#fee2e2';
@@ -258,11 +262,21 @@ const PulseBadge: React.FC<PulseBadgeProps> = ({
 // ── Main Dashboard ─────────────────────────────────────────────────────
 const ProgressDashboard: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const isFocused = useIsFocused();
-  const studentId = useSelector((state: RootState) => state.common.studentId);
-  const studentName = useSelector(
+  const routeStudentId = route?.params?.studentId;
+  const routeStudentName = route?.params?.studentName;
+  const isAdminReview = route?.params?.adminReview === true;
+  const loggedInStudentId = useSelector(
+    (state: RootState) => state.common.studentId,
+  );
+  const loggedInStudentName = useSelector(
     (state: RootState) => state.common.studentName,
   );
+  const studentId = isAdminReview ? routeStudentId : loggedInStudentId;
+  const studentName = isAdminReview
+    ? routeStudentName ?? 'Student'
+    : loggedInStudentName;
   const headerAnim = useRef(new Animated.Value(-60)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const cardSlide = useRef(new Animated.Value(80)).current;
@@ -287,11 +301,36 @@ const ProgressDashboard: React.FC = () => {
   const working = score?.progress ?? 0;
   const correct = score?.success ?? 0;
   const wrong = score?.failure ?? 0;
+  const practiceAssigned = score?.practiceAssigned ?? 0;
+  const practiceDone = score?.practiceCompleted ?? 0;
+  const practiceNew = score?.practiceNew ?? 0;
+  const practiceWorking = score?.practiceProgress ?? 0;
+  const practiceCorrect = score?.practiceSuccess ?? 0;
+  const practiceWrong = score?.practiceFailure ?? 0;
   const totalSolved = correct + wrong;
   const accuracy =
     totalSolved > 0 ? Math.round((correct / totalSolved) * 1000) / 10 : 0;
+  const practiceTotalSolved = practiceCorrect + practiceWrong;
+  const practiceAccuracy =
+    practiceTotalSolved > 0
+      ? Math.round((practiceCorrect / practiceTotalSolved) * 1000) / 10
+      : 0;
   const learningHours = formatDuration(score?.timeTaken ?? 0);
+  const practiceLearningHours = formatDuration(score?.practiceTimeTaken ?? 0);
   const dashboardTitle = `${studentName.trim() || 'Your'}'s Progress Dashboard`;
+
+  const navigateToPractice = () => {
+    if (isAdminReview) {
+      navigation.navigate('PracticeScreen', {
+        studentId,
+        studentName,
+        adminReview: true,
+      });
+      return;
+    }
+
+    navigation.navigate('Practice');
+  };
 
   // ── Pull-to-refresh handler ──────────────────────────────────────────
   const onRefresh = useCallback(async () => {
@@ -362,7 +401,7 @@ const ProgressDashboard: React.FC = () => {
         useNativeDriver: true,
       }),
     ).start();
-  }, []);
+  }, [cardOpacity, cardSlide, headerAnim, headerOpacity, waveAnim]);
 
   const waveTranslate = waveAnim.interpolate({
     inputRange: [0, 1],
@@ -372,6 +411,15 @@ const ProgressDashboard: React.FC = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+      {isAdminReview ? (
+        <AdminHeader
+          header={`${studentName.trim() || 'Student'} Progress`}
+          showBackButton={true}
+          headerBackgroundColor="#4F46E5"
+        />
+      ) : (
+        <StudentHeader header="" headerBackgroundColor="#4F46E5" />
+      )}
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -389,17 +437,17 @@ const ProgressDashboard: React.FC = () => {
       >
         {/* Decorative floating elements */}
         <FloatingStar
-          style={{ position: 'absolute', top: 30, right: 28 }}
+          style={styles.floatingStarTop}
           delay={0}
           color="#FBBF24"
         />
         <FloatingStar
-          style={{ position: 'absolute', top: 90, right: 70 }}
+          style={styles.floatingStarMiddle}
           delay={2}
           color="#FB7185"
         />
         <FloatingStar
-          style={{ position: 'absolute', top: 60, left: 20 }}
+          style={styles.floatingStarLeft}
           delay={1}
           color="#A78BFA"
         />
@@ -494,7 +542,7 @@ const ProgressDashboard: React.FC = () => {
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardEmoji}>📊</Text>
-                <Text style={styles.cardTitle}>Performance Stats</Text>
+                <Text style={styles.cardTitle}>Homework Performance</Text>
               </View>
 
               <View style={styles.statsTopRow}>
@@ -540,9 +588,116 @@ const ProgressDashboard: React.FC = () => {
               <TouchableOpacity
                 style={styles.viewLogBtn}
                 activeOpacity={0.85}
-                onPress={() => navigation.navigate('Homework')}
+                onPress={() => {
+                  if (isAdminReview) {
+                    navigation.navigate('HomeworkScreen', {
+                      studentId,
+                      studentName,
+                      adminReview: true,
+                      type: 'homework',
+                    });
+                    return;
+                  }
+
+                  navigation.navigate('Homework');
+                }}
               >
                 <Text style={styles.viewLogText}>📋 View Homework</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardEmoji}>🧠</Text>
+                <Text style={styles.cardTitle}>Practice Status</Text>
+              </View>
+              <View style={styles.circleRow}>
+                <StatCircle
+                  value={practiceAssigned}
+                  label="ASSIGNED"
+                  color="#7C3AED"
+                  bgColor="#F3E8FF"
+                  delay={200}
+                />
+
+                <StatCircle
+                  value={practiceNew}
+                  label="NEW"
+                  color="#0891B2"
+                  bgColor="#CFFAFE"
+                  delay={400}
+                />
+
+                <StatCircle
+                  value={practiceWorking}
+                  label="WORKING"
+                  color="#CA8A04"
+                  bgColor="#FEF9C3"
+                  delay={600}
+                />
+                <StatCircle
+                  value={practiceDone}
+                  label="DONE"
+                  color="#16A34A"
+                  bgColor="#DCFCE7"
+                  delay={800}
+                />
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardEmoji}>🎯</Text>
+                <Text style={styles.cardTitle}>Practice Performance</Text>
+              </View>
+
+              <View style={styles.statsTopRow}>
+                <View>
+                  <Text style={styles.statsSmallLabel}>Accuracy</Text>
+                  <Text style={styles.accuracyValue}>{practiceAccuracy}%</Text>
+                </View>
+                <View style={styles.statsRight}>
+                  <Text style={styles.statsSmallLabel}>Total Solved</Text>
+                  <Text style={styles.totalSolvedValue}>
+                    {practiceTotalSolved.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              <AccuracyBar percent={practiceAccuracy} />
+
+              <View style={styles.badgeRow}>
+                <PulseBadge
+                  icon="✅"
+                  value={practiceCorrect}
+                  label="CORRECT"
+                  correct={true}
+                />
+                <PulseBadge
+                  icon="❌"
+                  value={practiceWrong}
+                  label="WRONG"
+                  correct={false}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.card, styles.practiceTimeCard]}>
+              <View style={styles.timeCardInner}>
+                <Text style={styles.timeIcon}>🧩</Text>
+                <View style={styles.timeInfo}>
+                  <Text style={styles.practiceTimeLabel}>PRACTICE TIME</Text>
+                  <Text style={styles.timeValue}>
+                    {practiceLearningHours} Hours
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.practiceLogBtn}
+                activeOpacity={0.85}
+                onPress={navigateToPractice}
+              >
+                <Text style={styles.viewLogText}>🧠 View Practice</Text>
               </TouchableOpacity>
             </View>
 
@@ -556,7 +711,7 @@ const ProgressDashboard: React.FC = () => {
             </View>
 
             <Text style={styles.versionText}>v{APP_VERSION}</Text>
-            <View style={{ height: 32 }} />
+            <View style={styles.bottomSpacer} />
           </Animated.View>
         )}
       </ScrollView>
@@ -568,7 +723,7 @@ const ProgressDashboard: React.FC = () => {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F0F4FF',
+    backgroundColor: '#4F46E5',
   },
   container: {
     flex: 1,
@@ -578,7 +733,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    paddingTop: 56,
+    paddingTop: 24,
     paddingBottom: 32,
     paddingHorizontal: 24,
     marginBottom: 20,
@@ -632,6 +787,24 @@ const styles = StyleSheet.create({
   floatingStar: {
     fontSize: 22,
     opacity: 0.85,
+  },
+  floatingStarTop: {
+    position: 'absolute',
+    top: 30,
+    right: 28,
+  },
+  floatingStarMiddle: {
+    position: 'absolute',
+    top: 90,
+    right: 70,
+  },
+  floatingStarLeft: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+  },
+  bottomSpacer: {
+    height: 32,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -776,6 +949,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B',
     gap: 16,
   },
+  practiceTimeCard: {
+    backgroundColor: '#312E81',
+    gap: 16,
+  },
   timeCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -786,6 +963,13 @@ const styles = StyleSheet.create({
   timeLabel: {
     fontSize: 11,
     color: '#818CF8',
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  practiceTimeLabel: {
+    fontSize: 11,
+    color: '#A5F3FC',
     fontWeight: '700',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -805,6 +989,18 @@ const styles = StyleSheet.create({
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  practiceLogBtn: {
+    backgroundColor: '#0891B2',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    shadowColor: '#0891B2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.42,
     shadowRadius: 8,
     elevation: 6,
   },

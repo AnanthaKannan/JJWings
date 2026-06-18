@@ -2,7 +2,8 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { HomeworkState } from '../util/enum';
-import { baseQuery } from './baseQuery';
+import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
+import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
 
@@ -23,6 +24,13 @@ type ApiScore = {
   correct?: number;
   wrong?: number;
   timeTaken?: number;
+  practiceAssigned?: number;
+  practiceNew?: number;
+  practiceProgress?: number;
+  practiceCompleted?: number;
+  practiceCorrect?: number;
+  practiceWrong?: number;
+  practiceTimeTaken?: number;
 };
 
 type ApiStudent = {
@@ -30,6 +38,8 @@ type ApiStudent = {
   studentId?: string;
   name?: string;
   level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
   vertical?: boolean;
   deviceIds?: string[];
   fcmToken?: string;
@@ -41,7 +51,9 @@ type ApiQuestion = {
   _id: string;
   questionId?: string;
   questions?: string[];
+  marks?: number[];
   level?: number;
+  oral?: boolean;
   updatedAt?: string;
 };
 
@@ -53,6 +65,7 @@ type ApiHomework = {
   results?: boolean[];
   answers?: Array<number | string>;
   timer?: number;
+  oral?: boolean;
   updatedAt?: string;
 };
 
@@ -94,6 +107,53 @@ type ApiNotificationsResponse = {
   meta: ApiMeta;
 };
 
+type ApiMessageParticipant = {
+  _id: string;
+  name?: string;
+  adminId?: string;
+  studentId?: string;
+  profilePic?: string;
+  profilePicPath?: string;
+};
+
+type ApiMessage = {
+  _id: string;
+  message?: string;
+  sendBy: ApiMessageParticipant;
+  sendByModel: 'Admin' | 'Student' | string;
+  receivedTo: ApiMessageParticipant;
+  receivedToModel: 'Admin' | 'Student' | string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ApiMessagesResponse = {
+  data: ApiMessage[];
+  meta: ApiMeta;
+};
+
+type ApiMessageStudent = {
+  _id: string;
+  studentId?: string;
+  name?: string;
+  level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
+  unreadMessageCount?: number;
+};
+
+type ApiMessageStudentsResponse = {
+  students: ApiMessageStudent[];
+  meta: ApiMeta;
+};
+
+type ApiUnreadMessageCountResponse = {
+  unreadCount?: number;
+  data?: {
+    unreadCount?: number;
+  };
+};
+
 type ApiRankingStudent = {
   totalCorrect?: number;
   totalQuestions?: number;
@@ -110,16 +170,45 @@ type ApiRankingResponse = {
   data: ApiRankingStudent[];
 };
 
+type ApiFileUpload = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  path?: string;
+  url?: string;
+  filePath?: string;
+  fileUrl?: string;
+  originalName?: string;
+  mimeType?: string;
+  size?: number;
+  fileSize?: number;
+  fileFormat?: string;
+  type?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ApiFileUploadsResponse =
+  | ApiFileUpload[]
+  | {
+      data?: ApiFileUpload[];
+      files?: ApiFileUpload[];
+      fileUploads?: ApiFileUpload[];
+    };
+
 export type Student = {
   id: string;
   name: string;
   studentId?: string;
   level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
   fcmTokens: string[];
   horizontal: boolean;
   assigned: number;
   completed: number;
   new: number;
+  progress: number;
   success: number;
   failure: number;
 };
@@ -128,19 +217,24 @@ export type SameDeviceStudent = {
   id: string;
   name: string;
   studentId?: string;
+  profilePic?: string;
+  profilePicPath?: string;
   deviceIds: string[];
   horizontal: boolean;
 };
 
 export type Question = {
   question?: string[];
+  marks?: number[];
 };
 
 export type QuestionTask = {
   id: string;
   questionId?: string;
   question: string[];
+  marks?: number[];
   level?: number;
+  oral?: boolean;
   updatedAt?: string;
 };
 
@@ -154,6 +248,7 @@ export type Homework = {
   result: boolean[];
   answer: number[];
   timer: number;
+  oral: boolean;
   updatedAt?: string;
 };
 
@@ -179,6 +274,13 @@ export type Score = {
   failure: number;
   timeTaken: number;
   completed: number;
+  practiceAssigned: number;
+  practiceNew: number;
+  practiceProgress: number;
+  practiceCompleted: number;
+  practiceSuccess: number;
+  practiceFailure: number;
+  practiceTimeTaken: number;
 };
 
 export type RankingStudent = {
@@ -193,9 +295,54 @@ export type RankingStudent = {
   accuracy: number;
 };
 
+export type QuestionPaper = {
+  id: string;
+  name: string;
+  path?: string;
+  url?: string;
+  originalName?: string;
+  mimeType?: string;
+  size?: number;
+  fileSize?: number;
+  fileFormat?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type MessageParticipant = {
+  id: string;
+  name: string;
+  code?: string;
+  model: string;
+  profilePic?: string;
+  profilePicPath?: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  message: string;
+  sendBy: MessageParticipant;
+  receivedTo: MessageParticipant;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type MessageStudent = {
+  id: string;
+  studentId?: string;
+  name: string;
+  level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
+  unreadMessageCount: number;
+};
+
+export type Achievement = QuestionPaper;
+
 type LoginArg = {
   username: string;
   password: string;
+  deviceId?: string;
 };
 
 type SwitchStudentLoginArg = {
@@ -213,22 +360,86 @@ type LoginApiResponse = {
     studentId?: string;
     adminId?: string;
     level?: number;
+    profilePic?: string;
+    profilePicPath?: string;
     vertical: boolean;
   };
 };
 
 type LoginResult = {
   id: string;
+  studentCode?: string;
+  adminCode?: string;
   name: string;
   role: 'student' | 'admin';
   token: string;
   level?: number;
+  profilePic?: string;
+  profilePicPath?: string;
   vertical: boolean;
 };
+
+type UploadFile = {
+  uri: string;
+  type?: string;
+  name?: string;
+};
+
+type UploadQuestionPaperArg = {
+  file: UploadFile;
+  name: string;
+};
+
+type UploadAchievementArg = {
+  file: UploadFile;
+};
+
+type UploadProfilePicArg = {
+  file: UploadFile;
+};
+
+type UploadResponse = {
+  url?: string;
+  path?: string;
+  fileUrl?: string;
+  location?: string;
+  profilePic?: string;
+  profilePicPath?: string;
+  file?: {
+    url?: string;
+    path?: string;
+  };
+  data?: {
+    url?: string;
+    path?: string;
+    fileUrl?: string;
+    location?: string;
+    profilePic?: string;
+    profilePicPath?: string;
+  };
+};
+
+type DownloadResponse =
+  | string
+  | {
+      url?: string;
+      downloadUrl?: string;
+      path?: string;
+      file?: {
+        url?: string;
+        path?: string;
+      };
+      data?: {
+        url?: string;
+        downloadUrl?: string;
+        path?: string;
+      };
+    };
 
 type HomeworkArg = {
   studentId: string;
   state: 'PROGRESS' | 'NEW' | 'COMPLETED';
+  type?: 'homework' | 'exam' | 'practice';
 };
 
 type HomeworkByIdArg = {
@@ -241,6 +452,10 @@ type ScoreArg = {
 
 type StudentByIdArg = {
   studentId: string;
+};
+
+type StudentsArg = {
+  level?: number;
 };
 
 type AddStudentArg = {
@@ -292,6 +507,9 @@ type CreateQuestionArg = {
   taskId: string;
   question: string[];
   level: number;
+  type: 'homework' | 'exam' | 'practice';
+  marks?: number[];
+  oral?: boolean;
 };
 
 type DeleteQuestionArg = {
@@ -300,6 +518,8 @@ type DeleteQuestionArg = {
 
 type QuestionsArg = {
   level?: number;
+  type?: 'homework' | 'exam' | 'practice';
+  search?: string;
 };
 
 type UpdateQuestionArg = {
@@ -309,13 +529,59 @@ type UpdateQuestionArg = {
 };
 
 type AssignHomeworkArg = {
+  studentId?: string;
+  levels?: number[];
+  questionIds: string[];
+};
+
+export type AssignmentQuestion = {
+  id: string;
+  questionId?: string;
+  type?: 'homework' | 'exam' | 'practice' | string;
+};
+
+export type AssignmentStudentResult = {
+  id: string;
+  studentId?: string;
+  name: string;
+  level?: number;
+  assignedQuestionIds: string[];
+  assignedQuestions: AssignmentQuestion[];
+  skippedQuestionIds: string[];
+  skippedQuestions: AssignmentQuestion[];
+};
+
+export type AssignHomeworkResult = {
+  success: boolean;
+  message?: string;
+  assignedCount: number;
+  skippedCount: number;
+  students: AssignmentStudentResult[];
+  notifications?: {
+    sentCount?: number;
+    totalRequested?: number;
+  };
+};
+
+type UnassignHomeworkArg = {
   studentId: string;
   questionIds: string[];
+};
+
+type AssignPracticeQuestionsArg = {
+  questionIds: string[];
+  studentId?: string;
+};
+
+type UnassignPracticeQuestionsArg = {
+  questionIds: string[];
+  studentId?: string;
 };
 
 type AvailableQuestionsArg = {
   studentId: string;
   level?: number;
+  type?: 'homework' | 'exam' | 'practice';
 };
 
 type RankingArg = {
@@ -334,11 +600,22 @@ type SendNotificationArg = {
   messageBody: string;
 };
 
+type SendMessageArg = {
+  message: string;
+  receivedTo: string;
+};
+
+type ReadMessagesArg = {
+  studentId: string;
+};
+
 const mapStudent = (student: ApiStudent): Student => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
   level: student.level,
+  profilePic: student.profilePicPath ?? student.profilePic,
+  profilePicPath: student.profilePicPath,
   fcmTokens: [
     ...(student.fcmTokens ?? []),
     ...(student.fcmToken ? [student.fcmToken] : []),
@@ -347,6 +624,7 @@ const mapStudent = (student: ApiStudent): Student => ({
   assigned: student.score?.assigned ?? 0,
   completed: student.score?.completed ?? 0,
   new: student.score?.new ?? 0,
+  progress: student.score?.progress ?? 0,
   success: student.score?.correct ?? 0,
   failure: student.score?.wrong ?? 0,
 });
@@ -355,6 +633,8 @@ const mapSameDeviceStudent = (student: ApiStudent): SameDeviceStudent => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
+  profilePic: student.profilePicPath ?? student.profilePic,
+  profilePicPath: student.profilePicPath,
   deviceIds: student.deviceIds ?? [],
   horizontal: !(student.vertical ?? true),
 });
@@ -363,7 +643,9 @@ const mapQuestion = (question: ApiQuestion): QuestionTask => ({
   id: question._id,
   questionId: question.questionId,
   question: question.questions ?? [],
+  marks: question.marks,
   level: question.level,
+  oral: question.oral ?? false,
   updatedAt: question.updatedAt,
 });
 
@@ -382,11 +664,13 @@ const mapHomework = (homework: ApiHomework): Homework => {
     questionLabel: question?.questionId,
     question: {
       question: question?.questions ?? [],
+      marks: question?.marks,
     },
     state: homework.state ?? HomeworkState.NEW,
     result: homework.results ?? [],
     answer: (homework.answers ?? []).map(Number),
     timer: homework.timer ?? 0,
+    oral: question?.oral ?? homework.oral ?? false,
     updatedAt: homework.updatedAt,
   };
 };
@@ -400,6 +684,40 @@ const mapNotification = (notification: ApiNotification): Notification => ({
   updatedAt: notification.updatedAt,
 });
 
+const mapMessageParticipant = (
+  participant: ApiMessageParticipant,
+  model: string,
+): MessageParticipant => ({
+  id: participant._id,
+  name: participant.name ?? (model === 'Admin' ? 'Admin' : 'Student'),
+  code: participant.adminId ?? participant.studentId,
+  model,
+  profilePic: participant.profilePicPath ?? participant.profilePic,
+  profilePicPath: participant.profilePicPath,
+});
+
+const mapMessage = (message: ApiMessage): ChatMessage => ({
+  id: message._id,
+  message: message.message ?? '',
+  sendBy: mapMessageParticipant(message.sendBy, message.sendByModel),
+  receivedTo: mapMessageParticipant(
+    message.receivedTo,
+    message.receivedToModel,
+  ),
+  createdAt: message.createdAt,
+  updatedAt: message.updatedAt,
+});
+
+const mapMessageStudent = (student: ApiMessageStudent): MessageStudent => ({
+  id: student._id,
+  studentId: student.studentId,
+  name: student.name ?? 'Student',
+  level: student.level,
+  profilePic: student.profilePicPath ?? student.profilePic,
+  profilePicPath: student.profilePicPath,
+  unreadMessageCount: student.unreadMessageCount ?? 0,
+});
+
 const mapRankingStudent = (student: ApiRankingStudent): RankingStudent => ({
   id: student.studentId,
   rank: student.rank,
@@ -410,6 +728,33 @@ const mapRankingStudent = (student: ApiRankingStudent): RankingStudent => ({
   totalTimer: student.totalTimer ?? 0,
   completedCount: student.completedCount ?? 0,
   accuracy: student.accuracy ?? 0,
+});
+
+const getFileUploadsFromResponse = (
+  response: ApiFileUploadsResponse,
+): ApiFileUpload[] => {
+  if (Array.isArray(response)) return response;
+
+  return response.data ?? response.files ?? response.fileUploads ?? [];
+};
+
+const mapQuestionPaper = (file: ApiFileUpload): QuestionPaper => ({
+  id: file._id ?? file.id ?? '',
+  name: file.name ?? file.originalName ?? 'Question paper',
+  path: file.path ?? file.filePath,
+  url: file.url ?? file.fileUrl,
+  originalName: file.originalName,
+  mimeType: file.mimeType,
+  size: file.fileSize ?? file.size,
+  fileSize: file.fileSize,
+  fileFormat: file.fileFormat,
+  createdAt: file.createdAt,
+  updatedAt: file.updatedAt,
+});
+
+const mapAchievement = (file: ApiFileUpload): Achievement => ({
+  ...mapQuestionPaper(file),
+  name: file.name ?? file.originalName ?? 'Celebration',
 });
 
 const getNextStudentId = (students: Student[]): IdGenData => {
@@ -432,13 +777,19 @@ export const jjWingsApi = createApi({
     'Homework',
     'Score',
     'Notifications',
+    'Messages',
     'Ranking',
+    'FileUploads',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<Homework[], HomeworkArg>({
-      query: ({ studentId, state }) => ({
+      query: ({ studentId, state, type }) => ({
         url: `/homework/${studentId}/${state}`,
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(type ? { type } : {}),
+        },
       }),
       transformResponse: (response: ApiHomeworksResponse) =>
         response.homeworks.map(mapHomework),
@@ -475,20 +826,25 @@ export const jjWingsApi = createApi({
     }),
 
     getLogin: builder.query<LoginResult, LoginArg>({
-      query: ({ username, password }) => ({
+      query: ({ username, password, deviceId }) => ({
         url: '/login',
         method: 'POST',
         body: {
           username,
           password,
+          ...(deviceId ? { deviceId } : {}),
         },
       }),
       transformResponse: (response: LoginApiResponse) => ({
         id: response.user.id,
+        studentCode: response.user.studentId,
+        adminCode: response.user.adminId,
         name: response.user.name,
         role: response.role,
         token: response.token,
         level: response.user.level,
+        profilePic: response.user.profilePicPath ?? response.user.profilePic,
+        profilePicPath: response.user.profilePicPath,
         vertical: response.user.vertical,
       }),
     }),
@@ -500,18 +856,26 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: (response: LoginApiResponse) => ({
         id: response.user.id,
+        studentCode: response.user.studentId,
+        adminCode: response.user.adminId,
         name: response.user.name,
         role: response.role,
         token: response.token,
         level: response.user.level,
+        profilePic: response.user.profilePicPath ?? response.user.profilePic,
+        profilePicPath: response.user.profilePicPath,
         vertical: response.user.vertical,
       }),
     }),
 
-    getStudents: builder.query<Student[], void>({
-      query: () => ({
+    getStudents: builder.query<Student[], StudentsArg | void>({
+      query: arg => ({
         url: '/admin/students',
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+        },
       }),
       transformResponse: (response: ApiStudentsResponse) =>
         response.students.map(mapStudent),
@@ -538,6 +902,8 @@ export const jjWingsApi = createApi({
           page: 1,
           limit: DEFAULT_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+          ...(arg?.type ? { type: arg.type } : {}),
+          ...(arg?.search ? { search: arg.search } : {}),
         },
       }),
       transformResponse: (response: ApiQuestionsResponse) =>
@@ -553,12 +919,13 @@ export const jjWingsApi = createApi({
 
     getAvailableQuestions: builder.query<QuestionTask[], AvailableQuestionsArg>(
       {
-        query: ({ studentId, level }) => ({
+        query: ({ studentId, level, type }) => ({
           url: `/admin/questions/available/${studentId}`,
           params: {
             page: 1,
             limit: DEFAULT_LIMIT,
             ...(typeof level === 'number' ? { level } : {}),
+            ...(type ? { type } : {}),
           },
         }),
         transformResponse: (response: ApiQuestionsResponse) =>
@@ -568,6 +935,27 @@ export const jjWingsApi = createApi({
         ],
       },
     ),
+
+    getPracticeQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+      query: arg => ({
+        url: '/questions/practice',
+        params: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
+          ...(arg?.search ? { search: arg.search } : {}),
+        },
+      }),
+      transformResponse: (response: ApiQuestionsResponse) =>
+        response.questions.map(mapQuestion),
+      providesTags: result => [
+        { type: 'Questions', id: 'PRACTICE_LIST' },
+        ...(result ?? []).map(question => ({
+          type: 'Question' as const,
+          id: question.id,
+        })),
+      ],
+    }),
 
     getIdGen: builder.query<IdGenData, void>({
       query: () => ({
@@ -590,6 +978,13 @@ export const jjWingsApi = createApi({
         failure: response.wrong ?? 0,
         timeTaken: response.timeTaken ?? 0,
         completed: response.completed ?? 0,
+        practiceAssigned: response.practiceAssigned ?? 0,
+        practiceNew: response.practiceNew ?? 0,
+        practiceProgress: response.practiceProgress ?? 0,
+        practiceCompleted: response.practiceCompleted ?? 0,
+        practiceSuccess: response.practiceCorrect ?? 0,
+        practiceFailure: response.practiceWrong ?? 0,
+        practiceTimeTaken: response.practiceTimeTaken ?? 0,
       }),
       providesTags: (_result, _error, { studentId }) => [
         { type: 'Score', id: studentId },
@@ -618,6 +1013,33 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
     }),
 
+    getMessages: builder.query<ChatMessage[], void>({
+      query: () => ({
+        url: '/messages',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiMessagesResponse) =>
+        response.data.map(mapMessage),
+      providesTags: [{ type: 'Messages', id: 'LIST' }],
+    }),
+
+    getMessageStudents: builder.query<MessageStudent[], void>({
+      query: () => ({
+        url: '/admin/messages/students',
+        params: { page: 1, limit: DEFAULT_LIMIT },
+      }),
+      transformResponse: (response: ApiMessageStudentsResponse) =>
+        response.students.map(mapMessageStudent),
+      providesTags: [{ type: 'Messages', id: 'STUDENTS' }],
+    }),
+
+    getUnreadMessageCount: builder.query<number, void>({
+      query: () => '/messages/unread-count',
+      transformResponse: (response: ApiUnreadMessageCountResponse) =>
+        response.data?.unreadCount ?? response.unreadCount ?? 0,
+      providesTags: [{ type: 'Messages', id: 'UNREAD_COUNT' }],
+    }),
+
     getRanking: builder.query<RankingStudent[], RankingArg | void>({
       query: arg => ({
         url: '/ranking',
@@ -628,6 +1050,30 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Ranking', id: 'LIST' }],
     }),
 
+    getQuestionPapers: builder.query<QuestionPaper[], void>({
+      query: () => ({
+        url: '/file-uploads',
+        params: { type: 'practice' },
+      }),
+      transformResponse: (response: ApiFileUploadsResponse) =>
+        getFileUploadsFromResponse(response)
+          .map(mapQuestionPaper)
+          .filter(file => file.id.length > 0),
+      providesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
+    getAchievements: builder.query<Achievement[], void>({
+      query: () => ({
+        url: '/file-uploads',
+        params: { type: 'celebration' },
+      }),
+      transformResponse: (response: ApiFileUploadsResponse) =>
+        getFileUploadsFromResponse(response)
+          .map(mapAchievement)
+          .filter(file => file.id.length > 0),
+      providesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+    }),
+
     sendNotification: builder.mutation<string, SendNotificationArg>({
       query: body => ({
         url: '/admin/notifications',
@@ -635,14 +1081,13 @@ export const jjWingsApi = createApi({
         body,
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { studentIds }) =>
-        [
-          ...studentIds.map(student => ({
-            type: 'Notifications' as const,
-            id: student.id,
-          })),
-          { type: 'Notifications' as const, id: 'ADMIN' },
-        ],
+      invalidatesTags: (_result, _error, { studentIds }) => [
+        ...studentIds.map(student => ({
+          type: 'Notifications' as const,
+          id: student.id,
+        })),
+        { type: 'Notifications' as const, id: 'ADMIN' },
+      ],
     }),
 
     addStudent: builder.mutation<string, AddStudentArg>({
@@ -722,14 +1167,150 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
     }),
 
+    uploadProfilePic: builder.mutation<string | undefined, UploadProfilePicArg>(
+      {
+        query: ({ file }) => {
+          const formData = new FormData();
+          formData.append('path', 'profile');
+          formData.append('file', {
+            uri: file.uri,
+            type: file.type ?? 'image/jpeg',
+            name: file.name ?? 'profile.jpg',
+          } as any);
+
+          return {
+            url: '/uploads',
+            method: 'POST',
+            body: formData,
+          };
+        },
+        transformResponse: (response: UploadResponse) =>
+          response.profilePic ??
+          response.profilePicPath ??
+          response.file?.path ??
+          response.url ??
+          response.file?.url ??
+          response.fileUrl ??
+          response.location ??
+          response.path ??
+          response.data?.profilePic ??
+          response.data?.profilePicPath ??
+          response.data?.url ??
+          response.data?.fileUrl ??
+          response.data?.location ??
+          response.data?.path,
+      },
+    ),
+
+    deleteProfilePic: builder.mutation<string, void>({
+      query: () => ({
+        url: '/profile-pic',
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+    }),
+
+    uploadQuestionPaper: builder.mutation<string, UploadQuestionPaperArg>({
+      query: ({ file, name }) => {
+        const formData = new FormData();
+        formData.append('path', 'practice');
+        formData.append('name', name);
+        formData.append('file', {
+          uri: file.uri,
+          type: file.type ?? 'application/octet-stream',
+          name: file.name ?? name,
+        } as any);
+
+        return {
+          url: '/uploads',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
+    uploadAchievement: builder.mutation<string, UploadAchievementArg>({
+      query: ({ file }) => {
+        const formData = new FormData();
+        formData.append('path', 'celebration');
+        formData.append('name', 'celebration');
+        formData.append('file', {
+          uri: file.uri,
+          type: file.type ?? 'image/jpeg',
+          name: file.name ?? 'celebration.jpg',
+        } as any);
+
+        return {
+          url: '/uploads',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+    }),
+
+    deleteQuestionPaper: builder.mutation<string, string>({
+      query: id => ({
+        url: `/admin/file-uploads/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
+    }),
+
+    deleteAchievement: builder.mutation<string, string>({
+      query: id => ({
+        url: `/admin/file-uploads/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+    }),
+
+    getQuestionPaperDownload: builder.query<string, string>({
+      query: id => ({
+        url: `/file-uploads/${id}/download`,
+        responseHandler: async response => {
+          const fallbackUrl = `${API_URL}/file-uploads/${id}/download`;
+          const contentType = response.headers.get('content-type') ?? '';
+
+          if (contentType.includes('application/json')) {
+            const json = (await response.json()) as DownloadResponse;
+
+            if (typeof json === 'string') return json;
+
+            return (
+              json.downloadUrl ??
+              json.url ??
+              json.file?.url ??
+              json.file?.path ??
+              json.data?.downloadUrl ??
+              json.data?.url ??
+              json.data?.path ??
+              json.path ??
+              fallbackUrl
+            );
+          }
+
+          return fallbackUrl;
+        },
+      }),
+    }),
+
     createQuestion: builder.mutation<string, CreateQuestionArg>({
-      query: ({ taskId, question, level }) => ({
+      query: ({ taskId, question, level, type, marks, oral }) => ({
         url: '/admin/questions',
         method: 'POST',
         body: {
           questionId: taskId,
           questions: question,
           level,
+          type,
+          ...(marks ? { marks } : {}),
+          ...(oral ? { oral } : {}),
         },
       }),
       transformResponse: () => 'success',
@@ -761,10 +1342,88 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    assignHomework: builder.mutation<string, AssignHomeworkArg>({
-      query: ({ studentId, questionIds }) => ({
+    assignHomework: builder.mutation<AssignHomeworkResult, AssignHomeworkArg>({
+      query: ({ studentId, levels, questionIds }) => ({
         url: '/admin/questions/assign',
         method: 'POST',
+        body: {
+          questionIds,
+          ...(studentId ? { studentId } : {}),
+          ...(levels ? { levels } : {}),
+        },
+      }),
+      invalidatesTags: (_result, _error, { studentId }) => [
+        ...(studentId
+          ? [
+              {
+                type: 'Homework' as const,
+                id: `${studentId}_${HomeworkState.NEW}`,
+              },
+              { type: 'Score' as const, id: studentId },
+              { type: 'Questions' as const, id: `AVAILABLE_${studentId}` },
+            ]
+          : []),
+        { type: 'Students', id: 'LIST' },
+      ],
+    }),
+
+    sendMessage: builder.mutation<string, SendMessageArg>({
+      query: body => ({
+        url: '/messages',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Messages', id: 'LIST' }],
+    }),
+
+    readMessages: builder.mutation<string, ReadMessagesArg>({
+      query: body => ({
+        url: '/messages/read',
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [
+        { type: 'Messages', id: 'LIST' },
+        { type: 'Messages', id: 'STUDENTS' },
+      ],
+      async onQueryStarted({ studentId }, { dispatch, queryFulfilled }) {
+        let readCount = 0;
+        const patchResult = dispatch(
+          jjWingsApi.util.updateQueryData(
+            'getMessageStudents',
+            undefined,
+            students => {
+              const student = students.find(item => item.id === studentId);
+              if (student) {
+                readCount = student.unreadMessageCount;
+                student.unreadMessageCount = 0;
+              }
+            },
+          ),
+        );
+
+        try {
+          await queryFulfilled;
+          dispatch(reduceMessageUnreadCount(readCount));
+          const unreadCount = await dispatch(
+            jjWingsApi.endpoints.getUnreadMessageCount.initiate(undefined, {
+              forceRefetch: true,
+              subscribe: false,
+            }),
+          ).unwrap();
+          dispatch(setMessageUnreadCount(unreadCount));
+        } catch {
+          patchResult.undo();
+        }
+      },
+    }),
+
+    unassignHomework: builder.mutation<string, UnassignHomeworkArg>({
+      query: ({ studentId, questionIds }) => ({
+        url: '/admin/questions/assign',
+        method: 'DELETE',
         body: { studentId, questionIds },
       }),
       transformResponse: () => 'success',
@@ -773,6 +1432,55 @@ export const jjWingsApi = createApi({
         { type: 'Score', id: studentId },
         { type: 'Questions', id: `AVAILABLE_${studentId}` },
         { type: 'Students', id: 'LIST' },
+      ],
+    }),
+
+    assignPracticeQuestions: builder.mutation<
+      string,
+      AssignPracticeQuestionsArg
+    >({
+      query: ({ questionIds }) => ({
+        url: '/student/questions/practice/assign',
+        method: 'POST',
+        body: { questionIds },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Questions', id: 'PRACTICE_LIST' },
+        ...(studentId
+          ? [
+              {
+                type: 'Homework' as const,
+                id: `${studentId}_${HomeworkState.NEW}`,
+              },
+              { type: 'Score' as const, id: studentId },
+            ]
+          : []),
+      ],
+    }),
+
+    unassignPracticeQuestions: builder.mutation<
+      string,
+      UnassignPracticeQuestionsArg
+    >({
+      query: ({ questionIds }) => ({
+        url: '/student/questions/practice/assign',
+        method: 'DELETE',
+        body: { questionIds },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Questions', id: 'PRACTICE_LIST' },
+        ...(studentId
+          ? [
+              {
+                type: 'Homework' as const,
+                id: `${studentId}_${HomeworkState.NEW}`,
+              },
+              { type: 'Score' as const, id: studentId },
+              { type: 'Students' as const, id: 'LIST' },
+            ]
+          : []),
       ],
     }),
 
@@ -809,6 +1517,7 @@ export const {
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
   useGetQuestionsQuery,
+  useGetPracticeQuestionsQuery,
   useGetAvailableQuestionsQuery,
   useAddStudentMutation,
   useUpdateStudentMutation,
@@ -817,14 +1526,31 @@ export const {
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,
+  useUploadProfilePicMutation,
+  useDeleteProfilePicMutation,
   useCreateQuestionMutation,
   useDeleteQuestionMutation,
   useUpdateQuestionMutation,
   useAssignHomeworkMutation,
+  useUnassignHomeworkMutation,
+  useAssignPracticeQuestionsMutation,
+  useUnassignPracticeQuestionsMutation,
   useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
   useGetAdminNotificationsQuery,
+  useGetMessagesQuery,
+  useGetMessageStudentsQuery,
+  useLazyGetUnreadMessageCountQuery,
   useGetRankingQuery,
+  useReadMessagesMutation,
   useSendNotificationMutation,
+  useSendMessageMutation,
+  useGetQuestionPapersQuery,
+  useUploadQuestionPaperMutation,
+  useDeleteQuestionPaperMutation,
+  useLazyGetQuestionPaperDownloadQuery,
+  useGetAchievementsQuery,
+  useUploadAchievementMutation,
+  useDeleteAchievementMutation,
 } = jjWingsApi;

@@ -8,7 +8,7 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useRoute } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 import { useGetHomeworkByIdQuery } from '../store/api';
@@ -37,6 +37,7 @@ const TrophyIcon = () => (
 type QuestionCardProps = {
   index: number;
   question: string;
+  points?: number;
   answer: number;
   correctAnswer: number;
   isWrong: boolean;
@@ -49,12 +50,13 @@ const formatTime = (seconds = 0) => {
     .padStart(2, '0');
   const remainingSeconds = (safeSeconds % 60).toString().padStart(2, '0');
 
-  return `${minutes} : ${remainingSeconds}`;
+  return `${minutes}:${remainingSeconds}`;
 };
 
 const QuestionCard = ({
   index,
   question,
+  points,
   answer,
   correctAnswer,
   isWrong,
@@ -77,7 +79,7 @@ const QuestionCard = ({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, index, slideAnim]);
 
   return (
     <Animated.View
@@ -128,6 +130,11 @@ const QuestionCard = ({
             </Text>
             {isWrong ? <CrossIcon /> : <CheckIcon />}
           </View>
+          {typeof points === 'number' && points > 0 && (
+            <View style={styles.pointsBadge}>
+              <Text style={styles.pointsText}>{points} pts</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -147,9 +154,11 @@ export default function QuizReviewScreen() {
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const isFocused = useIsFocused();
+  const route = useRoute<any>();
 
   const homeworkId = useSelector((state: RootState) => state.common.homeworkId);
   const questions = useSelector((state: RootState) => state.common.questions);
+  const storedMarks = useSelector((state: RootState) => state.common.marks);
 
   const { data: hw, isLoading } = useGetHomeworkByIdQuery(
     { homeworkId: homeworkId ?? '' },
@@ -172,7 +181,22 @@ export default function QuizReviewScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [headerAnim, scoreAnim]);
+
+  const marks = hw?.question?.marks ?? storedMarks;
+  const hasMarks = Array.isArray(marks) && marks.length > 0;
+  const totalMarks = hasMarks
+    ? marks.reduce((total, mark) => total + mark, 0)
+    : 0;
+  const earnedMarks =
+    hasMarks && hw?.result
+      ? hw.result.reduce((total, isCorrect, index) => {
+          return total + (isCorrect ? marks[index] ?? 0 : 0);
+        }, 0)
+      : 0;
+  const correctAnswers = hw?.result?.filter(val => val === true)?.length ?? 0;
+  const totalQuestions = hw?.result?.length ?? 0;
+  const isExam = route.params?.type === 'exam';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -210,15 +234,12 @@ export default function QuizReviewScreen() {
           >
             <View style={styles.heroLeft}>
               <Text style={styles.heroTitle}>Great Job!</Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <View>
+              <View style={styles.heroStatsLayout}>
+                <View style={styles.statBlock}>
                   <View style={styles.scorePill}>
-                    <Text style={styles.scorePillLabel}>FINAL SCORE</Text>
+                    <Text style={styles.scorePillLabel}>
+                      {hasMarks ? 'FINAL MARKS' : 'FINAL SCORE'}
+                    </Text>
                   </View>
                   <View style={styles.statsRow}>
                     <Animated.View
@@ -228,16 +249,21 @@ export default function QuizReviewScreen() {
                     >
                       <View style={styles.scoreRow}>
                         <Text style={styles.scoreNumber}>
-                          {hw?.result?.filter(val => val === true)?.length}
+                          {hasMarks ? earnedMarks : correctAnswers}
                         </Text>
                         <Text style={styles.scoreTotal}>
-                          /{hw?.result?.length}
+                          /{hasMarks ? totalMarks : totalQuestions}
                         </Text>
                       </View>
                     </Animated.View>
                   </View>
+                  {isExam && hasMarks ? (
+                    <Text style={styles.scoreSubText}>
+                      Questions {correctAnswers}/{totalQuestions}
+                    </Text>
+                  ) : null}
                 </View>
-                <View>
+                <View style={[styles.statBlock, styles.timeStatBlock]}>
                   <View style={styles.scorePill}>
                     <Text style={styles.scorePillLabel}>TIME TAKEN</Text>
                   </View>
@@ -246,8 +272,13 @@ export default function QuizReviewScreen() {
                       transform: [{ scale: scoreAnim }],
                     }}
                   >
-                    <View style={styles.scoreRow}>
-                      <Text style={styles.timerShow}>
+                    <View style={styles.timerRow}>
+                      <Text
+                        style={styles.timerShow}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.82}
+                      >
                         {formatTime(hw?.timer)}
                       </Text>
                     </View>
@@ -271,13 +302,14 @@ export default function QuizReviewScreen() {
                 key={question}
                 index={index}
                 question={question}
+                points={marks[index]}
                 answer={hw?.answer[index]}
                 correctAnswer={evaluateExpression(question)}
                 isWrong={!hw?.result[index]}
               />
             ))}
 
-          <View style={{ height: 32 }} />
+          <View style={styles.bottomSpacer} />
         </ScrollView>
       )}
     </SafeAreaView>
@@ -300,6 +332,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  bottomSpacer: {
+    height: 32,
   },
   loaderWrap: {
     paddingHorizontal: 16,
@@ -330,6 +365,20 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: 6,
   },
+  heroStatsLayout: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  statBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  timeStatBlock: {
+    flex: 0,
+    minWidth: 92,
+    alignItems: 'flex-end',
+  },
   heroSub: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.82)',
@@ -355,6 +404,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 2,
   },
+  timerRow: {
+    alignItems: 'flex-end',
+    minWidth: 92,
+  },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -372,8 +425,16 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
     color: '#fff',
-    letterSpacing: -2,
+    letterSpacing: 0,
     lineHeight: 54,
+    minWidth: 92,
+    textAlign: 'right',
+  },
+  scoreSubText: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: -4,
   },
   scoreTotal: {
     fontSize: 22,
@@ -489,6 +550,19 @@ const styles = StyleSheet.create({
     color: MUTED,
     marginBottom: 2,
     letterSpacing: 0.3,
+  },
+  pointsBadge: {
+    alignSelf: 'flex-end',
+    borderRadius: 8,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 7,
+  },
+  pointsText: {
+    color: '#92400E',
+    fontSize: 11,
+    fontWeight: '900',
   },
   questionText: {
     fontSize: 22,
