@@ -1,5 +1,8 @@
 ## JJ Brain Wings
 
+
+https://sites.google.com/view/jjwings-abacus-privacy-policy/home
+
 ## Version
 Node: v24.14.0
 
@@ -29,3 +32,19 @@ adb connect 10.70.190.83:5555
 ## Keystore
 keystore.properties - android\keystore.properties
 jjwings-upload-key.keystore - android\app\jjwings-upload-key.keystore
+4. 
+
+
+## Release details
+Welcome to JJ Brainwings Abacus!
+
+🎉 Initial release of the JJ Brainwings Abacus app.
+
+Features:
+• Access abacus learning materials and practice activities.
+• View daily homework and assignments.
+• Stay updated with class information and announcements.
+• User-friendly interface designed for children and parents.
+• Performance improvements and a smooth learning experience.
+
+Thank you for choosing JJ Brainwings Abacus. We look forward to helping children build strong mental math skills!
