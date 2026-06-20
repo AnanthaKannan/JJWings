@@ -304,7 +304,7 @@ export default function GameScreen() {
             >
               <View style={styles.welcomeCard}>
                 <Text style={styles.welcomeEmoji}>🪁</Text>
-                <Text style={styles.gameTitle}>JJWings</Text>
+                <Text style={styles.gameTitle}>JJ Brain Wings</Text>
                 <Text style={styles.gameTitleAccent}>Abacus Adventure</Text>
                 <Text style={styles.gameSubtitle}>
                   Pop the falling bead-balls before they hit the floor!
