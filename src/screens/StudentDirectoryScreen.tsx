@@ -13,6 +13,7 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -20,6 +21,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {
   useGetStudentsQuery,
   useUpdateStudentHorizontalMutation,
+  useResetPasswordMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
@@ -208,6 +210,8 @@ export default function StudentDirectoryScreen() {
   );
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
+  const [resetPassword, { isLoading: isResetPasswordLoading }] =
+    useResetPasswordMutation();
 
   // Reset to page 1 whenever the level filter changes
   useEffect(() => {
@@ -375,6 +379,33 @@ export default function StudentDirectoryScreen() {
     closeActionsModal();
   };
 
+  const handleModalResetPasswordPress = async () => {
+    if (!selectedStudent) return;
+
+    try {
+      const response = await resetPassword({
+        studentId: selectedStudent.id,
+      }).unwrap();
+
+      const password =
+        response?.password || response?.newPassword || response?.data?.password;
+      const message =
+        response?.message || 'Password has been reset successfully.';
+
+      closeActionsModal();
+      Alert.alert(
+        'Password Reset',
+        password ? `${message}\n\nNew password: ${password}` : message,
+      );
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      Alert.alert(
+        'Password Reset',
+        'Unable to reset password right now. Please try again.',
+      );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
@@ -472,8 +503,12 @@ export default function StudentDirectoryScreen() {
         <Text style={styles.fabIcon}>＋</Text>
       </TouchableOpacity> */}
       <LoadingOverlay
-        visible={isHorizontalUpdating}
-        label="Updating student..."
+        visible={isHorizontalUpdating || isResetPasswordLoading}
+        label={
+          isResetPasswordLoading
+            ? 'Resetting password...'
+            : 'Updating student...'
+        }
       />
       <Modal
         visible={isLevelPickerOpen}
@@ -629,6 +664,15 @@ export default function StudentDirectoryScreen() {
                 ]}
               >
                 {selectedStudent?.horizontal ? 'Vertical' : 'Horizontal'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleModalResetPasswordPress}
+              disabled={isResetPasswordLoading}
+            >
+              <Text style={styles.modalSecondaryActionText}>
+                {isResetPasswordLoading ? 'Resetting...' : 'Reset Password'}
               </Text>
             </TouchableOpacity>
           </Pressable>

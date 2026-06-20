@@ -487,6 +487,19 @@ type UpdatePasswordArg = {
   password: string;
 };
 
+type ResetPasswordArg = {
+  studentId: string;
+};
+
+type ResetPasswordResponse = {
+  message?: string;
+  password?: string;
+  newPassword?: string;
+  data?: {
+    password?: string;
+  };
+};
+
 type UpdateStudentDeviceIdArg = {
   deviceId: string;
   authToken?: string;
@@ -1253,6 +1266,15 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
     }),
 
+    resetPassword: builder.mutation<ResetPasswordResponse, ResetPasswordArg>({
+      query: ({ studentId }) => ({
+        url: '/resetpassword',
+        method: 'POST',
+        body: { studentId },
+      }),
+      transformResponse: (response: ResetPasswordResponse) => response,
+    }),
+
     updateStudentDeviceId: builder.mutation<string, UpdateStudentDeviceIdArg>({
       query: ({ deviceId, authToken }) => ({
         url: '/student',
@@ -1640,6 +1662,7 @@ export const {
   useUpdateStudentFcmTokenMutation,
   useUpdateStudentPasswordMutation,
   useUpdateAdminPasswordMutation,
+  useResetPasswordMutation,
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,
