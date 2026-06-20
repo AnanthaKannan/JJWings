@@ -6,6 +6,7 @@ import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
 import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
+const DEFAULT_NOTIFICATION_LIMIT = 10;
 
 type ApiMeta = {
   total: number;
@@ -590,6 +591,18 @@ type RankingArg = {
 
 type NotificationsArg = {
   studentId: string;
+  page?: number;
+  limit?: number;
+};
+
+type AdminNotificationsArg = {
+  page?: number;
+  limit?: number;
+};
+
+export type NotificationsResult = {
+  notifications: Notification[];
+  meta: ApiMeta;
 };
 
 type SendNotificationArg = {
@@ -683,6 +696,27 @@ const mapNotification = (notification: ApiNotification): Notification => ({
   createdAt: notification.createdAt,
   updatedAt: notification.updatedAt,
 });
+
+const mergeNotificationsResult = (
+  currentCache: NotificationsResult,
+  newPage: NotificationsResult,
+) => {
+  if (newPage.meta.page === 1) {
+    currentCache.notifications = newPage.notifications;
+    currentCache.meta = newPage.meta;
+    return;
+  }
+
+  const existingIds = new Set(
+    currentCache.notifications.map(notification => notification.id),
+  );
+  const newNotifications = newPage.notifications.filter(
+    notification => !existingIds.has(notification.id),
+  );
+
+  currentCache.notifications.push(...newNotifications);
+  currentCache.meta = newPage.meta;
+};
 
 const mapMessageParticipant = (
   participant: ApiMessageParticipant,
@@ -991,25 +1025,47 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    getNotifications: builder.query<Notification[], NotificationsArg>({
-      query: ({ studentId }) => ({
+    getNotifications: builder.query<NotificationsResult, NotificationsArg>({
+      query: ({ studentId, page = 1, limit = DEFAULT_NOTIFICATION_LIMIT }) => ({
         url: `/notifications/${studentId}`,
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: { page, limit },
       }),
-      transformResponse: (response: ApiNotificationsResponse) =>
-        response.data.map(mapNotification),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs.studentId}-${
+          queryArgs.limit ?? DEFAULT_NOTIFICATION_LIMIT
+        }`,
+      transformResponse: (response: ApiNotificationsResponse) => ({
+        notifications: response.data.map(mapNotification),
+        meta: response.meta,
+      }),
+      merge: mergeNotificationsResult,
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page,
       providesTags: (_result, _error, { studentId }) => [
         { type: 'Notifications', id: studentId },
       ],
     }),
 
-    getAdminNotifications: builder.query<Notification[], void>({
-      query: () => ({
+    getAdminNotifications: builder.query<
+      NotificationsResult,
+      AdminNotificationsArg | void
+    >({
+      query: arg => ({
         url: '/admin/notifications',
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: arg?.page ?? 1,
+          limit: arg?.limit ?? DEFAULT_NOTIFICATION_LIMIT,
+        },
       }),
-      transformResponse: (response: ApiNotificationsResponse) =>
-        response.data.map(mapNotification),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.limit ?? DEFAULT_NOTIFICATION_LIMIT}`,
+      transformResponse: (response: ApiNotificationsResponse) => ({
+        notifications: response.data.map(mapNotification),
+        meta: response.meta,
+      }),
+      merge: mergeNotificationsResult,
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page,
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
     }),
 
