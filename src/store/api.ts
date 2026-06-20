@@ -6,8 +6,8 @@ import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
 import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
-const DEFAULT_NOTIFICATION_LIMIT = 10;
-const DEFAULT_STUDENTS_LIMIT = 500;
+const DEFAULT_NOTIFICATION_LIMIT = 20;
+const DEFAULT_STUDENTS_LIMIT = 20;
 
 type ApiMeta = {
   total: number;

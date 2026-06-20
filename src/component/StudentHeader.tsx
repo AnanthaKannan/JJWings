@@ -55,6 +55,7 @@ const studentNavItems: StudentNavItem[] = [
     routeName: 'QuestionPapers',
   },
   { label: 'Achievements', icon: 'emoji-events', routeName: 'Achievements' },
+  { label: 'Game', icon: 'sports-esports', routeName: 'Game' },
   {
     label: 'Update Password',
     icon: 'lock-reset',

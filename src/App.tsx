@@ -41,6 +41,7 @@ import {
   ProfileScreen,
   StudentProfileScreen,
   UpdatePasswordScreen,
+  GameScreen,
   HomeworkScreen,
   PracticeScreen,
   QuizReviewScreen,
@@ -454,6 +455,23 @@ const MainTabs = createBottomTabNavigator({
         tabBarIcon: ({ color, size, focused }) => (
           <AnimatedTabIcon
             name="emoji-events"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
+    Game: {
+      screen: GameScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarStyle: { display: 'none' },
+        tabBarLabel: 'Game',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="sports-esports"
             color={color}
             size={size}
             focused={focused}
