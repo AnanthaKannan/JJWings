@@ -7,6 +7,7 @@ import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 10;
+const DEFAULT_STUDENTS_LIMIT = 10;
 
 type ApiMeta = {
   total: number;
@@ -457,6 +458,8 @@ type StudentByIdArg = {
 
 type StudentsArg = {
   level?: number;
+  page?: number;
+  limit?: number;
 };
 
 type AddStudentArg = {
@@ -605,6 +608,11 @@ export type NotificationsResult = {
   meta: ApiMeta;
 };
 
+export type StudentsResult = {
+  students: Student[];
+  meta: ApiMeta;
+};
+
 type SendNotificationArg = {
   studentIds: Array<{
     id: string;
@@ -715,6 +723,25 @@ const mergeNotificationsResult = (
   );
 
   currentCache.notifications.push(...newNotifications);
+  currentCache.meta = newPage.meta;
+};
+
+const mergeStudentsResult = (
+  currentCache: StudentsResult,
+  newPage: StudentsResult,
+) => {
+  if (newPage.meta.page === 1) {
+    currentCache.students = newPage.students;
+    currentCache.meta = newPage.meta;
+    return;
+  }
+
+  const existingIds = new Set(currentCache.students.map(student => student.id));
+  const newStudents = newPage.students.filter(
+    student => !existingIds.has(student.id),
+  );
+
+  currentCache.students.push(...newStudents);
   currentCache.meta = newPage.meta;
 };
 
@@ -902,20 +929,29 @@ export const jjWingsApi = createApi({
       }),
     }),
 
-    getStudents: builder.query<Student[], StudentsArg | void>({
+    getStudents: builder.query<StudentsResult, StudentsArg | void>({
       query: arg => ({
         url: '/admin/students',
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: arg?.page ?? 1,
+          limit: arg?.limit ?? DEFAULT_STUDENTS_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
         },
       }),
-      transformResponse: (response: ApiStudentsResponse) =>
-        response.students.map(mapStudent),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.level ?? 'ALL'}-${
+          queryArgs?.limit ?? DEFAULT_STUDENTS_LIMIT
+        }`,
+      transformResponse: (response: ApiStudentsResponse) => ({
+        students: response.students.map(mapStudent),
+        meta: response.meta,
+      }),
+      merge: mergeStudentsResult,
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page,
       providesTags: result => [
         { type: 'Students', id: 'LIST' },
-        ...(result ?? []).map(student => ({
+        ...(result?.students ?? []).map(student => ({
           type: 'Student' as const,
           id: student.id,
         })),
