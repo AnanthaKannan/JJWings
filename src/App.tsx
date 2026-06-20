@@ -40,6 +40,7 @@ import {
   LoginScreen,
   ProfileScreen,
   StudentProfileScreen,
+  UpdatePasswordScreen,
   HomeworkScreen,
   PracticeScreen,
   QuizReviewScreen,
@@ -692,6 +693,7 @@ const RootStack = createNativeStackNavigator({
     Login: { screen: LoginScreen },
     Main: { screen: MainTabs }, // student flow
     Admin: { screen: AdminTabs }, // admin flow
+    UpdatePassword: { screen: UpdatePasswordScreen },
   },
 });
 

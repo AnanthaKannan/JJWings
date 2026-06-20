@@ -160,9 +160,11 @@ const StudentRow = ({
 
 // ─── Table Header ─────────────────────────────────────────────────────────────
 
-const TableHeader = () => (
+const TableHeader = ({ count }: { count: number }) => (
   <View style={styles.tableHeader}>
-    <Text style={[styles.headerText, styles.studentHeader]}>STUDENT</Text>
+    <Text style={[styles.headerText, styles.studentHeader]}>
+      STUDENT {count}
+    </Text>
     <Text style={[styles.headerText, styles.progressHeader]}>PROGRESS</Text>
     <Text style={[styles.headerText, styles.actionsHeader]}>ACTIONS</Text>
   </View>
@@ -386,7 +388,7 @@ export default function StudentDirectoryScreen() {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name, level, or ID..."
+            placeholder="Search by name..."
             placeholderTextColor="#A0AEC0"
             value={search}
             onChangeText={setSearch}
@@ -423,7 +425,7 @@ export default function StudentDirectoryScreen() {
 
       {/* Table */}
       <View style={styles.tableCard}>
-        <TableHeader />
+        <TableHeader count={meta?.total ?? 0} />
         {showLoader && <LoadingState label="Loading students..." />}
         <FlatList
           data={showLoader ? [] : filtered}

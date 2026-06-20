@@ -7,7 +7,7 @@ import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 10;
-const DEFAULT_STUDENTS_LIMIT = 10;
+const DEFAULT_STUDENTS_LIMIT = 500;
 
 type ApiMeta = {
   total: number;
@@ -480,6 +480,11 @@ type UpdateStudentHorizontalArg = {
 
 type UpdateStudentFcmTokenArg = {
   fcmToken: string;
+};
+
+type UpdatePasswordArg = {
+  oldPassword: string;
+  password: string;
 };
 
 type UpdateStudentDeviceIdArg = {
@@ -1230,6 +1235,24 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
     }),
 
+    updateStudentPassword: builder.mutation<string, UpdatePasswordArg>({
+      query: ({ oldPassword, password }) => ({
+        url: '/student',
+        method: 'PATCH',
+        body: { oldPassword, password },
+      }),
+      transformResponse: () => 'success',
+    }),
+
+    updateAdminPassword: builder.mutation<string, UpdatePasswordArg>({
+      query: ({ oldPassword, password }) => ({
+        url: '/admin',
+        method: 'PATCH',
+        body: { oldPassword, password },
+      }),
+      transformResponse: () => 'success',
+    }),
+
     updateStudentDeviceId: builder.mutation<string, UpdateStudentDeviceIdArg>({
       query: ({ deviceId, authToken }) => ({
         url: '/student',
@@ -1615,6 +1638,8 @@ export const {
   useUpdateStudentMutation,
   useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
+  useUpdateStudentPasswordMutation,
+  useUpdateAdminPasswordMutation,
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,

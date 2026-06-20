@@ -44,9 +44,22 @@ const studentNavItems: StudentNavItem[] = [
       params: { type: 'exam' },
     },
   },
-  { label: 'Same Device', icon: 'devices-other', routeName: 'SameDeviceStudents' },
-  { label: 'Question Papers', icon: 'description', routeName: 'QuestionPapers' },
+  {
+    label: 'Same Device',
+    icon: 'devices-other',
+    routeName: 'SameDeviceStudents',
+  },
+  {
+    label: 'Question Papers',
+    icon: 'description',
+    routeName: 'QuestionPapers',
+  },
   { label: 'Achievements', icon: 'emoji-events', routeName: 'Achievements' },
+  {
+    label: 'Update Password',
+    icon: 'lock-reset',
+    routeName: 'UpdatePassword',
+  },
   { label: 'Profile', icon: 'person', routeName: 'StudentProfile' },
   { label: 'Logout', icon: 'logout', routeName: 'Logout' },
 ];
@@ -138,7 +151,10 @@ export default function StudentHeader({
           activeOpacity={0.78}
         >
           {profilePicUrl ? (
-            <Image source={{ uri: profilePicUrl }} style={styles.profileImage} />
+            <Image
+              source={{ uri: profilePicUrl }}
+              style={styles.profileImage}
+            />
           ) : (
             <Text style={styles.profileInitial}>{studentInitial}</Text>
           )}
@@ -183,7 +199,9 @@ export default function StudentHeader({
                     {displayName}
                   </Text>
                   <Text style={styles.studentRole}>
-                    {studentLevel === null ? 'Student' : `Level ${studentLevel}`}
+                    {studentLevel === null
+                      ? 'Student'
+                      : `Level ${studentLevel}`}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -207,11 +225,7 @@ export default function StudentHeader({
                     onPress={() => handleNavigate(item.routeName, item.params)}
                     activeOpacity={0.78}
                   >
-                    <MaterialIcons
-                      name={item.icon}
-                      size={21}
-                      color="#4F46E5"
-                    />
+                    <MaterialIcons name={item.icon} size={21} color="#4F46E5" />
                     <Text style={styles.navItemText}>{item.label}</Text>
                     <MaterialIcons
                       name="chevron-right"
