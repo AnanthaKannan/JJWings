@@ -1,4 +1,10 @@
 import { GameLevel, GameLevelConfig, Operator, Question } from '../types';
+import {
+  getDifficultyConfig,
+  getLevelLabel,
+  getLevelEmoji,
+  getAvailableLevels,
+} from '../config/levelDifficulty';
 
 let idCounter = 0;
 
@@ -6,63 +12,34 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export const GAME_LEVELS: GameLevelConfig[] = [
-  {
-    level: 1,
-    title: 'Level 1',
-    description: 'Easy · 1–9 · Add only',
-    emoji: '🌱',
-    minMax: 5,
-    maxMax: 9,
-    allowSubtraction: false,
-    subtractionChance: 0,
-    startFallDuration: 8000,
-    minFallDuration: 3800,
-    speedUpPerPoint: 120,
-  },
-  {
-    level: 2,
-    title: 'Level 2',
-    description: 'Medium · 1–18 · Add & subtract',
-    emoji: '🌿',
-    minMax: 9,
-    maxMax: 18,
-    allowSubtraction: true,
-    subtractionChance: 0.25,
-    startFallDuration: 6500,
-    minFallDuration: 3000,
-    speedUpPerPoint: 140,
-  },
-  {
-    level: 3,
-    title: 'Level 3',
-    description: 'Hard · 1–30 · Faster balls',
-    emoji: '🌳',
-    minMax: 15,
-    maxMax: 30,
-    allowSubtraction: true,
-    subtractionChance: 0.4,
-    startFallDuration: 5500,
-    minFallDuration: 2400,
-    speedUpPerPoint: 160,
-  },
-  {
-    level: 4,
-    title: 'Level 4',
-    description: 'Expert · 1–50 · Speed challenge',
-    emoji: '🏆',
-    minMax: 25,
-    maxMax: 50,
-    allowSubtraction: true,
-    subtractionChance: 0.5,
-    startFallDuration: 4500,
-    minFallDuration: 2000,
-    speedUpPerPoint: 180,
-  },
-];
+/**
+ * Generate GAME_LEVELS array from difficulty configuration
+ * This creates GameLevelConfig objects for all levels 0-10
+ */
+export function generateGameLevels(): GameLevelConfig[] {
+  return getAvailableLevels().map(level => {
+    const difficulty = getDifficultyConfig(level);
+    return {
+      level: level as GameLevel,
+      title: getLevelLabel(level),
+      description: `${getLevelLabel(level)} · ${difficulty.minMax}–${
+        difficulty.maxMax
+      }`,
+      emoji: getLevelEmoji(level),
+      ...difficulty,
+    };
+  });
+}
+
+export const GAME_LEVELS: GameLevelConfig[] = generateGameLevels();
 
 export function getLevelConfig(level: GameLevel): GameLevelConfig {
-  return GAME_LEVELS.find(entry => entry.level === level) ?? GAME_LEVELS[0];
+  const config = GAME_LEVELS.find(entry => entry.level === level);
+  if (!config) {
+    // Fallback to level 0 if not found
+    return GAME_LEVELS[0];
+  }
+  return config;
 }
 
 /**

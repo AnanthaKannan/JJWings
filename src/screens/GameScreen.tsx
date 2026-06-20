@@ -3,6 +3,7 @@ import {
   Animated,
   Easing,
   LayoutChangeEvent,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -41,7 +42,8 @@ export default function GameScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<GamePhase>('ready');
-  const [selectedLevel, setSelectedLevel] = useState<GameLevel>(1);
+  const [selectedLevel, setSelectedLevel] = useState<GameLevel>(0);
+  const [levelModalVisible, setLevelModalVisible] = useState(false);
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
   const [lives, setLives] = useState(TOTAL_LIVES);
@@ -53,7 +55,7 @@ export default function GameScreen() {
 
   const scoreRef = useRef(0);
   const livesRef = useRef(TOTAL_LIVES);
-  const levelRef = useRef<GameLevel>(1);
+  const levelRef = useRef<GameLevel>(0);
   const resolvedRef = useRef(false);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -309,47 +311,25 @@ export default function GameScreen() {
                 </Text>
 
                 <Text style={styles.levelHeading}>Choose your level</Text>
-                <View style={styles.levelGrid}>
-                  {GAME_LEVELS.map(levelOption => {
-                    const isSelected = selectedLevel === levelOption.level;
-                    return (
-                      <TouchableOpacity
-                        key={levelOption.level}
-                        style={[
-                          styles.levelChip,
-                          isSelected && styles.levelChipSelected,
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setSelectedLevel(levelOption.level)}
-                      >
-                        <Text style={styles.levelEmoji}>{levelOption.emoji}</Text>
-                        <View style={styles.levelTextWrap}>
-                          <Text
-                            style={[
-                              styles.levelTitle,
-                              isSelected && styles.levelTitleSelected,
-                            ]}
-                          >
-                            {levelOption.title}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.levelDescription,
-                              isSelected && styles.levelDescriptionSelected,
-                            ]}
-                          >
-                            {levelOption.description}
-                          </Text>
-                        </View>
-                        {isSelected && (
-                          <View style={styles.levelCheck}>
-                            <Text style={styles.levelCheckText}>✓</Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <TouchableOpacity
+                  style={styles.levelDropdownButton}
+                  onPress={() => setLevelModalVisible(true)}
+                >
+                  <View style={styles.levelDropdownContent}>
+                    <Text style={styles.levelDropdownEmoji}>
+                      {selectedLevelConfig.emoji}
+                    </Text>
+                    <View style={styles.levelDropdownTextWrap}>
+                      <Text style={styles.levelDropdownTitle}>
+                        {selectedLevelConfig.title}
+                      </Text>
+                      <Text style={styles.levelDropdownSubtitle}>
+                        {selectedLevelConfig.description.split(' · ')[0]}
+                      </Text>
+                    </View>
+                    <Text style={styles.levelDropdownArrow}>▼</Text>
+                  </View>
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.startButton}
@@ -363,8 +343,8 @@ export default function GameScreen() {
                     <View style={styles.startTextWrap}>
                       <Text style={styles.startButtonText}>Start Game</Text>
                       <Text style={styles.startButtonHint}>
-                        {selectedLevelConfig.emoji} {selectedLevelConfig.title} ·{' '}
-                        {selectedLevelConfig.description.split(' · ')[0]}
+                        {selectedLevelConfig.emoji} {selectedLevelConfig.title}{' '}
+                        · {selectedLevelConfig.description.split(' · ')[0]}
                       </Text>
                     </View>
                   </View>
@@ -399,6 +379,64 @@ export default function GameScreen() {
         onPlayAgain={startGame}
         onExit={exitGame}
       />
+
+      <Modal
+        visible={levelModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setLevelModalVisible(false)}
+      >
+        <View style={styles.levelModalOverlay}>
+          <View style={styles.levelModalContent}>
+            <View style={styles.levelModalHeader}>
+              <Text style={styles.levelModalTitle}>Select Level</Text>
+              <TouchableOpacity
+                onPress={() => setLevelModalVisible(false)}
+                style={styles.levelModalCloseBtn}
+              >
+                <Text style={styles.levelModalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.levelModalList}
+              showsVerticalScrollIndicator={true}
+            >
+              {GAME_LEVELS.map(levelOption => {
+                const isSelected = selectedLevel === levelOption.level;
+                return (
+                  <TouchableOpacity
+                    key={levelOption.level}
+                    style={[
+                      styles.levelModalItem,
+                      isSelected && styles.levelModalItemSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedLevel(levelOption.level);
+                      setLevelModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.levelModalItemEmoji}>
+                      {levelOption.emoji}
+                    </Text>
+                    <View style={styles.levelModalItemText}>
+                      <Text style={styles.levelModalItemTitle}>
+                        {levelOption.title}
+                      </Text>
+                      <Text style={styles.levelModalItemDesc}>
+                        {levelOption.description}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Text style={styles.levelModalItemCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -579,6 +617,124 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 10,
     textTransform: 'uppercase',
+  },
+  levelDropdownButton: {
+    width: '100%',
+    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: '#F4F8FC',
+    borderWidth: 2,
+    borderColor: '#E2EAF2',
+    overflow: 'hidden',
+  },
+  levelDropdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  levelDropdownEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  levelDropdownTextWrap: {
+    flex: 1,
+  },
+  levelDropdownTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#2D4A6E',
+  },
+  levelDropdownSubtitle: {
+    fontSize: 12,
+    color: '#6B7C8F',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  levelDropdownArrow: {
+    fontSize: 12,
+    color: '#6B7C8F',
+    fontWeight: '600',
+  },
+  levelModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  levelModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    paddingTop: 0,
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2EAF2',
+  },
+  levelModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2D4A6E',
+  },
+  levelModalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F4F8FC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelModalCloseText: {
+    fontSize: 18,
+    color: '#6B7C8F',
+    fontWeight: '600',
+  },
+  levelModalList: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  levelModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 6,
+    backgroundColor: '#F9FBFD',
+  },
+  levelModalItemSelected: {
+    backgroundColor: '#E8F4FD',
+    borderWidth: 2,
+    borderColor: '#4A90D9',
+  },
+  levelModalItemEmoji: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  levelModalItemText: {
+    flex: 1,
+  },
+  levelModalItemTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#2D4A6E',
+  },
+  levelModalItemDesc: {
+    fontSize: 12,
+    color: '#6B7C8F',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  levelModalItemCheck: {
+    fontSize: 18,
+    color: '#4A90D9',
+    fontWeight: '800',
   },
   levelGrid: {
     width: '100%',
