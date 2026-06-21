@@ -53,6 +53,11 @@ const adminNavItems = [
     routeName: 'AdminNotificationSend',
   },
   {
+    label: 'Update Password',
+    icon: 'lock-reset',
+    routeName: 'UpdatePassword',
+  },
+  {
     label: 'Profile',
     icon: 'person',
     routeName: 'AdminProfile',

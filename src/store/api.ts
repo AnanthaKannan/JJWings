@@ -6,6 +6,8 @@ import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
 import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
+const DEFAULT_NOTIFICATION_LIMIT = 20;
+const DEFAULT_STUDENTS_LIMIT = 20;
 
 type ApiMeta = {
   total: number;
@@ -456,6 +458,8 @@ type StudentByIdArg = {
 
 type StudentsArg = {
   level?: number;
+  page?: number;
+  limit?: number;
 };
 
 type AddStudentArg = {
@@ -476,6 +480,26 @@ type UpdateStudentHorizontalArg = {
 
 type UpdateStudentFcmTokenArg = {
   fcmToken: string;
+};
+
+type UpdatePasswordArg = {
+  oldPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
+
+type ResetPasswordArg = {
+  studentId: string;
+};
+
+type ResetPasswordResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    studentId?: string;
+    name?: string;
+    password?: string;
+  };
 };
 
 type UpdateStudentDeviceIdArg = {
@@ -590,6 +614,23 @@ type RankingArg = {
 
 type NotificationsArg = {
   studentId: string;
+  page?: number;
+  limit?: number;
+};
+
+type AdminNotificationsArg = {
+  page?: number;
+  limit?: number;
+};
+
+export type NotificationsResult = {
+  notifications: Notification[];
+  meta: ApiMeta;
+};
+
+export type StudentsResult = {
+  students: Student[];
+  meta: ApiMeta;
 };
 
 type SendNotificationArg = {
@@ -683,6 +724,46 @@ const mapNotification = (notification: ApiNotification): Notification => ({
   createdAt: notification.createdAt,
   updatedAt: notification.updatedAt,
 });
+
+const mergeNotificationsResult = (
+  currentCache: NotificationsResult,
+  newPage: NotificationsResult,
+) => {
+  if (newPage.meta.page === 1) {
+    currentCache.notifications = newPage.notifications;
+    currentCache.meta = newPage.meta;
+    return;
+  }
+
+  const existingIds = new Set(
+    currentCache.notifications.map(notification => notification.id),
+  );
+  const newNotifications = newPage.notifications.filter(
+    notification => !existingIds.has(notification.id),
+  );
+
+  currentCache.notifications.push(...newNotifications);
+  currentCache.meta = newPage.meta;
+};
+
+const mergeStudentsResult = (
+  currentCache: StudentsResult,
+  newPage: StudentsResult,
+) => {
+  if (newPage.meta.page === 1) {
+    currentCache.students = newPage.students;
+    currentCache.meta = newPage.meta;
+    return;
+  }
+
+  const existingIds = new Set(currentCache.students.map(student => student.id));
+  const newStudents = newPage.students.filter(
+    student => !existingIds.has(student.id),
+  );
+
+  currentCache.students.push(...newStudents);
+  currentCache.meta = newPage.meta;
+};
 
 const mapMessageParticipant = (
   participant: ApiMessageParticipant,
@@ -868,20 +949,29 @@ export const jjWingsApi = createApi({
       }),
     }),
 
-    getStudents: builder.query<Student[], StudentsArg | void>({
+    getStudents: builder.query<StudentsResult, StudentsArg | void>({
       query: arg => ({
         url: '/admin/students',
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: arg?.page ?? 1,
+          limit: arg?.limit ?? DEFAULT_STUDENTS_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
         },
       }),
-      transformResponse: (response: ApiStudentsResponse) =>
-        response.students.map(mapStudent),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.level ?? 'ALL'}-${
+          queryArgs?.limit ?? DEFAULT_STUDENTS_LIMIT
+        }`,
+      transformResponse: (response: ApiStudentsResponse) => ({
+        students: response.students.map(mapStudent),
+        meta: response.meta,
+      }),
+      merge: mergeStudentsResult,
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page,
       providesTags: result => [
         { type: 'Students', id: 'LIST' },
-        ...(result ?? []).map(student => ({
+        ...(result?.students ?? []).map(student => ({
           type: 'Student' as const,
           id: student.id,
         })),
@@ -991,25 +1081,47 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    getNotifications: builder.query<Notification[], NotificationsArg>({
-      query: ({ studentId }) => ({
+    getNotifications: builder.query<NotificationsResult, NotificationsArg>({
+      query: ({ studentId, page = 1, limit = DEFAULT_NOTIFICATION_LIMIT }) => ({
         url: `/notifications/${studentId}`,
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: { page, limit },
       }),
-      transformResponse: (response: ApiNotificationsResponse) =>
-        response.data.map(mapNotification),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs.studentId}-${
+          queryArgs.limit ?? DEFAULT_NOTIFICATION_LIMIT
+        }`,
+      transformResponse: (response: ApiNotificationsResponse) => ({
+        notifications: response.data.map(mapNotification),
+        meta: response.meta,
+      }),
+      merge: mergeNotificationsResult,
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page,
       providesTags: (_result, _error, { studentId }) => [
         { type: 'Notifications', id: studentId },
       ],
     }),
 
-    getAdminNotifications: builder.query<Notification[], void>({
-      query: () => ({
+    getAdminNotifications: builder.query<
+      NotificationsResult,
+      AdminNotificationsArg | void
+    >({
+      query: arg => ({
         url: '/admin/notifications',
-        params: { page: 1, limit: DEFAULT_LIMIT },
+        params: {
+          page: arg?.page ?? 1,
+          limit: arg?.limit ?? DEFAULT_NOTIFICATION_LIMIT,
+        },
       }),
-      transformResponse: (response: ApiNotificationsResponse) =>
-        response.data.map(mapNotification),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.limit ?? DEFAULT_NOTIFICATION_LIMIT}`,
+      transformResponse: (response: ApiNotificationsResponse) => ({
+        notifications: response.data.map(mapNotification),
+        meta: response.meta,
+      }),
+      merge: mergeNotificationsResult,
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page,
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
     }),
 
@@ -1136,6 +1248,40 @@ export const jjWingsApi = createApi({
         body: { fcmToken },
       }),
       transformResponse: () => 'success',
+    }),
+
+    updateStudentPassword: builder.mutation<string, UpdatePasswordArg>({
+      query: ({ oldPassword, newPassword, confirmNewPassword }) => ({
+        url: '/change-password',
+        method: 'PATCH',
+        body: {
+          oldPassword,
+          newPassword,
+          confirmNewPassword,
+        },
+      }),
+      transformResponse: () => 'success',
+    }),
+
+    updateAdminPassword: builder.mutation<string, UpdatePasswordArg>({
+      query: ({ oldPassword, newPassword, confirmNewPassword }) => ({
+        url: '/change-password',
+        method: 'PATCH',
+        body: {
+          oldPassword,
+          newPassword,
+          confirmNewPassword,
+        },
+      }),
+      transformResponse: () => 'success',
+    }),
+
+    resetPassword: builder.mutation<ResetPasswordResponse, ResetPasswordArg>({
+      query: ({ studentId }) => ({
+        url: `/admin/students/${studentId}/reset-password`,
+        method: 'POST',
+      }),
+      transformResponse: (response: ResetPasswordResponse) => response,
     }),
 
     updateStudentDeviceId: builder.mutation<string, UpdateStudentDeviceIdArg>({
@@ -1523,6 +1669,9 @@ export const {
   useUpdateStudentMutation,
   useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
+  useUpdateStudentPasswordMutation,
+  useUpdateAdminPasswordMutation,
+  useResetPasswordMutation,
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
   useRemoveStudentFcmTokenMutation,

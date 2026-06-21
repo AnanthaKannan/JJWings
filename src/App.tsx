@@ -40,6 +40,8 @@ import {
   LoginScreen,
   ProfileScreen,
   StudentProfileScreen,
+  UpdatePasswordScreen,
+  GameScreen,
   HomeworkScreen,
   PracticeScreen,
   QuizReviewScreen,
@@ -460,6 +462,23 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    Game: {
+      screen: GameScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarStyle: { display: 'none' },
+        tabBarLabel: 'Game',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="sports-esports"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
     Logout: {
       screen: ProfileScreen,
       options: {
@@ -692,6 +711,7 @@ const RootStack = createNativeStackNavigator({
     Login: { screen: LoginScreen },
     Main: { screen: MainTabs }, // student flow
     Admin: { screen: AdminTabs }, // admin flow
+    UpdatePassword: { screen: UpdatePasswordScreen },
   },
 });
 

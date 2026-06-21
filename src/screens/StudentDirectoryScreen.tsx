@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   SafeAreaView,
   StatusBar,
   RefreshControl,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -19,6 +21,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {
   useGetStudentsQuery,
   useUpdateStudentHorizontalMutation,
+  useResetPasswordMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
@@ -159,9 +162,11 @@ const StudentRow = ({
 
 // ─── Table Header ─────────────────────────────────────────────────────────────
 
-const TableHeader = () => (
+const TableHeader = ({ count }: { count: number }) => (
   <View style={styles.tableHeader}>
-    <Text style={[styles.headerText, styles.studentHeader]}>STUDENT</Text>
+    <Text style={[styles.headerText, styles.studentHeader]}>
+      STUDENT {count}
+    </Text>
     <Text style={[styles.headerText, styles.progressHeader]}>PROGRESS</Text>
     <Text style={[styles.headerText, styles.actionsHeader]}>ACTIONS</Text>
   </View>
@@ -171,7 +176,7 @@ const TableHeader = () => (
 
 export const EmptyState = () => (
   <View style={styles.emptyState}>
-    <Text style={styles.emptyIcon}>ðŸ”</Text>
+    <Text style={styles.emptyIcon}>🔍</Text>
     <Text style={styles.emptyText}>No students found</Text>
   </View>
 );
@@ -182,26 +187,48 @@ export default function StudentDirectoryScreen() {
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [page, setPage] = useState(1);
+  const [loadingMorePage, setLoadingMorePage] = useState<number | null>(null);
 
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
 
   const {
-    data: students,
+    data: { students = [], meta } = {},
     isLoading,
+    isFetching,
+    isError,
     refetch,
   } = useGetStudentsQuery(
-    selectedLevel === null ? undefined : { level: selectedLevel },
+    {
+      ...(selectedLevel === null ? {} : { level: selectedLevel }),
+      page,
+    },
     {
       skip: !isFocused,
     },
   );
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
+  const [resetPassword, { isLoading: isResetPasswordLoading }] =
+    useResetPasswordMutation();
 
-  const filtered = students?.filter(s => {
-    const matchesLevel =
-      selectedLevel === null || Number(s.level) === selectedLevel;
+  // Reset to page 1 whenever the level filter changes
+  useEffect(() => {
+    setPage(1);
+    setLoadingMorePage(null);
+  }, [selectedLevel]);
+
+  useEffect(() => {
+    if (
+      loadingMorePage !== null &&
+      (meta?.page === loadingMorePage || isError)
+    ) {
+      setLoadingMorePage(null);
+    }
+  }, [isError, loadingMorePage, meta?.page]);
+
+  const filtered = students.filter(s => {
     const cleanSearch = search.trim().toLowerCase();
     const matchesSearch =
       cleanSearch.length === 0 ||
@@ -210,18 +237,31 @@ export default function StudentDirectoryScreen() {
       s.id.toLowerCase().includes(cleanSearch) ||
       String(s.level ?? '').includes(cleanSearch);
 
-    return matchesLevel && matchesSearch;
+    return matchesSearch;
   });
-  const showLoader = isFocused && isLoading && !students;
+  const showLoader = isFocused && isLoading && students.length === 0;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refetch();
+      if (page === 1) {
+        await refetch();
+      } else {
+        setPage(1);
+      }
     } finally {
       setRefreshing(false);
     }
-  }, [refetch]);
+  }, [page, refetch]);
+
+  const onReachStudentsBottom = useCallback(() => {
+    if (!isFetching && meta?.hasNextPage === true) {
+      const nextPage = meta.page + 1;
+
+      setLoadingMorePage(nextPage);
+      setPage(nextPage);
+    }
+  }, [isFetching, meta]);
 
   const handleAssignPress = (student: Student) => {
     navigation.navigate('AssignHomework', {
@@ -338,6 +378,51 @@ export default function StudentDirectoryScreen() {
     closeActionsModal();
   };
 
+  const handleModalResetPasswordPress = async () => {
+    if (!selectedStudent) return;
+
+    closeActionsModal();
+
+    Alert.alert(
+      'Confirm Password Reset',
+      `This will reset the password for ${
+        selectedStudent.name || 'this student'
+      } and generate a new temporary password. Do you want to continue?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await resetPassword({
+                studentId: selectedStudent.id,
+              }).unwrap();
+
+              const password = response?.data?.password;
+              const message =
+                response?.message || 'Password has been reset successfully.';
+
+              Alert.alert(
+                'Password Reset',
+                password ? `${message}\n\nNew password: ${password}` : message,
+              );
+            } catch (error) {
+              console.error('Failed to reset password:', error);
+              Alert.alert(
+                'Password Reset',
+                'Unable to reset password right now. Please try again.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
@@ -348,17 +433,17 @@ export default function StudentDirectoryScreen() {
       {/* Search */}
       <View style={styles.filterRow}>
         <View style={styles.searchWrapper}>
-        <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name, level, or ID..."
+            placeholder="Search by name..."
             placeholderTextColor="#A0AEC0"
             value={search}
             onChangeText={setSearch}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-            <Text style={styles.clearIcon}>✕</Text>
+              <Text style={styles.clearIcon}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -388,7 +473,7 @@ export default function StudentDirectoryScreen() {
 
       {/* Table */}
       <View style={styles.tableCard}>
-        <TableHeader />
+        <TableHeader count={meta?.total ?? 0} />
         {showLoader && <LoadingState label="Loading students..." />}
         <FlatList
           data={showLoader ? [] : filtered}
@@ -410,6 +495,15 @@ export default function StudentDirectoryScreen() {
           )}
           ItemSeparatorComponent={StudentSeparator}
           showsVerticalScrollIndicator={false}
+          onEndReached={onReachStudentsBottom}
+          onEndReachedThreshold={0.2}
+          ListFooterComponent={
+            meta?.hasNextPage === true ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator color="#4F46E5" />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             showLoader ? null : (
               <View style={styles.emptyState}>
@@ -426,8 +520,12 @@ export default function StudentDirectoryScreen() {
         <Text style={styles.fabIcon}>＋</Text>
       </TouchableOpacity> */}
       <LoadingOverlay
-        visible={isHorizontalUpdating}
-        label="Updating student..."
+        visible={isHorizontalUpdating || isResetPasswordLoading}
+        label={
+          isResetPasswordLoading
+            ? 'Resetting password...'
+            : 'Updating student...'
+        }
       />
       <Modal
         visible={isLevelPickerOpen}
@@ -583,6 +681,15 @@ export default function StudentDirectoryScreen() {
                 ]}
               >
                 {selectedStudent?.horizontal ? 'Vertical' : 'Horizontal'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleModalResetPasswordPress}
+              disabled={isResetPasswordLoading}
+            >
+              <Text style={styles.modalSecondaryActionText}>
+                {isResetPasswordLoading ? 'Resetting...' : 'Reset Password'}
               </Text>
             </TouchableOpacity>
           </Pressable>
@@ -1056,6 +1163,12 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyIcon: { fontSize: 32, marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#A0AEC0' },
+
+  // Footer loader (pagination spinner)
+  footerLoader: {
+    alignItems: 'center',
+    paddingVertical: 18,
+  },
 
   // FAB
   fab: {
