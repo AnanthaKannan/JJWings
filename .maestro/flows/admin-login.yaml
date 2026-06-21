@@ -1,0 +1,14 @@
+# Login as the seeded admin user.
+- extendedWaitUntil:
+    visible: "Explorer ID"
+    timeout: 10000
+- tapOn: "e.g. JJ099"
+- inputText: "JW001"
+- tapOn: "Password"
+- inputText: "Welcome123"
+- hideKeyboard
+- tapOn: "Let's Go!"
+- extendedWaitUntil:
+    visible: "Student Directory"
+    timeout: 30000
+- assertVisible: "Student Directory"
