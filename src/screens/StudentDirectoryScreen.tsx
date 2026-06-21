@@ -382,28 +382,46 @@ export default function StudentDirectoryScreen() {
   const handleModalResetPasswordPress = async () => {
     if (!selectedStudent) return;
 
-    try {
-      const response = await resetPassword({
-        studentId: selectedStudent.id,
-      }).unwrap();
+    closeActionsModal();
 
-      const password =
-        response?.password || response?.newPassword || response?.data?.password;
-      const message =
-        response?.message || 'Password has been reset successfully.';
+    Alert.alert(
+      'Confirm Password Reset',
+      `This will reset the password for ${
+        selectedStudent.name || 'this student'
+      } and generate a new temporary password. Do you want to continue?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await resetPassword({
+                studentId: selectedStudent.id,
+              }).unwrap();
 
-      closeActionsModal();
-      Alert.alert(
-        'Password Reset',
-        password ? `${message}\n\nNew password: ${password}` : message,
-      );
-    } catch (error) {
-      console.error('Failed to reset password:', error);
-      Alert.alert(
-        'Password Reset',
-        'Unable to reset password right now. Please try again.',
-      );
-    }
+              const password = response?.data?.password;
+              const message =
+                response?.message || 'Password has been reset successfully.';
+
+              Alert.alert(
+                'Password Reset',
+                password ? `${message}\n\nNew password: ${password}` : message,
+              );
+            } catch (error) {
+              console.error('Failed to reset password:', error);
+              Alert.alert(
+                'Password Reset',
+                'Unable to reset password right now. Please try again.',
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (

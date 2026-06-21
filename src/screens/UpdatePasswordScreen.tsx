@@ -12,19 +12,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { AdminHeader, LoadingOverlay, StudentHeader } from '../component';
-import {
-  useUpdateAdminPasswordMutation,
-  useUpdateStudentPasswordMutation,
-} from '../store/api';
+import { useUpdateStudentPasswordMutation } from '../store/api';
+import { logout } from '../store/slices';
 import { RootState } from '../store/store';
+import { clearSavedLoginCredentials } from '../util/authStorage';
 
 export default function UpdatePasswordScreen() {
   const navigation = useNavigation<any>();
+  const dispatch = useDispatch();
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const [oldPassword, setOldPassword] = useState('');
   const [password, setPassword] = useState('');
@@ -35,11 +35,8 @@ export default function UpdatePasswordScreen() {
   const [oldPasswordError, setOldPasswordError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
-  const [updateStudentPassword, studentResult] =
+  const [updateStudentPassword, { isLoading: isBusy }] =
     useUpdateStudentPasswordMutation();
-  const [updateAdminPassword, adminResult] = useUpdateAdminPasswordMutation();
-
-  const isBusy = studentResult.isLoading || adminResult.isLoading;
 
   const validatePassword = (value: string) => {
     if (!value.trim()) {
@@ -70,11 +67,11 @@ export default function UpdatePasswordScreen() {
     }
 
     try {
-      if (isAdmin) {
-        await updateAdminPassword({ oldPassword, password }).unwrap();
-      } else {
-        await updateStudentPassword({ oldPassword, password }).unwrap();
-      }
+      await updateStudentPassword({
+        oldPassword,
+        newPassword: password,
+        confirmNewPassword: confirmPassword,
+      }).unwrap();
 
       setOldPassword('');
       setPassword('');
@@ -86,8 +83,22 @@ export default function UpdatePasswordScreen() {
       Alert.alert(
         'Password updated',
         'Your password has been updated successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: async () => {
+              await clearSavedLoginCredentials();
+              dispatch(logout());
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'Login' }],
+                }),
+              );
+            },
+          },
+        ],
       );
-      navigation.goBack();
     } catch (error) {
       console.error('Failed to update password', error);
 
@@ -180,9 +191,9 @@ export default function UpdatePasswordScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
-            <View style={styles.iconWrap}>
+            {/* <View style={styles.iconWrap}>
               <MaterialIcons name="lock-reset" size={32} color="#4F46E5" />
-            </View>
+            </View> */}
             <Text style={styles.cardTitle}>Change Password</Text>
             <Text style={styles.cardSubtitle}>
               Use a strong password you will remember.

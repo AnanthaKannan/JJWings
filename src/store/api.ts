@@ -484,7 +484,8 @@ type UpdateStudentFcmTokenArg = {
 
 type UpdatePasswordArg = {
   oldPassword: string;
-  password: string;
+  newPassword: string;
+  confirmNewPassword: string;
 };
 
 type ResetPasswordArg = {
@@ -492,10 +493,11 @@ type ResetPasswordArg = {
 };
 
 type ResetPasswordResponse = {
+  success?: boolean;
   message?: string;
-  password?: string;
-  newPassword?: string;
   data?: {
+    studentId?: string;
+    name?: string;
     password?: string;
   };
 };
@@ -1249,28 +1251,35 @@ export const jjWingsApi = createApi({
     }),
 
     updateStudentPassword: builder.mutation<string, UpdatePasswordArg>({
-      query: ({ oldPassword, password }) => ({
-        url: '/student',
+      query: ({ oldPassword, newPassword, confirmNewPassword }) => ({
+        url: '/change-password',
         method: 'PATCH',
-        body: { oldPassword, password },
+        body: {
+          oldPassword,
+          newPassword,
+          confirmNewPassword,
+        },
       }),
       transformResponse: () => 'success',
     }),
 
     updateAdminPassword: builder.mutation<string, UpdatePasswordArg>({
-      query: ({ oldPassword, password }) => ({
-        url: '/admin',
+      query: ({ oldPassword, newPassword, confirmNewPassword }) => ({
+        url: '/change-password',
         method: 'PATCH',
-        body: { oldPassword, password },
+        body: {
+          oldPassword,
+          newPassword,
+          confirmNewPassword,
+        },
       }),
       transformResponse: () => 'success',
     }),
 
     resetPassword: builder.mutation<ResetPasswordResponse, ResetPasswordArg>({
       query: ({ studentId }) => ({
-        url: '/resetpassword',
+        url: `/admin/students/${studentId}/reset-password`,
         method: 'POST',
-        body: { studentId },
       }),
       transformResponse: (response: ResetPasswordResponse) => response,
     }),
