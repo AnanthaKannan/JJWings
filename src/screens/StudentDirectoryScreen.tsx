@@ -240,7 +240,6 @@ export default function StudentDirectoryScreen() {
     return matchesSearch;
   });
   const showLoader = isFocused && isLoading && students.length === 0;
-  const showFooterLoader = loadingMorePage !== null || (isFetching && page > 1);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -499,7 +498,7 @@ export default function StudentDirectoryScreen() {
           onEndReached={onReachStudentsBottom}
           onEndReachedThreshold={0.2}
           ListFooterComponent={
-            showFooterLoader ? (
+            meta?.hasNextPage === true ? (
               <View style={styles.footerLoader}>
                 <ActivityIndicator color="#4F46E5" />
               </View>

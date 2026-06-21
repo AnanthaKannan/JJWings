@@ -117,7 +117,6 @@ export default function NotificationsScreen() {
     (isAdmin && !isStudentNotificationReview) || Boolean(targetStudentId);
 
   const showLoader = isFocused && isLoading && notifications.length === 0;
-  const showFooterLoader = loadingMorePage !== null || (isFetching && page > 1);
 
   useEffect(() => {
     if (isFocused) {
@@ -197,7 +196,7 @@ export default function NotificationsScreen() {
         onEndReached={onReachNotificationBottom}
         onEndReachedThreshold={0.2}
         ListFooterComponent={
-          showFooterLoader ? (
+          meta?.hasNextPage === true ? (
             <View style={styles.footerLoader}>
               <ActivityIndicator color="#2563EB" />
             </View>
