@@ -21,7 +21,6 @@ import {
 } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import DeviceInfo from 'react-native-device-info';
 
 import { LoadingOverlay, LoadingState, StudentHeader } from '../component';
 import {
@@ -30,11 +29,10 @@ import {
   useGetSameDeviceStudentsQuery,
   useLazyGetLoginQuery,
   useSwitchStudentLoginMutation,
-  useUpdateStudentDeviceIdMutation,
 } from '../store/api';
 import { logout, setStudentCredentials } from '../store/slices';
 import { RootState } from '../store/store';
-import { clearSavedLoginCredentials } from '../util/authStorage';
+import { clearSavedLoginCredentials, getDeviceId } from '../util/authStorage';
 import { getFileUrl } from '../util/fileUrl';
 
 const AVATAR_COLORS = [
@@ -74,9 +72,7 @@ const StudentCard = ({
   onPress: () => void;
   onDeletePress: () => void;
 }) => {
-  const profilePicUrl = getFileUrl(
-    student.profilePicPath ?? student.profilePic,
-  );
+  const profilePicUrl = getFileUrl(student.profilePicPath);
 
   return (
     <TouchableOpacity
@@ -147,17 +143,16 @@ export default function SameDeviceStudentsScreen() {
     refetch,
   } = useGetSameDeviceStudentsQuery(undefined, {
     skip: !isFocused,
+    refetchOnMountOrArgChange: true,
   });
 
   const [deleteStudentDeviceId, { isLoading: isDeleting }] =
     useDeleteStudentDeviceIdMutation();
   const [login, loginRes] = useLazyGetLoginQuery();
-  const [updateStudentDeviceId, updateDeviceRes] =
-    useUpdateStudentDeviceIdMutation();
   const [switchStudentLogin, switchStudentRes] =
     useSwitchStudentLoginMutation();
 
-  const isAddingStudent = loginRes.isFetching || updateDeviceRes.isLoading;
+  const isAddingStudent = loginRes.isFetching;
   const isSwitchingStudent = switchStudentRes.isLoading;
   const canSubmitAdd = studentLoginId.trim().length > 0 && password.length > 0;
 
@@ -186,7 +181,7 @@ export default function SameDeviceStudentsScreen() {
       setDeletingStudentId(student.id);
 
       try {
-        const deviceId = await DeviceInfo.getUniqueId();
+        const deviceId = await getDeviceId();
         await deleteStudentDeviceId({
           studentId: student.id,
           deviceId,
@@ -251,7 +246,7 @@ export default function SameDeviceStudentsScreen() {
     setLoginError('');
 
     try {
-      const deviceId = await DeviceInfo.getUniqueId();
+      const deviceId = await getDeviceId();
       const result = await login({
         username: cleanStudentId,
         password,
@@ -267,12 +262,6 @@ export default function SameDeviceStudentsScreen() {
         return;
       }
 
-      console.log('deviceId', deviceId);
-      await updateStudentDeviceId({
-        deviceId,
-        authToken: result.data.token,
-      }).unwrap();
-
       setIsAddModalOpen(false);
       setStudentLoginId('');
       setPassword('');
@@ -281,7 +270,7 @@ export default function SameDeviceStudentsScreen() {
     } catch {
       setLoginError('User Name or password incorrect.');
     }
-  }, [login, password, refetch, studentLoginId, updateStudentDeviceId]);
+  }, [login, password, refetch, studentLoginId]);
 
   const handleStudentPress = useCallback(
     async (student: SameDeviceStudent) => {
@@ -308,7 +297,7 @@ export default function SameDeviceStudentsScreen() {
             isStudent: true,
             studentName: result.name,
             studentLevel: result.level,
-            studentProfilePic: result.profilePicPath ?? result.profilePic,
+            studentProfilePic: result.profilePicPath,
             token: result.token,
           }),
         );

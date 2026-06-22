@@ -15,19 +15,16 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
-import DeviceInfo from 'react-native-device-info';
 
 import bannerImage from '../../assets/images/banner.png';
 import color from '../util/colors';
-import {
-  useLazyGetLoginQuery,
-  useUpdateStudentDeviceIdMutation,
-} from '../store/api';
+import { useLazyGetLoginQuery } from '../store/api';
 import { setAdminCredentials, setStudentCredentials } from '../store/slices';
 import {
   clearSavedLoginCredentials,
   getSavedLoginCredentials,
   saveLoginCredentials,
+  getDeviceId,
 } from '../util/authStorage';
 
 export default function LoginScreen() {
@@ -39,14 +36,13 @@ export default function LoginScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   const [login, loginRes] = useLazyGetLoginQuery();
-  const [updateStudentDeviceId] = useUpdateStudentDeviceIdMutation();
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
 
   const finishLogin = useCallback(
     async (studentId: string, password: string, shouldSave: boolean) => {
       const cleanStudentId = studentId.trim();
-      const deviceId = await DeviceInfo.getUniqueId();
+      const deviceId = await getDeviceId();
 
       const result = await login({
         username: cleanStudentId,
@@ -68,17 +64,10 @@ export default function LoginScreen() {
               isStudent: true,
               studentName: result.data.name,
               studentLevel: result.data.level,
-              studentProfilePic:
-                result.data.profilePicPath ?? result.data.profilePic,
+              studentProfilePic: result.data.profilePicPath,
               token: result.data.token,
             }),
           );
-          try {
-            console.log('deviceId', deviceId);
-            await updateStudentDeviceId({ deviceId }).unwrap();
-          } catch (error) {
-            console.error('Failed to update student device id', error);
-          }
         } else {
           dispatch(
             setAdminCredentials({
@@ -86,8 +75,7 @@ export default function LoginScreen() {
               adminCode: result.data.adminCode,
               isAdmin: true,
               adminName: result.data.name,
-              adminProfilePic:
-                result.data.profilePicPath ?? result.data.profilePic,
+              adminProfilePic: result.data.profilePicPath,
               token: result.data.token,
             }),
           );
@@ -101,7 +89,7 @@ export default function LoginScreen() {
 
       return false;
     },
-    [dispatch, login, navigation, updateStudentDeviceId],
+    [dispatch, login, navigation],
   );
 
   useEffect(() => {

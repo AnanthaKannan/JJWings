@@ -25,3 +25,11 @@ export function formatDuration(totalSeconds: number): string {
 
   return [hh, mm, ss].map(unit => String(unit).padStart(2, '0')).join(':');
 }
+
+export function generateDeviceId(): string {
+  const timestamp = Date.now().toString(36); // time component
+  const random1 = Math.random().toString(36).slice(2, 9);
+  const random2 = Math.random().toString(36).slice(2, 9);
+
+  return `${timestamp}-${random1}-${random2}`;
+}
