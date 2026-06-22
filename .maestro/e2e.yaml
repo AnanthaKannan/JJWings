@@ -1,0 +1,11 @@
+appId: com.jjwings
+---
+- runFlow: flows/reset-app.yaml
+- runFlow: flows/admin-login.yaml
+- runFlow: flows/student-directory.yaml
+- runFlow: flows/homework-library.yaml
+- runFlow: flows/create-new-task.yaml
+- runFlow: flows/assign-by-level.yaml
+- runFlow: flows/messages.yaml
+- runFlow: flows/notifications.yaml
+- runFlow: flows/logout.yaml

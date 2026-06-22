@@ -1,0 +1,6 @@
+- tapOn: "Assign"
+- extendedWaitUntil:
+    visible: "Assign by Level"
+    timeout: 15000
+- assertVisible: "Assign by Level"
+- assertVisible: "Student Levels"
