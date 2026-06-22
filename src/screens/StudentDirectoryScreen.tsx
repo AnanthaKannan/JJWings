@@ -34,7 +34,6 @@ type Student = {
   name: string;
   studentId?: string;
   level?: number;
-  profilePic?: string;
   profilePicPath?: string;
   fcmTokens: string[];
   assigned: number;
@@ -125,7 +124,7 @@ const StudentRow = ({
       <Avatar
         color={COLORS[randomNumber(0, 6)]}
         name={item.name}
-        profilePic={item.profilePicPath ?? item.profilePic}
+        profilePic={item.profilePicPath}
       />
       <View style={styles.nameBlock}>
         <Text style={styles.studentName}>{item.name}</Text>
@@ -496,7 +495,7 @@ export default function StudentDirectoryScreen() {
           ItemSeparatorComponent={StudentSeparator}
           showsVerticalScrollIndicator={false}
           onEndReached={onReachStudentsBottom}
-          onEndReachedThreshold={0.2}
+          onEndReachedThreshold={0.5}
           ListFooterComponent={
             meta?.hasNextPage === true ? (
               <View style={styles.footerLoader}>

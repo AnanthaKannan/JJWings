@@ -10,9 +10,8 @@ import {
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import DeviceInfo from 'react-native-device-info';
 
-import { clearSavedLoginCredentials } from '../util/authStorage';
+import { clearSavedLoginCredentials, getDeviceId } from '../util/authStorage';
 import { logout } from '../store/slices';
 import { RootState } from '../store/store';
 import { useDeleteStudentDeviceIdMutation } from '../store/api';
@@ -81,7 +80,7 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     if (!isAdmin && studentId) {
       try {
-        const deviceId = await DeviceInfo.getUniqueId();
+        const deviceId = await getDeviceId();
         await deleteStudentDeviceId({ studentId, deviceId }).unwrap();
       } catch (error) {
         console.error('Failed to remove student device id', error);

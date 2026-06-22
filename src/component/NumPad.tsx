@@ -25,7 +25,6 @@ export default function NumPad({ onSubmit }: NumberPadProps) {
   const handleSubmit = () => {
     setInput('');
     if (onSubmit) onSubmit(Number(input));
-    console.log('Submitted:', input);
   };
 
   // ─── Pad Layout ─────────────────────────────────────────

@@ -40,7 +40,6 @@ type ApiStudent = {
   studentId?: string;
   name?: string;
   level?: number;
-  profilePic?: string;
   profilePicPath?: string;
   vertical?: boolean;
   deviceIds?: string[];
@@ -114,7 +113,6 @@ type ApiMessageParticipant = {
   name?: string;
   adminId?: string;
   studentId?: string;
-  profilePic?: string;
   profilePicPath?: string;
 };
 
@@ -139,7 +137,6 @@ type ApiMessageStudent = {
   studentId?: string;
   name?: string;
   level?: number;
-  profilePic?: string;
   profilePicPath?: string;
   unreadMessageCount?: number;
 };
@@ -166,6 +163,7 @@ type ApiRankingStudent = {
   studentId: string;
   name?: string;
   studentCode?: string;
+  profilePicPath?: string;
 };
 
 type ApiRankingResponse = {
@@ -203,7 +201,6 @@ export type Student = {
   name: string;
   studentId?: string;
   level?: number;
-  profilePic?: string;
   profilePicPath?: string;
   fcmTokens: string[];
   horizontal: boolean;
@@ -219,7 +216,6 @@ export type SameDeviceStudent = {
   id: string;
   name: string;
   studentId?: string;
-  profilePic?: string;
   profilePicPath?: string;
   deviceIds: string[];
   horizontal: boolean;
@@ -290,6 +286,7 @@ export type RankingStudent = {
   rank: number;
   name: string;
   studentCode?: string;
+  profilePicPath?: string;
   totalCorrect: number;
   totalQuestions: number;
   totalTimer: number;
@@ -316,7 +313,6 @@ export type MessageParticipant = {
   name: string;
   code?: string;
   model: string;
-  profilePic?: string;
   profilePicPath?: string;
 };
 
@@ -334,7 +330,6 @@ export type MessageStudent = {
   studentId?: string;
   name: string;
   level?: number;
-  profilePic?: string;
   profilePicPath?: string;
   unreadMessageCount: number;
 };
@@ -362,7 +357,6 @@ type LoginApiResponse = {
     studentId?: string;
     adminId?: string;
     level?: number;
-    profilePic?: string;
     profilePicPath?: string;
     vertical: boolean;
   };
@@ -376,7 +370,6 @@ type LoginResult = {
   role: 'student' | 'admin';
   token: string;
   level?: number;
-  profilePic?: string;
   profilePicPath?: string;
   vertical: boolean;
 };
@@ -405,7 +398,6 @@ type UploadResponse = {
   path?: string;
   fileUrl?: string;
   location?: string;
-  profilePic?: string;
   profilePicPath?: string;
   file?: {
     url?: string;
@@ -416,7 +408,6 @@ type UploadResponse = {
     path?: string;
     fileUrl?: string;
     location?: string;
-    profilePic?: string;
     profilePicPath?: string;
   };
 };
@@ -655,7 +646,6 @@ const mapStudent = (student: ApiStudent): Student => ({
   name: student.name ?? '',
   studentId: student.studentId,
   level: student.level,
-  profilePic: student.profilePicPath ?? student.profilePic,
   profilePicPath: student.profilePicPath,
   fcmTokens: [
     ...(student.fcmTokens ?? []),
@@ -674,7 +664,6 @@ const mapSameDeviceStudent = (student: ApiStudent): SameDeviceStudent => ({
   id: student._id,
   name: student.name ?? '',
   studentId: student.studentId,
-  profilePic: student.profilePicPath ?? student.profilePic,
   profilePicPath: student.profilePicPath,
   deviceIds: student.deviceIds ?? [],
   horizontal: !(student.vertical ?? true),
@@ -773,7 +762,6 @@ const mapMessageParticipant = (
   name: participant.name ?? (model === 'Admin' ? 'Admin' : 'Student'),
   code: participant.adminId ?? participant.studentId,
   model,
-  profilePic: participant.profilePicPath ?? participant.profilePic,
   profilePicPath: participant.profilePicPath,
 });
 
@@ -794,7 +782,6 @@ const mapMessageStudent = (student: ApiMessageStudent): MessageStudent => ({
   studentId: student.studentId,
   name: student.name ?? 'Student',
   level: student.level,
-  profilePic: student.profilePicPath ?? student.profilePic,
   profilePicPath: student.profilePicPath,
   unreadMessageCount: student.unreadMessageCount ?? 0,
 });
@@ -804,6 +791,7 @@ const mapRankingStudent = (student: ApiRankingStudent): RankingStudent => ({
   rank: student.rank,
   name: student.name ?? 'Student',
   studentCode: student.studentCode,
+  profilePicPath: student.profilePicPath,
   totalCorrect: student.totalCorrect ?? 0,
   totalQuestions: student.totalQuestions ?? 0,
   totalTimer: student.totalTimer ?? 0,
@@ -924,7 +912,6 @@ export const jjWingsApi = createApi({
         role: response.role,
         token: response.token,
         level: response.user.level,
-        profilePic: response.user.profilePicPath ?? response.user.profilePic,
         profilePicPath: response.user.profilePicPath,
         vertical: response.user.vertical,
       }),
@@ -943,7 +930,6 @@ export const jjWingsApi = createApi({
         role: response.role,
         token: response.token,
         level: response.user.level,
-        profilePic: response.user.profilePicPath ?? response.user.profilePic,
         profilePicPath: response.user.profilePicPath,
         vertical: response.user.vertical,
       }),
@@ -1331,7 +1317,6 @@ export const jjWingsApi = createApi({
           };
         },
         transformResponse: (response: UploadResponse) =>
-          response.profilePic ??
           response.profilePicPath ??
           response.file?.path ??
           response.url ??
@@ -1339,7 +1324,6 @@ export const jjWingsApi = createApi({
           response.fileUrl ??
           response.location ??
           response.path ??
-          response.data?.profilePic ??
           response.data?.profilePicPath ??
           response.data?.url ??
           response.data?.fileUrl ??

@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import {
+  Image,
   View,
   Text,
   ScrollView,
@@ -25,6 +26,7 @@ import { useSelector } from 'react-redux';
 import { AdminHeader, LoadingState, StudentHeader } from '../component';
 import { RankingStudent, useGetRankingQuery } from '../store/api';
 import { RootState } from '../store/store';
+import { getFileUrl } from '../util/fileUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -43,26 +45,49 @@ const AvatarCircle: React.FC<{
   size: number;
   color: string;
   label: string;
+  profilePicPath?: string;
   borderColor?: string;
   borderWidth?: number;
-}> = ({ size, color, label, borderColor = '#FFF', borderWidth = 3 }) => (
-  <View
-    style={{
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      backgroundColor: color,
-      borderWidth,
-      borderColor,
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
-  >
-    <Text style={{ fontSize: size * 0.38, color: '#FFF', fontWeight: '800' }}>
-      {label}
-    </Text>
-  </View>
-);
+}> = ({
+  size,
+  color,
+  label,
+  profilePicPath,
+  borderColor = '#FFF',
+  borderWidth = 3,
+}) => {
+  const profilePicUrl = getFileUrl(profilePicPath);
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: color,
+        borderWidth,
+        borderColor,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      {profilePicUrl ? (
+        <Image
+          source={{ uri: profilePicUrl }}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text
+          style={{ fontSize: size * 0.38, color: '#FFF', fontWeight: '800' }}
+        >
+          {label}
+        </Text>
+      )}
+    </View>
+  );
+};
 
 const getInitials = (name: string) =>
   name
@@ -264,9 +289,10 @@ const PodiumCard: React.FC<{
   score: string;
   rank: number;
   avatarColor: string;
+  profilePicPath?: string;
   isFirst: boolean;
   delay: number;
-}> = ({ name, score, rank, avatarColor, isFirst, delay }) => {
+}> = ({ name, score, rank, avatarColor, profilePicPath, isFirst, delay }) => {
   const slideUp = useRef(new Animated.Value(80)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -337,6 +363,7 @@ const PodiumCard: React.FC<{
               size={72}
               color={avatarColor}
               label={initials}
+              profilePicPath={profilePicPath}
               borderColor={avatarColor}
             />
           </Animated.View>
@@ -345,6 +372,7 @@ const PodiumCard: React.FC<{
             size={54}
             color={avatarColor}
             label={initials}
+            profilePicPath={profilePicPath}
             borderColor="#DDE8F8"
             borderWidth={3}
           />
@@ -463,8 +491,9 @@ const RisingStarRow: React.FC<{
   level: string;
   accuracy: string;
   avatarColor: string;
+  profilePicPath?: string;
   index: number;
-}> = ({ rank, name, level, accuracy, avatarColor, index }) => {
+}> = ({ rank, name, level, accuracy, avatarColor, profilePicPath, index }) => {
   const slideLeft = useRef(new Animated.Value(width)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -524,6 +553,7 @@ const RisingStarRow: React.FC<{
         size={46}
         color={avatarColor}
         label={initials}
+        profilePicPath={profilePicPath}
         borderColor="#E8F0FC"
         borderWidth={2}
       />
@@ -740,6 +770,7 @@ const TopExplorerScreen: React.FC = () => {
               score={`${secondPlace.totalCorrect}/${secondPlace.totalQuestions}`}
               rank={secondPlace.rank}
               avatarColor={getAvatarColor(secondPlace.rank)}
+              profilePicPath={secondPlace.profilePicPath}
               isFirst={false}
               delay={200}
             />
@@ -751,6 +782,7 @@ const TopExplorerScreen: React.FC = () => {
               score={`${firstPlace.totalCorrect}/${firstPlace.totalQuestions}`}
               rank={firstPlace.rank}
               avatarColor={getAvatarColor(firstPlace.rank)}
+              profilePicPath={firstPlace.profilePicPath}
               isFirst={true}
               delay={0}
             />
@@ -762,6 +794,7 @@ const TopExplorerScreen: React.FC = () => {
               score={`${thirdPlace.totalCorrect}/${thirdPlace.totalQuestions}`}
               rank={thirdPlace.rank}
               avatarColor={getAvatarColor(thirdPlace.rank)}
+              profilePicPath={thirdPlace.profilePicPath}
               isFirst={false}
               delay={400}
             />
@@ -818,6 +851,7 @@ const TopExplorerScreen: React.FC = () => {
               level={formatLevel(student)}
               accuracy={formatAccuracy(student.accuracy)}
               avatarColor={getAvatarColor(student.rank)}
+              profilePicPath={student.profilePicPath}
               index={i}
             />
           ))}
