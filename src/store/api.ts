@@ -41,6 +41,7 @@ type ApiStudent = {
   name?: string;
   level?: number;
   profilePicPath?: string;
+  isDeleted?: boolean;
   vertical?: boolean;
   deviceIds?: string[];
   fcmToken?: string;
@@ -202,6 +203,7 @@ export type Student = {
   studentId?: string;
   level?: number;
   profilePicPath?: string;
+  isDeleted?: boolean;
   fcmTokens: string[];
   horizontal: boolean;
   assigned: number;
@@ -460,8 +462,9 @@ type AddStudentArg = {
 
 type UpdateStudentArg = {
   studentId: string;
-  name: string;
-  level: number;
+  name?: string;
+  level?: number;
+  isDeleted?: boolean;
 };
 
 type UpdateStudentHorizontalArg = {
@@ -647,6 +650,7 @@ const mapStudent = (student: ApiStudent): Student => ({
   studentId: student.studentId,
   level: student.level,
   profilePicPath: student.profilePicPath,
+  isDeleted: student.isDeleted ?? false,
   fcmTokens: [
     ...(student.fcmTokens ?? []),
     ...(student.fcmToken ? [student.fcmToken] : []),
@@ -1199,10 +1203,14 @@ export const jjWingsApi = createApi({
     }),
 
     updateStudent: builder.mutation<string, UpdateStudentArg>({
-      query: ({ studentId, name, level }) => ({
+      query: ({ studentId, name, level, isDeleted }) => ({
         url: `/admin/students/${studentId}`,
         method: 'PATCH',
-        body: { name, level },
+        body: {
+          ...(name !== undefined ? { name } : {}),
+          ...(typeof level === 'number' ? { level } : {}),
+          ...(typeof isDeleted === 'boolean' ? { isDeleted } : {}),
+        },
       }),
       transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { studentId }) => [

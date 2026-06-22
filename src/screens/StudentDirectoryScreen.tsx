@@ -21,6 +21,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {
   useGetStudentsQuery,
   useUpdateStudentHorizontalMutation,
+  useUpdateStudentMutation,
   useResetPasswordMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
@@ -35,6 +36,7 @@ type Student = {
   studentId?: string;
   level?: number;
   profilePicPath?: string;
+  isDeleted?: boolean;
   fcmTokens: string[];
   assigned: number;
   completed: number;
@@ -115,11 +117,13 @@ const ProgressStat = ({
 const StudentRow = ({
   item,
   onViewPress,
+  onToggleDeletedPress,
 }: {
   item: Student;
   onViewPress: () => void;
+  onToggleDeletedPress: () => void;
 }) => (
-  <View style={styles.row}>
+  <View style={[styles.row, item.isDeleted && styles.deletedRow]}>
     <View style={styles.studentInfo}>
       <Avatar
         color={COLORS[randomNumber(0, 6)]}
@@ -152,8 +156,18 @@ const StudentRow = ({
     </View>
 
     <View style={styles.actions}>
-      <TouchableOpacity style={styles.viewAction} onPress={onViewPress}>
-        <Text style={styles.viewActionText}>View</Text>
+      <TouchableOpacity
+        style={[styles.viewAction, item.isDeleted && styles.revertAction]}
+        onPress={item.isDeleted ? onToggleDeletedPress : onViewPress}
+      >
+        <Text
+          style={[
+            styles.viewActionText,
+            item.isDeleted && styles.revertActionText,
+          ]}
+        >
+          {item.isDeleted ? 'Revert' : 'View'}
+        </Text>
       </TouchableOpacity>
     </View>
   </View>
@@ -209,6 +223,8 @@ export default function StudentDirectoryScreen() {
   );
   const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
     useUpdateStudentHorizontalMutation();
+  const [updateStudent, { isLoading: isStudentUpdating }] =
+    useUpdateStudentMutation();
   const [resetPassword, { isLoading: isResetPasswordLoading }] =
     useResetPasswordMutation();
 
@@ -311,6 +327,55 @@ export default function StudentDirectoryScreen() {
     }).unwrap();
     // refetch();
   };
+
+  const handleStudentDeletionToggle = useCallback(
+    async (student: Student, isDeleted: boolean) => {
+      try {
+        await updateStudent({
+          studentId: student.id,
+          isDeleted,
+        }).unwrap();
+
+        Alert.alert(
+          isDeleted ? 'Student Deleted' : 'Student Reverted',
+          isDeleted
+            ? 'This student will be deleted in 2 days. You can revert it if needed.'
+            : 'This student has been restored and is active again.',
+        );
+      } catch (error) {
+        console.error('Failed to update student deletion state:', error);
+        Alert.alert(
+          isDeleted ? 'Delete Student' : 'Revert Student',
+          'Unable to update the student right now. Please try again.',
+        );
+      }
+    },
+    [updateStudent],
+  );
+
+  const promptStudentDeletionToggle = useCallback(
+    (student: Student, isDeleted: boolean, onSuccess?: () => void) => {
+      Alert.alert(
+        isDeleted ? 'Delete Student' : 'Revert Student',
+        isDeleted
+          ? `Delete ${student.name || 'this student'}? 
+          Deletion will be completed in 2 days. You can undo this within 2 days. Once the period expires, the data will be permanently deleted.`
+          : `Revert ${student.name || 'this student'} back to active?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: isDeleted ? 'Delete' : 'Revert',
+            style: 'destructive',
+            onPress: async () => {
+              await handleStudentDeletionToggle(student, isDeleted);
+              onSuccess?.();
+            },
+          },
+        ],
+      );
+    },
+    [handleStudentDeletionToggle],
+  );
 
   const closeActionsModal = () => setSelectedStudent(null);
 
@@ -422,6 +487,17 @@ export default function StudentDirectoryScreen() {
     );
   };
 
+  const handleModalDeletePress = () => {
+    if (!selectedStudent) return;
+
+    const nextIsDeleted = !selectedStudent.isDeleted;
+    promptStudentDeletionToggle(
+      selectedStudent,
+      nextIsDeleted,
+      closeActionsModal,
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
@@ -490,6 +566,9 @@ export default function StudentDirectoryScreen() {
             <StudentRow
               item={item}
               onViewPress={() => setSelectedStudent(item)}
+              onToggleDeletedPress={() =>
+                promptStudentDeletionToggle(item, false)
+              }
             />
           )}
           ItemSeparatorComponent={StudentSeparator}
@@ -519,7 +598,9 @@ export default function StudentDirectoryScreen() {
         <Text style={styles.fabIcon}>＋</Text>
       </TouchableOpacity> */}
       <LoadingOverlay
-        visible={isHorizontalUpdating || isResetPasswordLoading}
+        visible={
+          isHorizontalUpdating || isResetPasswordLoading || isStudentUpdating
+        }
         label={
           isResetPasswordLoading
             ? 'Resetting password...'
@@ -618,7 +699,14 @@ export default function StudentDirectoryScreen() {
                 <Text style={styles.modalCloseText}>X</Text>
               </TouchableOpacity>
             </View>
-
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleModalAssignPress}
+            >
+              <Text style={styles.modalSecondaryActionText}>
+                Assign Questions
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalSecondaryAction}
               onPress={handleModalPerformancePress}
@@ -644,25 +732,18 @@ export default function StudentDirectoryScreen() {
               <Text style={styles.modalSecondaryActionText}>Exam</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.modalPrimaryAction}
-              onPress={handleModalAssignPress}
-            >
-              <Text style={styles.modalPrimaryActionText}>Assign</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalNotificationAction}
+              style={styles.modalSecondaryAction}
               onPress={handleModalNotificationsPress}
             >
-              <Text style={styles.modalNotificationActionText}>
-                Notifications
-              </Text>
+              <Text style={styles.modalSecondaryActionText}>Notifications</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.modalEditAction}
+              style={styles.modalSecondaryAction}
               onPress={handleModalEditPress}
             >
-              <Text style={styles.modalEditActionText}>Edit</Text>
+              <Text style={styles.modalSecondaryActionText}>Edit</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.modalHorizontalAction,
@@ -689,6 +770,22 @@ export default function StudentDirectoryScreen() {
             >
               <Text style={styles.modalSecondaryActionText}>
                 {isResetPasswordLoading ? 'Resetting...' : 'Reset Password'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalDeleteAction,
+                selectedStudent?.isDeleted && styles.modalRestoreAction,
+              ]}
+              onPress={handleModalDeletePress}
+            >
+              <Text
+                style={[
+                  styles.modalDeleteActionText,
+                  selectedStudent?.isDeleted && styles.modalRestoreActionText,
+                ]}
+              >
+                {selectedStudent?.isDeleted ? 'Revert' : 'Delete'}
               </Text>
             </TouchableOpacity>
           </Pressable>
@@ -868,6 +965,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
   },
+  deletedRow: {
+    opacity: 0.55,
+  },
   studentInfo: {
     flex: 2,
     flexDirection: 'row',
@@ -963,6 +1063,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#fff',
     fontWeight: '800',
+  },
+  revertAction: {
+    backgroundColor: '#E2E8F0',
+  },
+  revertActionText: {
+    color: '#334155',
   },
   horizontalActionActive: {
     borderColor: '#0F766E',
@@ -1072,6 +1178,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7E22CE',
     fontWeight: '800',
+  },
+  modalDeleteAction: {
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  modalDeleteActionText: {
+    fontSize: 14,
+    color: '#B91C1C',
+    fontWeight: '800',
+  },
+  modalRestoreAction: {
+    backgroundColor: '#E2E8F0',
+  },
+  modalRestoreActionText: {
+    color: '#334155',
   },
   modalHorizontalAction: {
     borderRadius: 10,
