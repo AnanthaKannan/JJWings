@@ -22,6 +22,8 @@ interface AuthState {
   adminCode: string | null;
   adminName: string;
   adminProfilePic: string | null;
+  adminOrgId: string | null;
+  adminRoles: string[];
   isAdmin: boolean;
   vertical: boolean;
   hasNotificationAttention: boolean;
@@ -49,6 +51,8 @@ const initialState: AuthState = {
   adminCode: null,
   adminName: '',
   adminProfilePic: null,
+  adminOrgId: null,
+  adminRoles: [],
   isAdmin: false,
   vertical: false,
   hasNotificationAttention: false,
@@ -94,6 +98,8 @@ const commonSlice = createSlice({
         isAdmin: boolean;
         adminName: string;
         adminProfilePic?: string | null;
+        adminOrgId?: string | null;
+        adminRoles?: string[];
         token?: string;
       }>,
     ) => {
@@ -101,6 +107,8 @@ const commonSlice = createSlice({
       state.adminCode = action.payload.adminCode ?? null;
       state.adminName = action.payload.adminName;
       state.adminProfilePic = action.payload.adminProfilePic ?? null;
+      state.adminOrgId = action.payload.adminOrgId ?? null;
+      state.adminRoles = action.payload.adminRoles ?? [];
       state.studentLevel = null;
       state.isAdmin = true;
       state.isStudent = false;
@@ -139,6 +147,8 @@ const commonSlice = createSlice({
       state.adminCode = null;
       state.adminName = '';
       state.adminProfilePic = null;
+      state.adminOrgId = null;
+      state.adminRoles = [];
       state.isStudent = false;
       state.isAdmin = false;
       state.isAuthenticated = false;

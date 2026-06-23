@@ -25,12 +25,26 @@ type AdminHeaderProps = {
   headerBackgroundColor?: string;
 };
 
-const adminNavItems = [
+type AdminNavItem = {
+  label: string;
+  icon: string;
+  routeName: string;
+  params?: object;
+  requiresRole?: string;
+};
+
+const adminNavItems: AdminNavItem[] = [
   {
     label: 'Add Student',
     icon: 'person-add',
     routeName: 'AdminStudents',
     params: { screen: 'AddStudent' },
+  },
+  {
+    label: 'Teachers',
+    icon: 'school',
+    routeName: 'AdminTeachers',
+    requiresRole: 'admin',
   },
   {
     label: 'Rank',
@@ -81,6 +95,7 @@ export default function AdminHeader({
   const adminProfilePic = useSelector(
     (state: RootState) => state.common.adminProfilePic,
   );
+  const adminRoles = useSelector((state: RootState) => state.common.adminRoles);
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
   const displayName = adminName.trim() || 'Admin';
@@ -195,22 +210,34 @@ export default function AdminHeader({
                 contentContainerStyle={styles.navList}
                 showsVerticalScrollIndicator={false}
               >
-                {adminNavItems.map(item => (
-                  <TouchableOpacity
-                    key={item.label}
-                    style={styles.navItem}
-                    onPress={() => handleNavigate(item.routeName, item.params)}
-                    activeOpacity={0.78}
-                  >
-                    <MaterialIcons name={item.icon} size={21} color="#4F46E5" />
-                    <Text style={styles.navItemText}>{item.label}</Text>
-                    <MaterialIcons
-                      name="chevron-right"
-                      size={22}
-                      color="#94A3B8"
-                    />
-                  </TouchableOpacity>
-                ))}
+                {adminNavItems
+                  .filter(
+                    item =>
+                      !item.requiresRole ||
+                      adminRoles.includes(item.requiresRole),
+                  )
+                  .map(item => (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={styles.navItem}
+                      onPress={() =>
+                        handleNavigate(item.routeName, item.params)
+                      }
+                      activeOpacity={0.78}
+                    >
+                      <MaterialIcons
+                        name={item.icon}
+                        size={21}
+                        color="#4F46E5"
+                      />
+                      <Text style={styles.navItemText}>{item.label}</Text>
+                      <MaterialIcons
+                        name="chevron-right"
+                        size={22}
+                        color="#94A3B8"
+                      />
+                    </TouchableOpacity>
+                  ))}
               </ScrollView>
 
               <Text style={styles.versionText}>v{APP_VERSION}</Text>

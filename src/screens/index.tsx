@@ -8,6 +8,7 @@ export { default as HomeworkScreen } from './HomeworkScreen';
 export { default as PracticeScreen } from './PracticeScreen';
 export { default as QuizReviewScreen } from './QuizReviewScreen';
 export { default as StudentDirectoryScreen } from './StudentDirectoryScreen';
+export { default as TeacherDirectoryScreen } from './TeacherDirectoryScreen';
 export { default as SameDeviceStudentsScreen } from './SameDeviceStudentsScreen';
 export { default as AddStudentScreen } from './AddStudentScreen';
 export { default as HomeworkLibraryScreen } from './HomeworkLibraryScreen';

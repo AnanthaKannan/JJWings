@@ -47,6 +47,7 @@ import {
   QuizReviewScreen,
   // ── Admin screens (create these in your screens folder) ──
   StudentDirectoryScreen,
+  TeacherDirectoryScreen,
   SameDeviceStudentsScreen,
   AddStudentScreen,
   HomeworkLibraryScreen,
@@ -628,6 +629,17 @@ const AdminTabs = createBottomTabNavigator({
         unmountOnBlur: true,
         tabBarIcon: ({ color, size }) => (
           <MaterialIcons name="campaign" color={color} size={size} />
+        ),
+      },
+    },
+    AdminTeachers: {
+      screen: TeacherDirectoryScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Teachers',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="school" color={color} size={size} />
         ),
       },
     },
