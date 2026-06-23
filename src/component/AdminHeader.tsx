@@ -44,7 +44,7 @@ const adminNavItems: AdminNavItem[] = [
     label: 'Teachers',
     icon: 'school',
     routeName: 'AdminTeachers',
-    requiresRole: 'admin',
+    requiresRole: 'superadmin',
   },
   {
     label: 'Rank',

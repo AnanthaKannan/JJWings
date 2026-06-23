@@ -18,7 +18,7 @@ import { useSelector } from 'react-redux';
 
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
-  Teacher,
+  Admin,
   useAddTeacherMutation,
   useGetTeachersQuery,
   useUpdateTeacherMutation,
@@ -37,26 +37,18 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 type TeacherRowProps = {
-  teacher: Teacher;
+  teacher: Admin;
   onEdit: () => void;
   onDelete: () => void;
   onRevert: () => void;
 };
 
-function TeacherRow({
-  teacher,
-  onEdit,
-  onDelete,
-  onRevert,
-}: TeacherRowProps) {
+function TeacherRow({ teacher, onEdit, onDelete, onRevert }: TeacherRowProps) {
   return (
     <View style={[styles.row, teacher.isDeleted && styles.deletedRow]}>
       <View style={styles.teacherInfo}>
         <View
-          style={[
-            styles.avatar,
-            teacher.isDeleted && styles.deletedAvatar,
-          ]}
+          style={[styles.avatar, teacher.isDeleted && styles.deletedAvatar]}
         >
           <Text
             style={[
@@ -78,7 +70,7 @@ function TeacherRow({
             {teacher.name || 'Teacher'}
           </Text>
           <Text style={styles.teacherMeta} numberOfLines={1}>
-            #{teacher.teacherId ?? teacher.id}
+            #{teacher.adminId ?? teacher.id}
           </Text>
           {teacher.isDeleted && (
             <Text style={styles.deletedLabel}>Pending delete</Text>
@@ -121,17 +113,15 @@ function TeacherRow({
 
 export default function TeacherDirectoryScreen() {
   const [teacherName, setTeacherName] = useState('');
-  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [editingTeacher, setEditingTeacher] = useState<Admin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const adminRoles = useSelector(
-    (state: RootState) => state.common.adminRoles,
-  );
-  const canManageTeachers = adminRoles.includes('admin');
+  const adminRoles = useSelector((state: RootState) => state.common.adminRoles);
+  const canManageTeachers = adminRoles.includes('superadmin');
 
   const {
-    data: { teachers = [] } = {},
+    data: { admins = [] } = {},
     isLoading,
     refetch,
   } = useGetTeachersQuery(undefined, {
@@ -141,16 +131,18 @@ export default function TeacherDirectoryScreen() {
   const [updateTeacher, { isLoading: isUpdatingTeacher }] =
     useUpdateTeacherMutation();
 
+  console.log('----------------', admins);
+
   const sortedTeachers = useMemo(
     () =>
-      [...teachers].sort((left, right) => {
+      [...admins].sort((left, right) => {
         if (left.isDeleted !== right.isDeleted) {
           return left.isDeleted ? 1 : -1;
         }
 
         return left.name.localeCompare(right.name);
       }),
-    [teachers],
+    [admins],
   );
   const isSubmitting = isAddingTeacher || isUpdatingTeacher;
   const isEditMode = editingTeacher !== null;
@@ -162,7 +154,7 @@ export default function TeacherDirectoryScreen() {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (teacher: Teacher) => {
+  const openEditModal = (teacher: Admin) => {
     setEditingTeacher(teacher);
     setTeacherName(teacher.name);
     setIsModalOpen(true);
@@ -190,13 +182,15 @@ export default function TeacherDirectoryScreen() {
     if (!cleanName) return;
 
     try {
+      let password = '';
       if (editingTeacher) {
         await updateTeacher({
           teacherId: editingTeacher.id,
           name: cleanName,
         }).unwrap();
       } else {
-        await addTeacher({ name: cleanName }).unwrap();
+        const teacherRes = await addTeacher({ name: cleanName }).unwrap();
+        password = teacherRes?.data?.password;
       }
 
       closeModal();
@@ -204,18 +198,22 @@ export default function TeacherDirectoryScreen() {
         isEditMode ? 'Teacher Updated' : 'Teacher Created',
         `${cleanName} has been ${
           isEditMode ? 'updated' : 'created'
-        } successfully.`,
+        } successfully. ${isEditMode ? '' : 'The password is '} ${
+          isEditMode ? '' : password
+        }`,
       );
     } catch (error) {
       console.error('Failed to save teacher:', error);
       Alert.alert(
         'Error',
-        `Failed to ${isEditMode ? 'update' : 'create'} teacher. Please try again.`,
+        `Failed to ${
+          isEditMode ? 'update' : 'create'
+        } teacher. Please try again.`,
       );
     }
   };
 
-  const confirmDelete = (teacher: Teacher) => {
+  const confirmDelete = (teacher: Admin) => {
     Alert.alert(
       'Confirm Teacher Delete',
       `This will take 2 days to delete. If you delete ${teacher.name}, the students under this teacher will also be deleted. Do you want to continue?`,
@@ -233,7 +231,10 @@ export default function TeacherDirectoryScreen() {
               Alert.alert('Teacher Deleted', 'Teacher deletion is pending.');
             } catch (error) {
               console.error('Failed to delete teacher:', error);
-              Alert.alert('Error', 'Failed to delete teacher. Please try again.');
+              Alert.alert(
+                'Error',
+                'Failed to delete teacher. Please try again.',
+              );
             }
           },
         },
@@ -241,7 +242,7 @@ export default function TeacherDirectoryScreen() {
     );
   };
 
-  const confirmRevert = (teacher: Teacher) => {
+  const confirmRevert = (teacher: Admin) => {
     Alert.alert(
       'Revert Teacher Delete',
       `Do you want to restore ${teacher.name}? This will cancel the pending delete request.`,
@@ -258,7 +259,10 @@ export default function TeacherDirectoryScreen() {
               Alert.alert('Teacher Restored', 'Teacher has been restored.');
             } catch (error) {
               console.error('Failed to restore teacher:', error);
-              Alert.alert('Error', 'Failed to restore teacher. Please try again.');
+              Alert.alert(
+                'Error',
+                'Failed to restore teacher. Please try again.',
+              );
             }
           },
         },
@@ -290,7 +294,7 @@ export default function TeacherDirectoryScreen() {
       <View style={styles.summaryRow}>
         <View>
           <Text style={styles.summaryTitle}>Teacher Directory</Text>
-          <Text style={styles.summaryMeta}>{teachers.length} total</Text>
+          <Text style={styles.summaryMeta}>{admins.length} total</Text>
         </View>
         <TouchableOpacity
           style={styles.addButton}
@@ -303,12 +307,8 @@ export default function TeacherDirectoryScreen() {
 
       <View style={styles.tableCard}>
         <View style={styles.tableHeader}>
-          <Text style={[styles.headerText, styles.teacherHeader]}>
-            TEACHER
-          </Text>
-          <Text style={[styles.headerText, styles.actionsHeader]}>
-            ACTIONS
-          </Text>
+          <Text style={[styles.headerText, styles.teacherHeader]}>TEACHER</Text>
+          <Text style={[styles.headerText, styles.actionsHeader]}>ACTIONS</Text>
         </View>
         {isLoading && <LoadingState label="Loading teachers..." />}
         <FlatList
@@ -367,7 +367,10 @@ export default function TeacherDirectoryScreen() {
 
             <Text style={styles.label}>Teacher Name</Text>
             <TextInput
-              style={[styles.input, teacherName.length > 0 && styles.inputFilled]}
+              style={[
+                styles.input,
+                teacherName.length > 0 && styles.inputFilled,
+              ]}
               placeholder="Enter teacher name"
               placeholderTextColor="#A0AEC0"
               value={teacherName}

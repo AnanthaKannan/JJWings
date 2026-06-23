@@ -76,6 +76,8 @@ export default function LoginScreen() {
               isAdmin: true,
               adminName: result.data.name,
               adminProfilePic: result.data.profilePicPath,
+              adminOrgId: result.data.orgId,
+              adminRoles: result.data.roles,
               token: result.data.token,
             }),
           );
@@ -94,11 +96,12 @@ export default function LoginScreen() {
 
   useEffect(() => {
     let isMounted = true;
-
+    console.log('>>>>>>>>>>>>>>>>>>>>>>> useEffect');
     const trySavedLogin = async () => {
+      console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> trySavedLogin');
       try {
         const savedCredentials = await getSavedLoginCredentials();
-
+        console.log('savedCredentials', savedCredentials);
         if (!savedCredentials) {
           return;
         }

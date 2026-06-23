@@ -351,11 +351,13 @@ type LoginApiResponse = {
   message: string;
   token: string;
   role: 'student' | 'admin';
+  orgId: string;
   user: {
     id: string;
     name: string;
     studentId?: string;
     adminId?: string;
+    roles?: string[];
     level?: number;
     profilePicPath?: string;
     vertical: boolean;
@@ -368,6 +370,8 @@ type LoginResult = {
   adminCode?: string;
   name: string;
   role: 'student' | 'admin';
+  roles: string[];
+  orgId: string;
   token: string;
   level?: number;
   profilePicPath?: string;
@@ -464,6 +468,47 @@ type UpdateStudentArg = {
   level: number;
 };
 
+type ApiAdmin = {
+  _id: string;
+  adminId: string;
+  name: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+type ApiAdminsResponse =
+  | ApiAdmin[]
+  | {
+      data?: ApiAdmin[];
+      admins?: ApiAdmin[];
+      meta?: ApiMeta;
+    };
+
+export type Admin = {
+  id: string;
+  adminId: string;
+  name: string;
+  isDeleted: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminsResult = {
+  admins: Admin[];
+  meta?: ApiMeta;
+};
+
+type AddTeacherArg = {
+  name: string;
+};
+
+type UpdateTeacherArg = {
+  teacherId: string;
+  name?: string;
+  isDeleted?: boolean;
+};
+
 type UpdateStudentHorizontalArg = {
   studentId: string;
   horizontal: boolean;
@@ -489,6 +534,15 @@ type ResetPasswordResponse = {
   data?: {
     studentId?: string;
     name?: string;
+    password?: string;
+  };
+};
+
+type addAdminResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    adminId?: string;
     password?: string;
   };
 };
@@ -658,6 +712,34 @@ const mapStudent = (student: ApiStudent): Student => ({
   progress: student.score?.progress ?? 0,
   success: student.score?.correct ?? 0,
   failure: student.score?.wrong ?? 0,
+});
+
+const mapLogin = (response: LoginApiResponse): LoginResult => {
+  return {
+    id: response.user.id,
+    studentCode: response.user.studentId,
+    adminCode: response.user.adminId,
+    name: response.user.name,
+    role: response.role,
+    roles: response.user.roles ?? [],
+    orgId: response.orgId,
+    token: response.token,
+    level: response.user.level,
+    profilePicPath: response.user.profilePicPath,
+    vertical: response.user.vertical,
+  };
+};
+
+const getTeachersFromResponse = (response: ApiAdminsResponse): ApiAdmin[] =>
+  response?.admins ?? [];
+
+const mapTeacher = (admin: ApiAdmin): Admin => ({
+  id: admin._id,
+  adminId: admin.adminId,
+  name: admin.name ?? '',
+  isDeleted: admin.isDeleted ?? false,
+  createdAt: admin.createdAt,
+  updatedAt: admin.updatedAt,
 });
 
 const mapSameDeviceStudent = (student: ApiStudent): SameDeviceStudent => ({
@@ -841,6 +923,8 @@ export const jjWingsApi = createApi({
   tagTypes: [
     'Student',
     'Students',
+    'Admin',
+    'Admins',
     'Question',
     'Questions',
     'Homework',
@@ -904,17 +988,7 @@ export const jjWingsApi = createApi({
           ...(deviceId ? { deviceId } : {}),
         },
       }),
-      transformResponse: (response: LoginApiResponse) => ({
-        id: response.user.id,
-        studentCode: response.user.studentId,
-        adminCode: response.user.adminId,
-        name: response.user.name,
-        role: response.role,
-        token: response.token,
-        level: response.user.level,
-        profilePicPath: response.user.profilePicPath,
-        vertical: response.user.vertical,
-      }),
+      transformResponse: mapLogin,
     }),
 
     switchStudentLogin: builder.mutation<LoginResult, SwitchStudentLoginArg>({
@@ -922,17 +996,7 @@ export const jjWingsApi = createApi({
         url: `/login/${studentId}`,
         method: 'POST',
       }),
-      transformResponse: (response: LoginApiResponse) => ({
-        id: response.user.id,
-        studentCode: response.user.studentId,
-        adminCode: response.user.adminId,
-        name: response.user.name,
-        role: response.role,
-        token: response.token,
-        level: response.user.level,
-        profilePicPath: response.user.profilePicPath,
-        vertical: response.user.vertical,
-      }),
+      transformResponse: mapLogin,
     }),
 
     getStudents: builder.query<StudentsResult, StudentsArg | void>({
@@ -969,6 +1033,21 @@ export const jjWingsApi = createApi({
       transformResponse: (response: ApiSameDeviceStudentsResponse) =>
         response.students.map(mapSameDeviceStudent),
       providesTags: [{ type: 'Students', id: 'SAME_DEVICE' }],
+    }),
+
+    getTeachers: builder.query<AdminsResult, void>({
+      query: () => '/admin/teacher',
+      transformResponse: (response: ApiAdminsResponse) => ({
+        admins: getTeachersFromResponse(response).map(mapTeacher),
+        meta: Array.isArray(response) ? undefined : response.meta,
+      }),
+      providesTags: result => [
+        { type: 'Teachers', id: 'LIST' },
+        ...(result?.admins ?? []).map(admin => ({
+          type: 'Teacher' as const,
+          id: admin.id,
+        })),
+      ],
     }),
 
     getQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
@@ -1208,6 +1287,32 @@ export const jjWingsApi = createApi({
       invalidatesTags: (_result, _error, { studentId }) => [
         { type: 'Student', id: studentId },
         { type: 'Students', id: 'LIST' },
+      ],
+    }),
+
+    addTeacher: builder.mutation<string, AddTeacherArg>({
+      query: ({ name }) => ({
+        url: '/admin/teacher',
+        method: 'POST',
+        body: { name },
+      }),
+      transformResponse: (response: addAdminResponse) => response,
+      invalidatesTags: [{ type: 'Teachers', id: 'LIST' }],
+    }),
+
+    updateTeacher: builder.mutation<string, UpdateTeacherArg>({
+      query: ({ teacherId, name, isDeleted }) => ({
+        url: `/admin/teacher/${teacherId}`,
+        method: 'PATCH',
+        body: {
+          ...(typeof name === 'string' ? { name } : {}),
+          ...(typeof isDeleted === 'boolean' ? { isDeleted } : {}),
+        },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { teacherId }) => [
+        { type: 'Teacher', id: teacherId },
+        { type: 'Teachers', id: 'LIST' },
       ],
     }),
 
@@ -1646,11 +1751,14 @@ export const {
   useGetStudentByIdQuery,
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
+  useGetTeachersQuery,
   useGetQuestionsQuery,
   useGetPracticeQuestionsQuery,
   useGetAvailableQuestionsQuery,
   useAddStudentMutation,
   useUpdateStudentMutation,
+  useAddTeacherMutation,
+  useUpdateTeacherMutation,
   useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
   useUpdateStudentPasswordMutation,
