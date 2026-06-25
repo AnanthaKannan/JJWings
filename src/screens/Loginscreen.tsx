@@ -100,7 +100,7 @@ export default function LoginScreen() {
 
   useEffect(() => {
     getDeviceId().then(mockDeviceId => {
-      dispatch(setMockDeviceId(mockDeviceId));
+      dispatch(setMockDeviceId({ mockDeviceId }));
     });
   }, [dispatch]);
 

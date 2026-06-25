@@ -78,7 +78,7 @@ const adminNavItems: AdminNavItem[] = [
   },
   {
     label: 'Billing',
-    icon: 'emoji-events',
+    icon: 'attach-money',
     routeName: 'BillingRevenue',
     requiresRole: 'superadmin',
   },
