@@ -296,13 +296,13 @@ export default function TeacherDirectoryScreen() {
           <Text style={styles.summaryTitle}>Teacher Directory</Text>
           <Text style={styles.summaryMeta}>{admins.length} total</Text>
         </View>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.addButton}
           onPress={openCreateModal}
           activeOpacity={0.86}
         >
           <MaterialIcons name="add" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <View style={styles.tableCard}>
@@ -343,6 +343,14 @@ export default function TeacherDirectoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       </View>
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={openCreateModal}
+        activeOpacity={0.86}
+      >
+        <MaterialIcons name="add" size={22} color="#FFFFFF" />
+      </TouchableOpacity>
 
       <Modal
         visible={isModalOpen}
@@ -403,6 +411,10 @@ export default function TeacherDirectoryScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
+        <Text style={styles.fabIcon}>＋</Text>
+      </TouchableOpacity> */}
 
       <LoadingOverlay
         visible={isSubmitting}
@@ -680,5 +692,26 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     textAlign: 'center',
     marginTop: 6,
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 90,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#4F46E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  fabIcon: {
+    fontSize: 28,
+    color: '#FFFFFF',
+    lineHeight: 32,
   },
 });

@@ -62,6 +62,7 @@ import {
   AdminProfileScreen,
   QuestionPaperScreen,
   AchievementsScreen,
+  BillingRevenueScreen,
 } from './screens';
 
 type AnimatedTabIconProps = {
@@ -463,6 +464,22 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    UpdatePassword: {
+      screen: UpdatePasswordScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Update Password',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="emoji-events"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
     Game: {
       screen: GameScreen,
       options: {
@@ -696,6 +713,28 @@ const AdminTabs = createBottomTabNavigator({
         ),
       },
     },
+    UpdatePassword: {
+      screen: UpdatePasswordScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Update Password',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
+        ),
+      },
+    },
+    BillingRevenue: {
+      screen: BillingRevenueScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Achievements',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
+        ),
+      },
+    },
     // Tab — Settings / Logout
     Logout: {
       screen: ProfileScreen,
@@ -723,7 +762,7 @@ const RootStack = createNativeStackNavigator({
     Login: { screen: LoginScreen },
     Main: { screen: MainTabs }, // student flow
     Admin: { screen: AdminTabs }, // admin flow
-    UpdatePassword: { screen: UpdatePasswordScreen },
+    // UpdatePassword: { screen: UpdatePasswordScreen },
   },
 });
 

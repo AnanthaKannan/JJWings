@@ -99,7 +99,10 @@ export default function AddStudentScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#EEF0F8" />
 
       {/* ── Header ── */}
-      <AdminHeader header={isEditMode ? 'Update Student' : 'Add Student'} />
+      <AdminHeader
+        header={isEditMode ? 'Update Student' : 'Add Student'}
+        headerBackgroundColor={'#EEF0F8'}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

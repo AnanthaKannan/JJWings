@@ -49,11 +49,11 @@ const studentNavItems: StudentNavItem[] = [
     icon: 'devices-other',
     routeName: 'SameDeviceStudents',
   },
-  {
-    label: 'Question Papers',
-    icon: 'description',
-    routeName: 'QuestionPapers',
-  },
+  // {
+  //   label: 'Question Papers',
+  //   icon: 'description',
+  //   routeName: 'QuestionPapers',
+  // },
   { label: 'Achievements', icon: 'emoji-events', routeName: 'Achievements' },
   { label: 'Game', icon: 'sports-esports', routeName: 'Game' },
   {

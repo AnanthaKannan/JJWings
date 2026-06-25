@@ -672,13 +672,17 @@ const TopExplorerScreen: React.FC = () => {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#EEF4FF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#DDEAFD" />
       {isAdmin && (
         <View style={styles.adminHeaderWrap}>
-          <AdminHeader header="Rank" showBackButton={true} />
+          <AdminHeader
+            header="Rank"
+            showBackButton={true}
+            headerBackgroundColor="#DDEAFD"
+          />
         </View>
       )}
-      {!isAdmin && <StudentHeader header="" headerBackgroundColor="#EEF4FF" />}
+      {!isAdmin && <StudentHeader header="" headerBackgroundColor="#DDEAFD" />}
 
       {/* Animated background blob */}
       <Animated.View
@@ -710,7 +714,7 @@ const TopExplorerScreen: React.FC = () => {
             { opacity: headerFade, transform: [{ translateY: headerSlide }] },
           ]}
         >
-          <View>
+          <View style={{ marginTop: 5 }}>
             <Text style={styles.headerSub}>🏅 {getMonthRange()}</Text>
             <Text style={styles.headerTitle}>Top Explorers</Text>
           </View>

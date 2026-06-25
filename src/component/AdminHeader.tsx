@@ -35,31 +35,31 @@ type AdminNavItem = {
 
 const adminNavItems: AdminNavItem[] = [
   {
+    label: 'Rank',
+    icon: 'leaderboard',
+    routeName: 'AdminRanking',
+  },
+  // {
+  //   label: 'Question Papers',
+  //   icon: 'description',
+  //   routeName: 'AdminQuestionPapers',
+  // },
+  {
+    label: 'Achievements',
+    icon: 'emoji-events',
+    routeName: 'AdminAchievements',
+  },
+  {
     label: 'Add Student',
     icon: 'person-add',
     routeName: 'AdminStudents',
     params: { screen: 'AddStudent' },
   },
   {
-    label: 'Teachers',
+    label: 'Add Teachers',
     icon: 'school',
     routeName: 'AdminTeachers',
     requiresRole: 'superadmin',
-  },
-  {
-    label: 'Rank',
-    icon: 'leaderboard',
-    routeName: 'AdminRanking',
-  },
-  {
-    label: 'Question Papers',
-    icon: 'description',
-    routeName: 'AdminQuestionPapers',
-  },
-  {
-    label: 'Achievements',
-    icon: 'emoji-events',
-    routeName: 'AdminAchievements',
   },
   {
     label: 'Notification Send',
@@ -75,6 +75,12 @@ const adminNavItems: AdminNavItem[] = [
     label: 'Profile',
     icon: 'person',
     routeName: 'AdminProfile',
+  },
+  {
+    label: 'Billing',
+    icon: 'emoji-events',
+    routeName: 'BillingRevenue',
+    requiresRole: 'superadmin',
   },
   {
     label: 'Logout',
