@@ -19,7 +19,11 @@ import { useDispatch } from 'react-redux';
 import bannerImage from '../../assets/images/banner.png';
 import color from '../util/colors';
 import { useLazyGetLoginQuery } from '../store/api';
-import { setAdminCredentials, setStudentCredentials } from '../store/slices';
+import {
+  setAdminCredentials,
+  setStudentCredentials,
+  setMockDeviceId,
+} from '../store/slices';
 import {
   clearSavedLoginCredentials,
   getSavedLoginCredentials,
@@ -93,6 +97,12 @@ export default function LoginScreen() {
     },
     [dispatch, login, navigation],
   );
+
+  useEffect(() => {
+    getDeviceId().then(mockDeviceId => {
+      dispatch(setMockDeviceId(mockDeviceId));
+    });
+  }, [dispatch]);
 
   useEffect(() => {
     let isMounted = true;

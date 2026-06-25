@@ -28,6 +28,7 @@ interface AuthState {
   vertical: boolean;
   hasNotificationAttention: boolean;
   messageUnreadCount: number;
+  mockDeviceId: string;
 }
 
 const initialState: AuthState = {
@@ -57,6 +58,7 @@ const initialState: AuthState = {
   vertical: false,
   hasNotificationAttention: false,
   messageUnreadCount: 0,
+  mockDeviceId: '',
 };
 
 const commonSlice = createSlice({
@@ -89,6 +91,9 @@ const commonSlice = createSlice({
       state.isAuthenticated = true;
       state.token = action.payload.token ?? null;
       state.vertical = action.payload.vertical;
+    },
+    setMockDeviceId: (state, action) => {
+      state.mockDeviceId = action.payload.mockDeviceId ?? '';
     },
     setAdminCredentials: (
       state,
@@ -171,10 +176,7 @@ const commonSlice = createSlice({
         state.messageUnreadCount - action.payload,
       );
     },
-    setStudentProfilePic: (
-      state,
-      action: PayloadAction<string | null>,
-    ) => {
+    setStudentProfilePic: (state, action: PayloadAction<string | null>) => {
       state.studentProfilePic = action.payload;
     },
     setAdminProfilePic: (state, action: PayloadAction<string | null>) => {
@@ -194,5 +196,6 @@ export const {
   reduceMessageUnreadCount,
   setStudentProfilePic,
   setAdminProfilePic,
+  setMockDeviceId,
 } = commonSlice.actions;
 export default commonSlice.reducer;

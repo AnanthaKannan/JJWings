@@ -32,7 +32,7 @@ import {
 } from '../store/api';
 import { logout, setStudentCredentials } from '../store/slices';
 import { RootState } from '../store/store';
-import { clearSavedLoginCredentials, getDeviceId } from '../util/authStorage';
+import { clearSavedLoginCredentials } from '../util/authStorage';
 import { getFileUrl } from '../util/fileUrl';
 
 const AVATAR_COLORS = [
@@ -136,6 +136,9 @@ export default function SameDeviceStudentsScreen() {
   const loggedInStudentId = useSelector(
     (state: RootState) => state.common.studentId,
   );
+  const mockDeviceId = useSelector(
+    (state: RootState) => state.common.mockDeviceId,
+  );
 
   const {
     data: students = [],
@@ -181,10 +184,9 @@ export default function SameDeviceStudentsScreen() {
       setDeletingStudentId(student.id);
 
       try {
-        const deviceId = await getDeviceId();
         await deleteStudentDeviceId({
           studentId: student.id,
-          deviceId,
+          deviceId: mockDeviceId,
         }).unwrap();
 
         if (student.id === loggedInStudentId) {
@@ -202,7 +204,13 @@ export default function SameDeviceStudentsScreen() {
         setDeletingStudentId(null);
       }
     },
-    [deleteStudentDeviceId, loggedInStudentId, logoutCurrentStudent, refetch],
+    [
+      deleteStudentDeviceId,
+      loggedInStudentId,
+      logoutCurrentStudent,
+      refetch,
+      mockDeviceId,
+    ],
   );
 
   const handleDeletePress = useCallback(
@@ -246,11 +254,10 @@ export default function SameDeviceStudentsScreen() {
     setLoginError('');
 
     try {
-      const deviceId = await getDeviceId();
       const result = await login({
         username: cleanStudentId,
         password,
-        deviceId,
+        deviceId: mockDeviceId,
       });
 
       if (
@@ -270,7 +277,7 @@ export default function SameDeviceStudentsScreen() {
     } catch {
       setLoginError('User Name or password incorrect.');
     }
-  }, [login, password, refetch, studentLoginId]);
+  }, [login, password, refetch, studentLoginId, mockDeviceId]);
 
   const handleStudentPress = useCallback(
     async (student: SameDeviceStudent) => {
