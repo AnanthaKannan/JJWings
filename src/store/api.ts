@@ -1063,7 +1063,7 @@ export const jjWingsApi = createApi({
         url: '/admin/questions',
         params: {
           page: arg?.page ?? 1,
-          limit: arg?.limit ?? DEFAULT_LIMIT,
+          limit: arg?.limit ?? DEFAULT_QUESTIONS_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
           ...(arg?.type ? { type: arg.type } : {}),
           ...(arg?.search ? { search: arg.search } : {}),
@@ -1076,7 +1076,9 @@ export const jjWingsApi = createApi({
       serializeQueryArgs: ({ endpointName, queryArgs }) =>
         `${endpointName}-${queryArgs?.type ?? 'ALL'}-${
           queryArgs?.level ?? 'ALL'
-        }-${queryArgs?.search ?? ''}-${queryArgs?.limit ?? DEFAULT_LIMIT}`,
+        }-${queryArgs?.search ?? ''}-${
+          queryArgs?.limit ?? DEFAULT_QUESTIONS_LIMIT
+        }`,
       merge: (currentCache, newPage) => {
         if (newPage.meta.page === 1) {
           currentCache.questions = newPage.questions;
