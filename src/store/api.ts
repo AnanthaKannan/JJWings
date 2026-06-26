@@ -9,6 +9,7 @@ const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 20;
 const DEFAULT_STUDENTS_LIMIT = 20;
 const DEFAULT_QUESTIONS_LIMIT = 20;
+const DEFAULT_HOMEWORK_LIMIT = 20;
 
 type ApiMeta = {
   total: number;
@@ -438,6 +439,13 @@ type HomeworkArg = {
   studentId: string;
   state: 'PROGRESS' | 'NEW' | 'COMPLETED';
   type?: 'homework' | 'exam' | 'practice';
+  page?: number;
+  limit?: number;
+};
+
+type HomeworksResult = {
+  homeworks: Homework[];
+  meta: ApiMeta;
 };
 
 type HomeworkByIdArg = {
@@ -945,17 +953,44 @@ export const jjWingsApi = createApi({
     'FileUploads',
   ],
   endpoints: builder => ({
-    getHomeworks: builder.query<Homework[], HomeworkArg>({
-      query: ({ studentId, state, type }) => ({
+    getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
+      query: ({ studentId, state, type, page, limit }) => ({
         url: `/homework/${studentId}/${state}`,
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: page ?? 1,
+          limit: limit ?? DEFAULT_HOMEWORK_LIMIT,
           ...(type ? { type } : {}),
         },
       }),
-      transformResponse: (response: ApiHomeworksResponse) =>
-        response.homeworks.map(mapHomework),
+      transformResponse: (response: ApiHomeworksResponse) => ({
+        homeworks: response.homeworks.map(mapHomework),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.studentId}-${queryArgs?.state}-${
+          queryArgs?.type ?? 'ALL'
+        }-${queryArgs?.limit ?? DEFAULT_HOMEWORK_LIMIT}`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.homeworks = newPage.homeworks;
+          currentCache.meta = newPage.meta;
+          return;
+        }
+
+        const existingIds = new Set(
+          currentCache.homeworks.map(homework => homework.id),
+        );
+        const nextItems = newPage.homeworks.filter(
+          homework => !existingIds.has(homework.id),
+        );
+        currentCache.homeworks.push(...nextItems);
+        currentCache.meta = newPage.meta;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.state !== previousArg?.state ||
+        currentArg?.type !== previousArg?.type ||
+        currentArg?.limit !== previousArg?.limit,
       providesTags: (_result, _error, { studentId, state }) => [
         { type: 'Homework', id: `${studentId}_${state}` },
       ],
@@ -969,25 +1004,6 @@ export const jjWingsApi = createApi({
         { type: 'Homework', id: homeworkId },
       ],
     }),
-
-    getStudentById: builder.query<Student | undefined, StudentByIdArg>({
-      query: () => ({
-        url: '/admin/students',
-        params: { page: 1, limit: DEFAULT_LIMIT },
-      }),
-      transformResponse: (
-        response: ApiStudentsResponse,
-        _meta,
-        { studentId },
-      ) =>
-        response.students
-          .map(mapStudent)
-          .find(student => student.id === studentId),
-      providesTags: (_result, _error, { studentId }) => [
-        { type: 'Student', id: studentId },
-      ],
-    }),
-
     getLogin: builder.query<LoginResult, LoginArg>({
       query: ({ username, password, deviceId }) => ({
         url: '/login',
@@ -1206,17 +1222,6 @@ export const jjWingsApi = createApi({
         })) as Array<{ type: 'Question'; id: string }>),
       ],
     }),
-
-    getIdGen: builder.query<IdGenData, void>({
-      query: () => ({
-        url: '/admin/students',
-        params: { page: 1, limit: DEFAULT_LIMIT },
-      }),
-      transformResponse: (response: ApiStudentsResponse) =>
-        getNextStudentId(response.students.map(mapStudent)),
-      providesTags: [{ type: 'Students', id: 'LIST' }],
-    }),
-
     getScore: builder.query<Score, ScoreArg>({
       query: ({ studentId }) => `/scores/${studentId}`,
       transformResponse: (response: ApiScore, _meta, { studentId }) => ({
@@ -1843,7 +1848,6 @@ export const {
   useSwitchStudentLoginMutation,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
-  useGetStudentByIdQuery,
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
   useGetTeachersQuery,
@@ -1871,7 +1875,6 @@ export const {
   useUnassignHomeworkMutation,
   useAssignPracticeQuestionsMutation,
   useUnassignPracticeQuestionsMutation,
-  useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
   useGetAdminNotificationsQuery,

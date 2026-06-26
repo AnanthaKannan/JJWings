@@ -8,7 +8,7 @@ type BottomLodeMoreProps = {
 export default function BottomLodeMore({ loading }: BottomLodeMoreProps) {
   return loading === true ? (
     <View style={styles.footerLoader}>
-      <ActivityIndicator color="#2563EB" />
+      <ActivityIndicator size="small" color="#2563EB" />
     </View>
   ) : null;
 }
@@ -16,6 +16,6 @@ export default function BottomLodeMore({ loading }: BottomLodeMoreProps) {
 const styles = StyleSheet.create({
   footerLoader: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 23,
   },
 });

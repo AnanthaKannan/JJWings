@@ -45,8 +45,8 @@ const studentNavItems: StudentNavItem[] = [
     },
   },
   {
-    label: 'Same Device',
-    icon: 'devices-other',
+    label: 'Add Siblings',
+    icon: 'group-add',
     routeName: 'SameDeviceStudents',
   },
   // {

@@ -4,14 +4,16 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 type FloatingAddButtonProps = {
   onPress?: () => void;
+  icon?: string;
 };
 
 export default function FloatingAddButton({
   onPress = () => {},
+  icon = 'add',
 }: FloatingAddButtonProps) {
   return (
     <TouchableOpacity style={styles.fab} onPress={onPress} activeOpacity={0.86}>
-      <MaterialIcons name="add" size={22} color="#FFFFFF" />
+      <MaterialIcons name={icon} size={22} color="#FFFFFF" />
     </TouchableOpacity>
   );
 }
@@ -19,18 +21,18 @@ export default function FloatingAddButton({
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 90,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    right: 18,
+    bottom: 18,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: '#4F46E5',
-    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    justifyContent: 'center',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });
