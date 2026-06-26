@@ -659,6 +659,8 @@ type AvailableQuestionsArg = {
   studentId: string;
   level?: number;
   type?: 'homework' | 'exam' | 'practice';
+  page?: number;
+  limit?: number;
 };
 
 type RankingArg = {
@@ -1110,24 +1112,52 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    getAvailableQuestions: builder.query<QuestionTask[], AvailableQuestionsArg>(
-      {
-        query: ({ studentId, level, type }) => ({
-          url: `/admin/questions/available/${studentId}`,
-          params: {
-            page: 1,
-            limit: DEFAULT_LIMIT,
-            ...(typeof level === 'number' ? { level } : {}),
-            ...(type ? { type } : {}),
-          },
-        }),
-        transformResponse: (response: ApiQuestionsResponse) =>
-          response.questions.map(mapQuestion),
-        providesTags: (_result, _error, { studentId }) => [
-          { type: 'Questions', id: `AVAILABLE_${studentId}` },
-        ],
+    getAvailableQuestions: builder.query<
+      QuestionsResult,
+      AvailableQuestionsArg
+    >({
+      query: ({ studentId, level, type, page, limit }) => ({
+        url: `/admin/questions/available/${studentId}`,
+        params: {
+          page: page ?? 1,
+          limit: limit ?? DEFAULT_QUESTIONS_LIMIT,
+          ...(typeof level === 'number' ? { level } : {}),
+          ...(type ? { type } : {}),
+        },
+      }),
+      transformResponse: (response: ApiQuestionsResponse) => ({
+        questions: response.questions.map(mapQuestion),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs.studentId}-${queryArgs.type ?? 'ALL'}-${
+          queryArgs.level ?? 'ALL'
+        }-${queryArgs.limit ?? DEFAULT_QUESTIONS_LIMIT}`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.questions = newPage.questions;
+          currentCache.meta = newPage.meta;
+          return;
+        }
+
+        const existingIds = new Set(
+          currentCache.questions.map(question => question.id),
+        );
+        const nextItems = newPage.questions.filter(
+          question => !existingIds.has(question.id),
+        );
+        currentCache.questions.push(...nextItems);
+        currentCache.meta = newPage.meta;
       },
-    ),
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.type !== previousArg?.type ||
+        currentArg?.level !== previousArg?.level ||
+        currentArg?.limit !== previousArg?.limit,
+      providesTags: (_result, _error, { studentId }) => [
+        { type: 'Questions', id: `AVAILABLE_${studentId}` },
+      ],
+    }),
 
     getPracticeQuestions: builder.query<QuestionsResult, QuestionsArg | void>({
       query: arg => ({
