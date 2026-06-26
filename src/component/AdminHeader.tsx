@@ -48,6 +48,7 @@ const adminNavItems: AdminNavItem[] = [
     label: 'Achievements',
     icon: 'emoji-events',
     routeName: 'AdminAchievements',
+    requiresRole: 'superadmin',
   },
   {
     label: 'Add Student',
@@ -61,11 +62,11 @@ const adminNavItems: AdminNavItem[] = [
     routeName: 'AdminTeachers',
     requiresRole: 'superadmin',
   },
-  {
-    label: 'Notification Send',
-    icon: 'campaign',
-    routeName: 'AdminNotificationSend',
-  },
+  // {
+  //   label: 'Notification Send',
+  //   icon: 'campaign',
+  //   routeName: 'AdminNotificationSend',
+  // },
   {
     label: 'Update Password',
     icon: 'lock-reset',
@@ -97,12 +98,14 @@ export default function AdminHeader({
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const adminName = useSelector((state: RootState) => state.common.adminName);
-  const adminProfilePic = useSelector(
-    (state: RootState) => state.common.adminProfilePic,
+  const { adminName, adminRoles, isAdmin, adminProfilePic } = useSelector(
+    (state: RootState) => state.common,
   );
-  const adminRoles = useSelector((state: RootState) => state.common.adminRoles);
-  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+  // const adminProfilePic = useSelector(
+  //   (state: RootState) => state.common.adminProfilePic,
+  // );
+  // const adminRoles = useSelector((state: RootState) => state.common.adminRoles);
+  // const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
   const displayName = adminName.trim() || 'Admin';
   const profilePicUrl = getFileUrl(adminProfilePic);
@@ -200,7 +203,7 @@ export default function AdminHeader({
                   <Text style={styles.adminName} numberOfLines={1}>
                     {displayName}
                   </Text>
-                  <Text style={styles.adminRole}>Admin</Text>
+                  <Text style={styles.adminRole}>{adminRoles?.toString()}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setIsNavOpen(false)}
