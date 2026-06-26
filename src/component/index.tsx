@@ -6,3 +6,4 @@ export { default as AdminHeader } from './AdminHeader';
 export { default as StudentHeader } from './StudentHeader';
 export { default as LoadingState } from './LoadingState';
 export { default as LoadingOverlay } from './LoadingOverlay';
+export { default as FloatingAddButton } from './FloatingAddButton';

@@ -14,8 +14,13 @@ import {
   TextInput,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useIsFocused } from '@react-navigation/native';
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
+import {
+  AdminHeader,
+  FloatingAddButton,
+  LoadingOverlay,
+  LoadingState,
+} from '../component';
 import {
   useDeleteQuestionMutation,
   useGetQuestionsQuery,
@@ -201,6 +206,7 @@ const ModuleCard = ({
 
 export default function HomeworkLibraryScreen() {
   const isFocused = useIsFocused();
+  const navigation = useNavigation<any>();
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
   const {
@@ -469,6 +475,7 @@ export default function HomeworkLibraryScreen() {
         }
       />
 
+      <FloatingAddButton onPress={() => navigation.navigate('CreateNewTask')} />
       {/* ── Questions Modal ── */}
       <Modal
         visible={modalVisible}

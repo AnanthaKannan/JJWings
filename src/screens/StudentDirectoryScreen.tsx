@@ -13,7 +13,6 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -26,6 +25,8 @@ import {
 import { randomNumber } from '../util/fn';
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import { getFileUrl } from '../util/fileUrl';
+import ReuseModal from '../component/ReuseModal';
+import { ReuseModalProps } from '../component/ReuseModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -180,6 +181,14 @@ export const EmptyState = () => (
   </View>
 );
 
+const modalInitial: ReuseModalProps = {
+  name: '',
+  state: 'confirm',
+  visible: false,
+  title: '',
+  description: '',
+};
+
 export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
@@ -188,6 +197,7 @@ export default function StudentDirectoryScreen() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [page, setPage] = useState(1);
   const [loadingMorePage, setLoadingMorePage] = useState<number | null>(null);
+  const [modal, setModal] = useState<ReuseModalProps>(modalInitial);
 
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
@@ -377,49 +387,52 @@ export default function StudentDirectoryScreen() {
     closeActionsModal();
   };
 
+  const handleResetPassword = async () => {
+    if (!selectedStudent) return;
+    try {
+      const response = await resetPassword({
+        studentId: selectedStudent.id,
+      }).unwrap();
+
+      const password = response?.data?.password;
+      const message = response?.message;
+      setModal({
+        name: '',
+        visible: true,
+        state: 'success',
+        title: 'Password Reset',
+        description: `${message}\n\nNew password: *${password}*`,
+      });
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      setModal({
+        name: '',
+        visible: true,
+        state: 'failure',
+        title: 'Password Reset',
+        description: 'Unable to reset password right now. Please try again.',
+      });
+    } finally {
+      closeActionsModal();
+    }
+  };
+
+  const handleOnConfirm = () => {
+    if (modal.name === 'password-reset') {
+      handleResetPassword();
+    }
+  };
+
   const handleModalResetPasswordPress = async () => {
     if (!selectedStudent) return;
 
-    closeActionsModal();
-
-    Alert.alert(
-      'Confirm Password Reset',
-      `This will reset the password for ${
-        selectedStudent.name || 'this student'
-      } and generate a new temporary password. Do you want to continue?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Confirm',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await resetPassword({
-                studentId: selectedStudent.id,
-              }).unwrap();
-
-              const password = response?.data?.password;
-              const message =
-                response?.message || 'Password has been reset successfully.';
-
-              Alert.alert(
-                'Password Reset',
-                password ? `${message}\n\nNew password: ${password}` : message,
-              );
-            } catch (error) {
-              console.error('Failed to reset password:', error);
-              Alert.alert(
-                'Password Reset',
-                'Unable to reset password right now. Please try again.',
-              );
-            }
-          },
-        },
-      ],
-    );
+    setModal({
+      name: 'password-reset',
+      visible: true,
+      state: 'confirm',
+      title: 'Confirm Password Reset',
+      description: `This will reset the password for *${selectedStudent.name}* and generate a new temporary password. Do you want to continue?`,
+    });
   };
 
   return (
@@ -525,6 +538,17 @@ export default function StudentDirectoryScreen() {
             ? 'Resetting password...'
             : 'Updating student...'
         }
+      />
+
+      <ReuseModal
+        visible={modal.visible}
+        state={modal.state}
+        title={modal.title}
+        description={modal.description}
+        onConfirm={() => handleOnConfirm()}
+        onCancel={() => {
+          setModal(modalInitial);
+        }}
       />
       <Modal
         visible={isLevelPickerOpen}

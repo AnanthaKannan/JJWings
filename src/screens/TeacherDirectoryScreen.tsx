@@ -16,7 +16,12 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
 
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import {
+  AdminHeader,
+  FloatingAddButton,
+  LoadingOverlay,
+  LoadingState,
+} from '../component';
 import {
   Admin,
   useAddTeacherMutation,
@@ -296,13 +301,6 @@ export default function TeacherDirectoryScreen() {
           <Text style={styles.summaryTitle}>Teacher Directory</Text>
           <Text style={styles.summaryMeta}>{admins.length} total</Text>
         </View>
-        {/* <TouchableOpacity
-          style={styles.addButton}
-          onPress={openCreateModal}
-          activeOpacity={0.86}
-        >
-          <MaterialIcons name="add" size={22} color="#FFFFFF" />
-        </TouchableOpacity> */}
       </View>
 
       <View style={styles.tableCard}>
@@ -344,13 +342,14 @@ export default function TeacherDirectoryScreen() {
         />
       </View>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.fab}
         onPress={openCreateModal}
         activeOpacity={0.86}
       >
         <MaterialIcons name="add" size={22} color="#FFFFFF" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
+      <FloatingAddButton onPress={openCreateModal} />
 
       <Modal
         visible={isModalOpen}
