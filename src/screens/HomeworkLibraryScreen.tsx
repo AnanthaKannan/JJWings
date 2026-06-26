@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,9 +17,10 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import {
   AdminHeader,
+  BottomLodeMore,
+  EmptyData,
   FloatingAddButton,
   LoadingOverlay,
-  LoadingState,
 } from '../component';
 import {
   useDeleteQuestionMutation,
@@ -75,6 +76,8 @@ const getTaskTypeLabel = (type: LibraryTypeFilter) => {
   if (type === 'practice') return 'Practice';
   return 'Homework';
 };
+
+const PAGE_SIZE = 20;
 
 // ─── Module Icon ──────────────────────────────────────────────────────────────
 
@@ -209,15 +212,18 @@ export default function HomeworkLibraryScreen() {
   const navigation = useNavigation<any>();
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
+  const [page, setPage] = useState(1);
   const {
     data: questionsData,
-    currentData: currentQuestionsData,
+    currentData,
     isLoading,
     isFetching,
   } = useGetQuestionsQuery(
     {
       type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
+      page,
+      limit: PAGE_SIZE,
     },
     {
       skip: !isFocused,
@@ -237,11 +243,19 @@ export default function HomeworkLibraryScreen() {
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [isFilterLevelPickerOpen, setIsFilterLevelPickerOpen] = useState(false);
 
-  const modules = useMemo(() => {
-    const activeQuestionsData = currentQuestionsData ?? questionsData;
-    if (!activeQuestionsData) return [];
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter, selectedLevel]);
 
-    return activeQuestionsData.map((q, index) => ({
+  const activeQuestions = useMemo(
+    () => questionsData?.questions ?? currentData?.questions ?? [],
+    [currentData?.questions, questionsData?.questions],
+  );
+
+  const modules = useMemo(() => {
+    if (activeQuestions.length === 0) return [];
+
+    return activeQuestions.map((q, index) => ({
       id: q.id,
       title: q.questionId ?? q.id,
       questions: q.question,
@@ -250,7 +264,7 @@ export default function HomeworkLibraryScreen() {
       updatedAt: q.updatedAt,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));
-  }, [currentQuestionsData, questionsData]);
+  }, [activeQuestions]);
 
   const filteredModules = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -266,13 +280,16 @@ export default function HomeworkLibraryScreen() {
   }, [modules, searchTerm]);
   const selectedTypeLabel = getTaskTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getTaskTypeLabel(typeFilter);
-  const showLoader = isFocused && (isLoading || isFetching);
+  const showLoader = isFocused && isLoading;
+  const isLoadingMore = isFetching && !isLoading && page > 1;
+  const hasMorePages = questionsData?.meta.hasNextPage === true;
 
   const handleTypeFilterPress = (type: LibraryTypeFilter) => {
     setTypeFilter(type);
     setSearchTerm('');
     setSelectedModule(null);
     setModalVisible(false);
+    setPage(1);
   };
 
   const handleModulePress = (item: Module) => {
@@ -444,6 +461,12 @@ export default function HomeworkLibraryScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        onEndReachedThreshold={0.4}
+        onEndReached={() => {
+          if (!showLoader && !isLoadingMore && hasMorePages) {
+            setPage(prev => prev + 1);
+          }
+        }}
         renderItem={({ item }) => (
           <ModuleCard
             item={item}
@@ -455,23 +478,24 @@ export default function HomeworkLibraryScreen() {
           />
         )}
         ListEmptyComponent={
-          showLoader ? (
-            <LoadingState label={`Loading ${selectedTypeLabel}...`} />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
-              <Text style={styles.emptyText}>
-                {searchTerm
-                  ? `No ${selectedTypeLabel} found`
-                  : `No ${selectedTypeLabel} yet`}
-              </Text>
-              <Text style={styles.emptySubText}>
-                {searchTerm
-                  ? 'Try searching another task or question'
-                  : `${selectedTypeDisplayLabel} will appear here when created`}
-              </Text>
-            </View>
-          )
+          <EmptyData
+            showLoader={showLoader}
+            loadingMessage={`Loading ${selectedTypeLabel}...`}
+            emptyTitle={
+              searchTerm
+                ? `No ${selectedTypeLabel} found`
+                : `No ${selectedTypeLabel} yet`
+            }
+            emptyText={
+              searchTerm
+                ? 'Try searching another task or question'
+                : `${selectedTypeDisplayLabel} will appear here when created`
+            }
+            icon="library-books"
+          />
+        }
+        ListFooterComponent={
+          <BottomLodeMore loading={questionsData?.meta.hasNextPage} />
         }
       />
 
@@ -1011,24 +1035,6 @@ const styles = StyleSheet.create({
   emptySubText: {
     fontSize: 13,
     color: '#CBD5E0',
-  },
-
-  // FAB
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
   },
 
   // Modal

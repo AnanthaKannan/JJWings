@@ -8,6 +8,7 @@ import { baseQuery, API_URL } from './baseQuery';
 const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 20;
 const DEFAULT_STUDENTS_LIMIT = 20;
+const DEFAULT_QUESTIONS_LIMIT = 20;
 
 type ApiMeta = {
   total: number;
@@ -589,6 +590,13 @@ type QuestionsArg = {
   level?: number;
   type?: 'homework' | 'exam' | 'practice';
   search?: string;
+  page?: number;
+  limit?: number;
+};
+
+type QuestionsResult = {
+  questions: QuestionTask[];
+  meta: ApiMeta;
 };
 
 type UpdateQuestionArg = {
@@ -1050,25 +1058,53 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    getQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+    getQuestions: builder.query<QuestionsResult, QuestionsArg | void>({
       query: arg => ({
         url: '/admin/questions',
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: arg?.page ?? 1,
+          limit: arg?.limit ?? DEFAULT_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
           ...(arg?.type ? { type: arg.type } : {}),
           ...(arg?.search ? { search: arg.search } : {}),
         },
       }),
-      transformResponse: (response: ApiQuestionsResponse) =>
-        response.questions.map(mapQuestion),
+      transformResponse: (response: ApiQuestionsResponse) => ({
+        questions: response.questions.map(mapQuestion),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.type ?? 'ALL'}-${
+          queryArgs?.level ?? 'ALL'
+        }-${queryArgs?.search ?? ''}-${queryArgs?.limit ?? DEFAULT_LIMIT}`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.questions = newPage.questions;
+          currentCache.meta = newPage.meta;
+          return;
+        }
+
+        const existingIds = new Set(
+          currentCache.questions.map(question => question.id),
+        );
+        const nextItems = newPage.questions.filter(
+          question => !existingIds.has(question.id),
+        );
+        currentCache.questions.push(...nextItems);
+        currentCache.meta = newPage.meta;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.type !== previousArg?.type ||
+        currentArg?.level !== previousArg?.level ||
+        currentArg?.search !== previousArg?.search ||
+        currentArg?.limit !== previousArg?.limit,
       providesTags: result => [
         { type: 'Questions', id: 'LIST' },
-        ...(result ?? []).map(question => ({
+        ...((result?.questions ?? []).map(question => ({
           type: 'Question' as const,
           id: question.id,
-        })),
+        })) as Array<{ type: 'Question'; id: string }>),
       ],
     }),
 
@@ -1091,24 +1127,51 @@ export const jjWingsApi = createApi({
       },
     ),
 
-    getPracticeQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+    getPracticeQuestions: builder.query<QuestionsResult, QuestionsArg | void>({
       query: arg => ({
         url: '/questions/practice',
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: arg?.page ?? 1,
+          limit: DEFAULT_QUESTIONS_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
           ...(arg?.search ? { search: arg.search } : {}),
         },
       }),
-      transformResponse: (response: ApiQuestionsResponse) =>
-        response.questions.map(mapQuestion),
+      transformResponse: (response: ApiQuestionsResponse) => ({
+        questions: response.questions.map(mapQuestion),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.level ?? 'ALL'}-${
+          queryArgs?.search ?? ''
+        }-${DEFAULT_QUESTIONS_LIMIT}`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.questions = newPage.questions;
+          currentCache.meta = newPage.meta;
+          return;
+        }
+
+        const existingIds = new Set(
+          currentCache.questions.map(question => question.id),
+        );
+        const nextItems = newPage.questions.filter(
+          question => !existingIds.has(question.id),
+        );
+        currentCache.questions.push(...nextItems);
+        currentCache.meta = newPage.meta;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.level !== previousArg?.level ||
+        currentArg?.search !== previousArg?.search ||
+        currentArg?.limit !== previousArg?.limit,
       providesTags: result => [
         { type: 'Questions', id: 'PRACTICE_LIST' },
-        ...(result ?? []).map(question => ({
+        ...((result?.questions ?? []).map(question => ({
           type: 'Question' as const,
           id: question.id,
-        })),
+        })) as Array<{ type: 'Question'; id: string }>),
       ],
     }),
 

@@ -311,7 +311,7 @@ export default function PracticeScreen() {
 
   const cleanSearch = search.trim();
   const {
-    data: practiceQuestions,
+    data: practiceQuestionsData,
     isLoading: isQuestionsLoading,
     isFetching: isQuestionsFetching,
     refetch: refetchQuestions,
@@ -326,10 +326,14 @@ export default function PracticeScreen() {
   );
   const [assignPracticeQuestions] = useAssignPracticeQuestionsMutation();
   const [unassignPracticeQuestions] = useUnassignPracticeQuestionsMutation();
+  const practiceQuestions = useMemo(
+    () => practiceQuestionsData?.questions ?? [],
+    [practiceQuestionsData?.questions],
+  );
 
   const filteredQuestions = useMemo(() => {
     const searchText = search.trim().toLowerCase();
-    return (practiceQuestions ?? []).filter(question => {
+    return practiceQuestions.filter(question => {
       const matchesLevel =
         selectedLevel === null || Number(question.level) === selectedLevel;
       const questionText = question.question.join(' ').toLowerCase();

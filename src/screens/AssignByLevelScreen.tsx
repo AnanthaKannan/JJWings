@@ -101,7 +101,7 @@ export default function AssignByLevelScreen() {
 
   const cleanSearch = search.trim();
   const {
-    data: questions = [],
+    data: questionsData,
     isLoading,
     isFetching,
   } = useGetQuestionsQuery(
@@ -115,6 +115,7 @@ export default function AssignByLevelScreen() {
   );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
+  const questions = useMemo(() => questionsData?.questions ?? [], [questionsData?.questions]);
 
   const filteredQuestions = useMemo(() => {
     const searchText = cleanSearch.toLowerCase();
