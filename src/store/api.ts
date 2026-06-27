@@ -48,6 +48,7 @@ type ApiStudent = {
   fcmToken?: string;
   fcmTokens?: string[];
   score?: ApiScore;
+  isDeleted: boolean;
 };
 
 type ApiQuestion = {
@@ -212,6 +213,7 @@ export type Student = {
   progress: number;
   success: number;
   failure: number;
+  isDeleted: boolean;
 };
 
 export type SameDeviceStudent = {
@@ -733,6 +735,7 @@ const mapStudent = (student: ApiStudent): Student => ({
   progress: student.score?.progress ?? 0,
   success: student.score?.correct ?? 0,
   failure: student.score?.wrong ?? 0,
+  isDeleted: student.isDeleted,
 });
 
 const mapLogin = (response: LoginApiResponse): LoginResult => {

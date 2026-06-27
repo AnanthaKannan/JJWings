@@ -50,6 +50,7 @@ type Student = {
   horizontal: boolean;
   success: number;
   failure: number;
+  isDeleted?: boolean;
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -127,14 +128,16 @@ const ProgressStat = ({
 const StudentRow = ({
   item,
   onViewPress,
+  onRevert,
 }: {
   item: Student;
   onViewPress: () => void;
+  onRevert: () => void;
 }) => (
-  <View style={styles.row}>
+  <View style={[styles.row, item.isDeleted && styles.deletedRow]}>
     <View style={styles.studentInfo}>
       <Avatar
-        color={COLORSX[randomNumber(0, 6)]}
+        color={item.isDeleted ? '#E2E8F0' : COLORSX[randomNumber(0, 6)]}
         name={item.name}
         profilePic={item.profilePicPath}
       />
@@ -149,24 +152,44 @@ const StudentRow = ({
 
     <View style={styles.progressCell}>
       <View style={styles.progressStats}>
-        <ProgressStat
-          label="Done"
-          value={item.completed || 0}
-          color="#22c55e"
-        />
-        <ProgressStat
-          label="Progress"
-          value={item.progress || 0}
-          color="#4F46E5"
-        />
-        <ProgressStat label="New" value={item.new || 0} color="#f59e0b" />
+        {item.isDeleted && (
+          <Text style={styles.deletedLabel}>Pending delete</Text>
+        )}
+        {item.isDeleted !== true && (
+          <ProgressStat
+            label="Done"
+            value={item.completed || 0}
+            color="#22c55e"
+          />
+        )}
+        {item.isDeleted !== true && (
+          <ProgressStat
+            label="Progress"
+            value={item.progress || 0}
+            color="#4F46E5"
+          />
+        )}
+        {item.isDeleted !== true && (
+          <ProgressStat label="New" value={item.new || 0} color="#f59e0b" />
+        )}
       </View>
     </View>
 
     <View style={styles.actions}>
-      <TouchableOpacity style={styles.viewAction} onPress={onViewPress}>
-        <Text style={styles.viewActionText}>View</Text>
-      </TouchableOpacity>
+      {item.isDeleted ? (
+        <TouchableOpacity
+          style={styles.revertButton}
+          onPress={onRevert}
+          activeOpacity={0.82}
+        >
+          <MaterialIcons name="restore" size={16} color="#047857" />
+          <Text style={styles.revertButtonText}>Revert</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.viewAction} onPress={onViewPress}>
+          <Text style={styles.viewActionText}>View</Text>
+        </TouchableOpacity>
+      )}
     </View>
   </View>
 );
@@ -273,6 +296,7 @@ export default function StudentDirectoryScreen() {
 
     return matchesSearch;
   });
+
   const showLoader = isFocused && isLoading && students.length === 0;
 
   const onRefresh = useCallback(async () => {
@@ -347,19 +371,26 @@ export default function StudentDirectoryScreen() {
   };
 
   const deleteOrUndoStudent = async (student: Student, isDeleted: boolean) => {
+    let title = 'Student deleted!';
+    let description = `The deletion process for *${student.name}* has been initiated successfully.
+\nThe student will be permanently deleted in *2 days*.
+\nIf needed, you can restore the student at any time within this 2-day period.`;
+
+    if (isDeleted === false) {
+      description = `The *${student.name}* has been restored successfully.`;
+    }
     try {
       await updateStudent({
         studentId: student.id,
         isDeleted,
       }).unwrap();
+
       setModal({
         name: '',
         visible: true,
         state: 'success',
-        title: 'Student deleted!',
-        description: `The deletion process for *${student.name}* has been initiated successfully.
-\nThe student will be permanently deleted in *2 days*.
-\nIf needed, you can restore the student at any time within this 2-day period.`,
+        title,
+        description,
       });
     } catch (error) {
       console.error('Failed to reset password:', error);
@@ -367,9 +398,9 @@ export default function StudentDirectoryScreen() {
         name: '',
         visible: true,
         state: 'failure',
-        title: 'Password Reset',
+        title,
         description:
-          'Unable to delete the student right now. Please try again later.',
+          'Unable to do the operation right now. Please try again later.',
       });
     } finally {
       closeActionsModal();
@@ -572,6 +603,7 @@ export default function StudentDirectoryScreen() {
             <StudentRow
               item={item}
               onViewPress={() => setSelectedStudent(item)}
+              onRevert={() => deleteOrUndoStudent(item, false)}
             />
           )}
           ItemSeparatorComponent={StudentSeparator}
@@ -779,6 +811,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FB',
+  },
+  deletedRow: {
+    opacity: 0.7,
+  },
+  deletedLabel: {
+    color: '#B45309',
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 3,
   },
 
   // Header
@@ -1017,6 +1058,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 11,
     textAlign: 'center',
+  },
+
+  revertButton: {
+    height: 40,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#ECFDF5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  revertButtonText: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   // Actions
