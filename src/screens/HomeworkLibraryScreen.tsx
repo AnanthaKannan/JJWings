@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -76,8 +76,6 @@ const getTaskTypeLabel = (type: LibraryTypeFilter) => {
   if (type === 'practice') return 'Practice';
   return 'Homework';
 };
-
-const PAGE_SIZE = 20;
 
 // ─── Module Icon ──────────────────────────────────────────────────────────────
 
@@ -209,6 +207,7 @@ const ModuleCard = ({
 
 export default function HomeworkLibraryScreen() {
   const isFocused = useIsFocused();
+  const flatListRef = useRef<FlatList<any>>(null);
   const navigation = useNavigation<any>();
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
@@ -216,6 +215,7 @@ export default function HomeworkLibraryScreen() {
   const {
     data: questionsData,
     currentData,
+    refetch,
     isLoading,
     isFetching,
   } = useGetQuestionsQuery(
@@ -223,7 +223,6 @@ export default function HomeworkLibraryScreen() {
       type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
       page,
-      limit: PAGE_SIZE,
     },
     {
       skip: !isFocused,
@@ -280,7 +279,7 @@ export default function HomeworkLibraryScreen() {
   }, [modules, searchTerm]);
   const selectedTypeLabel = getTaskTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getTaskTypeLabel(typeFilter);
-  const showLoader = isFocused && isLoading;
+  const showLoader = isFocused && isFetching && page === 1;
   const isLoadingMore = isFetching && !isLoading && page > 1;
   const hasMorePages = questionsData?.meta.hasNextPage === true;
 
@@ -315,6 +314,22 @@ export default function HomeworkLibraryScreen() {
     setIsLevelPickerOpen(false);
   };
 
+  const goToTop = () => {
+    flatListRef.current?.scrollToOffset({
+      offset: 0,
+      animated: true,
+    });
+  };
+
+  const onRefresh = async () => {
+    goToTop();
+    if (page === 1) {
+      await refetch();
+    } else {
+      setPage(1);
+    }
+  };
+  // console.log('isFetching', isFetching, 'isLoading', isLoading);
   const handleUpdateQuestion = async () => {
     const nextQuestionId = editQuestionId.trim();
 
@@ -329,7 +344,7 @@ export default function HomeworkLibraryScreen() {
         questionId: nextQuestionId,
         level: editLevel,
       }).unwrap();
-
+      onRefresh();
       if (selectedModule?.id === editModule.id) {
         setSelectedModule({
           ...selectedModule,
@@ -360,6 +375,7 @@ export default function HomeworkLibraryScreen() {
           onPress: async () => {
             try {
               await deleteQuestion({ questionId: item.id }).unwrap();
+              onRefresh();
               if (selectedModule?.id === item.id) {
                 closeModal();
               }
@@ -440,7 +456,10 @@ export default function HomeworkLibraryScreen() {
                 styles.typeFilterButton,
                 isSelected && styles.typeFilterButtonActive,
               ]}
-              onPress={() => handleTypeFilterPress(type)}
+              onPress={() => {
+                handleTypeFilterPress(type);
+                goToTop();
+              }}
               activeOpacity={0.82}
             >
               <Text
@@ -458,6 +477,7 @@ export default function HomeworkLibraryScreen() {
       </View>
       <FlatList
         data={showLoader ? [] : filteredModules}
+        ref={flatListRef}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}

@@ -1658,10 +1658,10 @@ export const jjWingsApi = createApi({
         method: 'DELETE',
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { questionId }) => [
-        { type: 'Question', id: questionId },
-        'Questions',
-      ],
+      // invalidatesTags: (_result, _error, { questionId }) => [
+      //   { type: 'Question', id: questionId },
+      //   'Questions',
+      // ],
     }),
 
     updateQuestion: builder.mutation<string, UpdateQuestionArg>({
@@ -1671,10 +1671,11 @@ export const jjWingsApi = createApi({
         body: { questionId, level },
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: 'Question', id },
-        'Questions',
-      ],
+      // invalidatesTags: (_result, _error, { id }) => [
+      //   { type: 'Question', id },
+      //   { type: 'Questions', id: 'LIST' },
+      //   'Questions',
+      // ],
     }),
 
     assignHomework: builder.mutation<AssignHomeworkResult, AssignHomeworkArg>({
