@@ -32,6 +32,7 @@ import {
 import { getFileUrl } from '../util/fileUrl';
 import ReuseModal from '../component/ReuseModal';
 import { ReuseModalProps } from '../component/ReuseModal';
+import { COLORS } from './../util/index';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ type Student = {
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const StudentSeparator = () => <View style={styles.separator} />;
 
-const COLORS = [
+const COLORSX = [
   '#E8A87C',
   '#7EB8D4',
   '#F4C56A',
@@ -133,7 +134,7 @@ const StudentRow = ({
   <View style={styles.row}>
     <View style={styles.studentInfo}>
       <Avatar
-        color={COLORS[randomNumber(0, 6)]}
+        color={COLORSX[randomNumber(0, 6)]}
         name={item.name}
         profilePic={item.profilePicPath}
       />
@@ -197,6 +198,20 @@ const modalInitial: ReuseModalProps = {
   visible: false,
   title: '',
   description: '',
+};
+
+const TouchableBtn = ({
+  onPress,
+  text,
+}: {
+  onPress: () => void;
+  text: string;
+}) => {
+  return (
+    <TouchableOpacity style={styles.modalSecondaryAction} onPress={onPress}>
+      <Text style={styles.modalSecondaryActionText}>{text}</Text>
+    </TouchableOpacity>
+  );
 };
 
 export default function StudentDirectoryScreen() {
@@ -705,50 +720,23 @@ export default function StudentDirectoryScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalPerformancePress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Progress</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalHomeworkPress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Homework</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalPracticePress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Practice</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalExamPress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Exam</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalPrimaryAction}
+            <TouchableBtn
+              text="Assign Questions"
               onPress={handleModalAssignPress}
-            >
-              <Text style={styles.modalPrimaryActionText}>Assign</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalNotificationAction}
+            />
+            <TouchableBtn
+              text="Progress"
+              onPress={handleModalPerformancePress}
+            />
+            <TouchableBtn text="Homework" onPress={handleModalHomeworkPress} />
+            <TouchableBtn text="Practice" onPress={handleModalPracticePress} />
+            <TouchableBtn text="Exam" onPress={handleModalExamPress} />
+            <TouchableBtn
+              text="Notifications"
               onPress={handleModalNotificationsPress}
-            >
-              <Text style={styles.modalNotificationActionText}>
-                Notifications
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalEditAction}
-              onPress={handleModalEditPress}
-            >
-              <Text style={styles.modalEditActionText}>Edit</Text>
-            </TouchableOpacity>
+            />
+            <TouchableBtn text="Edit" onPress={handleModalEditPress} />
+
             <TouchableOpacity
               style={[
                 styles.modalHorizontalAction,
@@ -768,23 +756,15 @@ export default function StudentDirectoryScreen() {
                 {selectedStudent?.horizontal ? 'Vertical' : 'Horizontal'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
+            <TouchableBtn
+              text="Reset Password"
               onPress={handleModalResetPasswordPress}
-              disabled={isResetPasswordLoading}
-            >
-              <Text style={styles.modalSecondaryActionText}>
-                {isResetPasswordLoading ? 'Resetting...' : 'Reset Password'}
-              </Text>
-            </TouchableOpacity>
+            />
             <TouchableOpacity
-              style={styles.modalSecondaryAction}
+              style={styles.modalDangerAction}
               onPress={handleDeleteStudent}
-              disabled={isResetPasswordLoading}
             >
-              <Text style={styles.modalSecondaryActionText}>
-                {isResetPasswordLoading ? 'Deleting...' : 'Delete'}
-              </Text>
+              <Text style={styles.modalDangerActionText}>Delete</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -1127,9 +1107,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
   },
+  modalDangerAction: {
+    borderRadius: 10,
+    backgroundColor: COLORS.dangerLight,
+    borderColor: COLORS.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
   modalSecondaryActionText: {
     fontSize: 14,
     color: '#4F46E5',
+    fontWeight: '800',
+  },
+  modalDangerActionText: {
+    fontSize: 14,
+    color: COLORS.danger,
     fontWeight: '800',
   },
   modalPrimaryAction: {

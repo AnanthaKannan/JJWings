@@ -6,7 +6,7 @@ export const COLORS = {
   success: '#22A86A',
   successLight: '#E6F9F0',
   danger: '#E03A3A',
-  dangerLight: '#FDEAEA',
+  dangerLight: '#FEE2E2',
   textDark: '#1A2340',
   textMid: '#4A5568',
   textCancel: '#6B7280',
