@@ -19,7 +19,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import {
   useGetStudentsQuery,
-  useUpdateStudentHorizontalMutation,
+  useUpdateStudentMutation,
   useResetPasswordMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
@@ -63,6 +63,11 @@ const COLORS = [
   '#EF9A9A',
   '#EF9A9A',
 ];
+
+const STATE_NAME = {
+  PASSWORD_RESET: 'password-reset',
+  DELETE_STUDENT: 'delete-student',
+};
 
 // ─── Avatar Component ─────────────────────────────────────────────────────────
 
@@ -222,8 +227,8 @@ export default function StudentDirectoryScreen() {
       skip: !isFocused,
     },
   );
-  const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
-    useUpdateStudentHorizontalMutation();
+  const [updateStudent, { isLoading: isHorizontalUpdating }] =
+    useUpdateStudentMutation();
   const [resetPassword, { isLoading: isResetPasswordLoading }] =
     useResetPasswordMutation();
 
@@ -320,11 +325,40 @@ export default function StudentDirectoryScreen() {
   };
 
   const handleHorizontalPress = async (student: Student) => {
-    await updateStudentHorizontal({
+    await updateStudent({
       studentId: student.id,
       horizontal: !student.horizontal,
     }).unwrap();
-    // refetch();
+  };
+
+  const deleteOrUndoStudent = async (student: Student, isDeleted: boolean) => {
+    try {
+      await updateStudent({
+        studentId: student.id,
+        isDeleted,
+      }).unwrap();
+      setModal({
+        name: '',
+        visible: true,
+        state: 'success',
+        title: 'Student deleted!',
+        description: `The deletion process for *${student.name}* has been initiated successfully.
+\nThe student will be permanently deleted in *2 days*.
+\nIf needed, you can restore the student at any time within this 2-day period.`,
+      });
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      setModal({
+        name: '',
+        visible: true,
+        state: 'failure',
+        title: 'Password Reset',
+        description:
+          'Unable to delete the student right now. Please try again later.',
+      });
+    } finally {
+      closeActionsModal();
+    }
   };
 
   const closeActionsModal = () => setSelectedStudent(null);
@@ -423,8 +457,11 @@ export default function StudentDirectoryScreen() {
   };
 
   const handleOnConfirm = () => {
-    if (modal.name === 'password-reset') {
+    if (!selectedStudent) return;
+    if (modal.name === STATE_NAME.PASSWORD_RESET) {
       handleResetPassword();
+    } else if (modal.name === STATE_NAME.DELETE_STUDENT) {
+      deleteOrUndoStudent(selectedStudent, true);
     }
   };
 
@@ -432,11 +469,23 @@ export default function StudentDirectoryScreen() {
     if (!selectedStudent) return;
 
     setModal({
-      name: 'password-reset',
+      name: STATE_NAME.PASSWORD_RESET,
       visible: true,
       state: 'confirm',
       title: 'Confirm Password Reset',
       description: `This will reset the password for *${selectedStudent.name}* and generate a new temporary password. Do you want to continue?`,
+    });
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!selectedStudent) return;
+
+    setModal({
+      name: STATE_NAME.DELETE_STUDENT,
+      visible: true,
+      state: 'confirm',
+      title: 'Are you sure, do you want to delete the student.',
+      description: `This will be delete *${selectedStudent.name}'s* all the record. `,
     });
   };
 
@@ -726,6 +775,15 @@ export default function StudentDirectoryScreen() {
             >
               <Text style={styles.modalSecondaryActionText}>
                 {isResetPasswordLoading ? 'Resetting...' : 'Reset Password'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalSecondaryAction}
+              onPress={handleDeleteStudent}
+              disabled={isResetPasswordLoading}
+            >
+              <Text style={styles.modalSecondaryActionText}>
+                {isResetPasswordLoading ? 'Deleting...' : 'Delete'}
               </Text>
             </TouchableOpacity>
           </Pressable>

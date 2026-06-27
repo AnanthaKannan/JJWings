@@ -469,8 +469,10 @@ type AddStudentArg = {
 
 type UpdateStudentArg = {
   studentId: string;
-  name: string;
-  level: number;
+  name?: string;
+  level?: number;
+  isDeleted?: boolean;
+  horizontal?: boolean;
 };
 
 type ApiAdmin = {
@@ -512,11 +514,6 @@ type UpdateTeacherArg = {
   teacherId: string;
   name?: string;
   isDeleted?: boolean;
-};
-
-type UpdateStudentHorizontalArg = {
-  studentId: string;
-  horizontal: boolean;
 };
 
 type UpdateStudentFcmTokenArg = {
@@ -1370,10 +1367,15 @@ export const jjWingsApi = createApi({
     }),
 
     updateStudent: builder.mutation<string, UpdateStudentArg>({
-      query: ({ studentId, name, level }) => ({
+      query: ({ studentId, name, level, isDeleted, horizontal }) => ({
         url: `/admin/students/${studentId}`,
         method: 'PATCH',
-        body: { name, level },
+        body: {
+          ...(name !== undefined && { name }),
+          ...(level !== undefined && { level }),
+          ...(isDeleted !== undefined && { isDeleted }),
+          ...(horizontal !== undefined && { vertical: !horizontal }),
+        },
       }),
       transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { studentId }) => [
@@ -1381,7 +1383,6 @@ export const jjWingsApi = createApi({
         { type: 'Students', id: 'LIST' },
       ],
     }),
-
     addTeacher: builder.mutation<addAdminResponse, AddTeacherArg>({
       query: ({ name }) => ({
         url: '/admin/teacher',
@@ -1403,22 +1404,6 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'Teachers', id: 'LIST' }],
-    }),
-
-    updateStudentHorizontal: builder.mutation<
-      string,
-      UpdateStudentHorizontalArg
-    >({
-      query: ({ studentId, horizontal }) => ({
-        url: `/admin/students/${studentId}`,
-        method: 'PATCH',
-        body: { vertical: !horizontal },
-      }),
-      transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { studentId }) => [
-        { type: 'Student', id: studentId },
-        { type: 'Students', id: 'LIST' },
-      ],
     }),
 
     updateStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
@@ -1848,7 +1833,6 @@ export const {
   useUpdateStudentMutation,
   useAddTeacherMutation,
   useUpdateTeacherMutation,
-  useUpdateStudentHorizontalMutation,
   useUpdateStudentFcmTokenMutation,
   useUpdateStudentPasswordMutation,
   useUpdateAdminPasswordMutation,
