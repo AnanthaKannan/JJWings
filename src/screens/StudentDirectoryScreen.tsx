@@ -378,6 +378,7 @@ export default function StudentDirectoryScreen() {
 
     if (isDeleted === false) {
       description = `The *${student.name}* has been restored successfully.`;
+      title = 'Student Restore!';
     }
     try {
       await updateStudent({
