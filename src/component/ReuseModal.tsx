@@ -199,38 +199,23 @@ const SuccessView: React.FC<SuccessViewProps> = ({
 interface FailureViewProps {
   title: string;
   message: string;
-  retryLabel: string;
-  cancelLabel: string;
-  onRetry: () => void;
   onCancel: () => void;
 }
 
 const FailureView: React.FC<FailureViewProps> = ({
   title,
   message,
-  retryLabel,
-  cancelLabel,
-  onRetry,
   onCancel,
 }) => (
   <>
     <Text style={[styles.title, styles.failureTitle]}>{title}</Text>
     <Text style={styles.description}>{message}</Text>
     <TouchableOpacity
-      style={[styles.primaryBtn, styles.dangerBtn]}
-      onPress={onRetry}
-      activeOpacity={0.85}
+      style={styles.cancelBtn}
+      onPress={onCancel}
+      activeOpacity={0.7}
     >
-      <MaterialIcons
-        name="refresh"
-        size={18}
-        color="#fff"
-        style={{ marginRight: 6 }}
-      />
-      <Text style={styles.primaryBtnText}>{retryLabel}</Text>
-    </TouchableOpacity>
-    <TouchableOpacity onPress={onCancel} activeOpacity={0.7}>
-      <Text style={styles.cancelText}>{cancelLabel}</Text>
+      <Text style={styles.cancelText}>Close</Text>
     </TouchableOpacity>
   </>
 );
@@ -247,8 +232,6 @@ const ReuseModal: React.FC<ReuseModalProps> = ({
   onConfirm = () => {},
   onCancel = () => {},
   doneLabel = 'Done',
-  retryLabel = 'Try Again',
-  onRetry = () => {},
 }) => {
   return (
     <Modal
@@ -285,9 +268,6 @@ const ReuseModal: React.FC<ReuseModalProps> = ({
             <FailureView
               title={title}
               message={description}
-              retryLabel={retryLabel}
-              cancelLabel={cancelLabel}
-              onRetry={onRetry}
               onCancel={onCancel}
             />
           )}

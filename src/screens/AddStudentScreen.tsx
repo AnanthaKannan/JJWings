@@ -7,7 +7,6 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,12 +16,25 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-import { useAddStudentMutation, useUpdateStudentMutation } from '../store/api';
+import {
+  addStudentResponse,
+  useAddStudentMutation,
+  useUpdateStudentMutation,
+} from '../store/api';
 import { AdminHeader, LoadingOverlay } from '../component';
+import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
+
+const modalInitial: ReuseModalProps = {
+  name: '',
+  state: 'success',
+  visible: false,
+  title: '',
+  description: '',
+};
 
 export default function AddStudentScreen() {
   const route = useRoute<any>();
@@ -35,6 +47,7 @@ export default function AddStudentScreen() {
   const [level, setLevel] = useState(editStudentLevel);
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modal, setModal] = useState<ReuseModalProps>(modalInitial);
 
   const isFormValid = fullName.trim().length > 0;
   const navigation = useNavigation<any>();
@@ -51,6 +64,8 @@ export default function AddStudentScreen() {
     if (!isFormValid) return;
 
     setIsSubmitting(true);
+    let addStudentRes: addStudentResponse;
+    let description = '';
     try {
       if (isEditMode && editStudentId) {
         await updateStudent({
@@ -58,37 +73,34 @@ export default function AddStudentScreen() {
           name: fullName.trim(),
           level,
         }).unwrap();
+        description = `*${fullName}* has been updated successfully.`;
       } else {
-        await addStudent({
+        addStudentRes = await addStudent({
           name: fullName.trim(),
           level,
         }).unwrap();
+        description = `*${fullName}* has been registered successfully. The password is : *${addStudentRes.student.password}*`;
       }
 
-      Alert.alert(
-        isEditMode ? 'Student Updated' : 'Student Added',
-        `${fullName} has been ${
-          isEditMode ? 'updated' : 'registered'
-        } successfully.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setFullName('');
-              setLevel(0);
-              navigation.navigate('AdminStudents', {
-                screen: 'StudentDirectory',
-              });
-            },
-          },
-        ],
-      );
+      setModal({
+        name: '',
+        state: 'success',
+        visible: true,
+        title: isEditMode ? 'Student Updated' : 'Student Added',
+        description,
+      });
     } catch (err) {
       console.log(err);
-      Alert.alert(
-        'Error',
-        `Failed to ${isEditMode ? 'update' : 'add'} student. Please try again.`,
-      );
+
+      setModal({
+        name: '',
+        state: 'failure',
+        visible: true,
+        title: 'Error',
+        description: `Failed to ${
+          isEditMode ? 'update' : 'add'
+        } student. Please try again.`,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -236,6 +248,20 @@ export default function AddStudentScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+      <ReuseModal
+        visible={modal.visible}
+        state={modal.state}
+        title={modal.title}
+        description={modal.description}
+        onCancel={() => {
+          setModal(modalInitial);
+          setFullName('');
+          setLevel(0);
+          navigation.navigate('AdminStudents', {
+            screen: 'StudentDirectory',
+          });
+        }}
+      />
       <LoadingOverlay visible={isSubmitting} label="Adding student..." />
     </SafeAreaView>
   );

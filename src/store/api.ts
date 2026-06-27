@@ -456,10 +456,6 @@ type ScoreArg = {
   studentId: string;
 };
 
-type StudentByIdArg = {
-  studentId: string;
-};
-
 type StudentsArg = {
   level?: number;
   page?: number;
@@ -553,6 +549,16 @@ type addAdminResponse = {
   data?: {
     adminId?: string;
     password?: string;
+  };
+};
+
+export type addStudentResponse = {
+  success: boolean;
+  message: string;
+  student: {
+    name: string;
+    studentId: string;
+    password: string;
   };
 };
 
@@ -926,15 +932,6 @@ const mapAchievement = (file: ApiFileUpload): Achievement => ({
   name: file.name ?? file.originalName ?? 'Celebration',
 });
 
-const getNextStudentId = (students: Student[]): IdGenData => {
-  const lastId = students.reduce((highest, student) => {
-    const numericId = Number(student.studentId?.replace(/\D/g, '') ?? 0);
-    return Math.max(highest, numericId);
-  }, 100);
-
-  return { studentLastID: lastId + 1 };
-};
-
 export const jjWingsApi = createApi({
   reducerPath: 'jjWingsApi',
   baseQuery,
@@ -951,6 +948,7 @@ export const jjWingsApi = createApi({
     'Messages',
     'Ranking',
     'FileUploads',
+    'Teachers',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
@@ -1067,13 +1065,7 @@ export const jjWingsApi = createApi({
         admins: getTeachersFromResponse(response).map(mapTeacher),
         meta: Array.isArray(response) ? undefined : response.meta,
       }),
-      providesTags: result => [
-        { type: 'Teachers', id: 'LIST' },
-        ...(result?.admins ?? []).map(admin => ({
-          type: 'Teacher' as const,
-          id: admin.id,
-        })),
-      ],
+      providesTags: [{ type: 'Teachers', id: 'LIST' }],
     }),
 
     getQuestions: builder.query<QuestionsResult, QuestionsArg | void>({
@@ -1367,13 +1359,13 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    addStudent: builder.mutation<string, AddStudentArg>({
+    addStudent: builder.mutation<addStudentResponse, AddStudentArg>({
       query: ({ name, level }) => ({
         url: '/admin/students',
         method: 'POST',
         body: { name, level },
       }),
-      transformResponse: () => 'success',
+      transformResponse: (response: addStudentResponse) => response,
       invalidatesTags: [{ type: 'Students', id: 'LIST' }],
     }),
 
@@ -1390,7 +1382,7 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    addTeacher: builder.mutation<string, AddTeacherArg>({
+    addTeacher: builder.mutation<addAdminResponse, AddTeacherArg>({
       query: ({ name }) => ({
         url: '/admin/teacher',
         method: 'POST',
@@ -1410,10 +1402,7 @@ export const jjWingsApi = createApi({
         },
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { teacherId }) => [
-        { type: 'Teacher', id: teacherId },
-        { type: 'Teachers', id: 'LIST' },
-      ],
+      invalidatesTags: [{ type: 'Teachers', id: 'LIST' }],
     }),
 
     updateStudentHorizontal: builder.mutation<
