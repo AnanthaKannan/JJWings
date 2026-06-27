@@ -23,7 +23,12 @@ import {
   useResetPasswordMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import {
+  AdminHeader,
+  FloatingAddButton,
+  LoadingOverlay,
+  LoadingState,
+} from '../component';
 import { getFileUrl } from '../util/fileUrl';
 import ReuseModal from '../component/ReuseModal';
 import { ReuseModalProps } from '../component/ReuseModal';
@@ -528,6 +533,14 @@ export default function StudentDirectoryScreen() {
       </View>
 
       {/* FAB */}
+      <FloatingAddButton
+        icon="person-add"
+        onPress={() =>
+          navigation.navigate('AdminStudents', {
+            screen: 'AddStudent',
+          })
+        }
+      />
       {/* <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
         <Text style={styles.fabIcon}>＋</Text>
       </TouchableOpacity> */}
