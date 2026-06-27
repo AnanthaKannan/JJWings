@@ -154,7 +154,11 @@ const ConfirmView: React.FC<ConfirmViewProps> = ({
     >
       <Text style={styles.primaryBtnText}>{confirmLabel}</Text>
     </TouchableOpacity>
-    <TouchableOpacity onPress={onCancel} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.cancelBtn}
+      onPress={onCancel}
+      activeOpacity={0.7}
+    >
       <Text style={styles.cancelText}>{cancelLabel}</Text>
     </TouchableOpacity>
   </>
@@ -382,6 +386,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     marginBottom: 14,
+  },
+  cancelBtn: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    // marginBottom: 14,
+    width: '100%',
   },
   successBtn: {
     backgroundColor: COLORS.primary,
