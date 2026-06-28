@@ -118,7 +118,6 @@ function TeacherRow({ teacher, onEdit, onDelete, onRevert }: TeacherRowProps) {
 }
 
 const modalInitial: ReuseModalProps = {
-  name: '',
   state: 'confirm',
   visible: false,
   title: '',
@@ -210,7 +209,6 @@ export default function TeacherDirectoryScreen() {
 
       closeModal();
       setModal({
-        name: '',
         visible: true,
         state: 'success',
         title: isEditMode ? 'Teacher Updated' : 'Teacher Created',
@@ -223,7 +221,6 @@ export default function TeacherDirectoryScreen() {
     } catch (error) {
       console.error('Failed to save teacher:', error);
       setModal({
-        name: '',
         visible: true,
         state: 'failure',
         title: 'Error',
@@ -242,7 +239,6 @@ export default function TeacherDirectoryScreen() {
       }).unwrap();
 
       setModal({
-        name: '',
         visible: true,
         state: 'success',
         title: 'Teacher Deleted',
@@ -250,7 +246,6 @@ export default function TeacherDirectoryScreen() {
       });
     } catch (error) {
       setModal({
-        name: '',
         visible: true,
         state: 'failure',
         title: 'Error',
@@ -285,7 +280,6 @@ export default function TeacherDirectoryScreen() {
     } catch (error) {
       console.error('Failed to restore teacher:', error);
       setModal({
-        name: '',
         visible: true,
         state: 'failure',
         title: 'Error',

@@ -15,11 +15,15 @@ import {
   Pressable,
   ScrollView,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  //  useNavigation
+} from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { useCreateQuestionMutation } from '../store/api';
 import { AdminHeader, LoadingOverlay } from '../component';
+import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -248,8 +252,15 @@ const DEFAULT_GEN_FORM: GenForm = {
   symbols: ['+'],
 };
 
+const modalInitial: ReuseModalProps = {
+  state: 'confirm',
+  visible: false,
+  title: '',
+  description: '',
+};
+
 export default function CreateNewTaskScreen() {
-  const navigation = useNavigation<any>();
+  // const navigation = useNavigation<any>();
   const [taskId, setTaskId] = useState('');
   const [level, setLevel] = useState(0);
   const [taskType, setTaskType] = useState<TaskType>('homework');
@@ -262,6 +273,7 @@ export default function CreateNewTaskScreen() {
   const [questions, setQuestions] = useState<Question[]>([
     createEmptyQuestion(),
   ]);
+  const [modal, setModal] = useState<ReuseModalProps>(modalInitial);
 
   const resetForm = useCallback(() => {
     setTaskId('');
@@ -367,8 +379,11 @@ export default function CreateNewTaskScreen() {
       Alert.alert('Invalid Range', 'Max should be greater than min.');
       return;
     }
-    if (!steps || steps < 2) {
-      Alert.alert('Invalid Steps', 'Steps should be at least 2.');
+    if (!steps || steps < 2 || steps > 6) {
+      Alert.alert(
+        'Invalid Steps',
+        'The process must have between 2 and 6 steps.',
+      );
       return;
     }
     if (genForm.symbols.length === 0) {
@@ -376,7 +391,10 @@ export default function CreateNewTaskScreen() {
       return;
     }
     if (taskType === 'exam' && (!genForm.marks || Number(genForm.marks) < 1)) {
-      Alert.alert('Invalid Marks', 'Marks should be at least 1 for exam questions.');
+      Alert.alert(
+        'Invalid Marks',
+        'Marks should be at least 1 for exam questions.',
+      );
       return;
     }
 
@@ -401,7 +419,12 @@ export default function CreateNewTaskScreen() {
       const hasEmpty = updated.some(q => q.expression === '');
       if (!hasEmpty) {
         nextId++;
-        updated.push({ id: String(nextId), expression: '', answer: null, marks: '' });
+        updated.push({
+          id: String(nextId),
+          expression: '',
+          answer: null,
+          marks: '',
+        });
       }
       return updated;
     });
@@ -430,7 +453,8 @@ export default function CreateNewTaskScreen() {
 
     const marks = filled.map(q => Number(q.marks));
     const hasInvalidMarks =
-      taskType === 'exam' && marks.some(mark => !Number.isFinite(mark) || mark < 1);
+      taskType === 'exam' &&
+      marks.some(mark => !Number.isFinite(mark) || mark < 1);
 
     if (hasInvalidMarks) {
       Alert.alert(
@@ -459,11 +483,13 @@ export default function CreateNewTaskScreen() {
       setIsOral(false);
       setQuestions([createEmptyQuestion()]);
 
-      Alert.alert(
-        'Task Saved',
-        `Task "${taskIdentifier}" saved with ${question.length} question(s).`,
-        [{ text: 'OK', onPress: () => navigation.navigate('HomeworkLibrary') }],
-      );
+      setModal({
+        visible: true,
+        state: 'success',
+        title: 'Task Saved',
+        // onConfirm: () => navigation.navigate('HomeworkLibrary'),
+        description: `Task "${taskIdentifier}" saved with ${question.length} question(s).`,
+      });
     } catch (err) {
       console.log(err);
 
@@ -477,7 +503,12 @@ export default function CreateNewTaskScreen() {
           ? String(err.data.err)
           : 'Failed to save task';
 
-      Alert.alert('Error', errorMessage);
+      setModal({
+        visible: true,
+        state: 'failure',
+        title: 'Error',
+        description: errorMessage,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -685,6 +716,15 @@ export default function CreateNewTaskScreen() {
                   />
                 </View>
                 <View style={styles.generatorField}>
+                  <Text style={styles.generatorLabel}>STEPS</Text>
+                  <TextInput
+                    style={styles.generatorInput}
+                    value={genForm.steps}
+                    onChangeText={updateGenField('steps')}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.generatorField}>
                   <Text style={styles.generatorLabel}>MIN</Text>
                   <TextInput
                     style={styles.generatorInput}
@@ -702,15 +742,7 @@ export default function CreateNewTaskScreen() {
                     keyboardType="number-pad"
                   />
                 </View>
-                <View style={styles.generatorField}>
-                  <Text style={styles.generatorLabel}>STEPS</Text>
-                  <TextInput
-                    style={styles.generatorInput}
-                    value={genForm.steps}
-                    onChangeText={updateGenField('steps')}
-                    keyboardType="number-pad"
-                  />
-                </View>
+
                 {taskType === 'exam' && (
                   <View style={styles.generatorField}>
                     <Text style={styles.generatorLabel}>MARKS</Text>
@@ -762,6 +794,17 @@ export default function CreateNewTaskScreen() {
             </View>
           </View>
         </Modal>
+
+        <ReuseModal
+          visible={modal.visible}
+          state={modal.state}
+          title={modal.title}
+          description={modal.description}
+          onConfirm={modal.onConfirm}
+          onCancel={() => {
+            setModal(modalInitial);
+          }}
+        />
 
         <Modal
           visible={isLevelPickerOpen}
@@ -1264,4 +1307,3 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 });
-

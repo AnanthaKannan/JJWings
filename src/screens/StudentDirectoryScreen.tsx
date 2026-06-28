@@ -211,7 +211,6 @@ export const EmptyState = () => (
 );
 
 const modalInitial: ReuseModalProps = {
-  name: '',
   state: 'confirm',
   visible: false,
   title: '',
@@ -382,7 +381,6 @@ export default function StudentDirectoryScreen() {
       }).unwrap();
 
       setModal({
-        name: '',
         visible: true,
         state: 'success',
         title,
@@ -391,7 +389,6 @@ export default function StudentDirectoryScreen() {
     } catch (error) {
       console.error('Failed to reset password:', error);
       setModal({
-        name: '',
         visible: true,
         state: 'failure',
         title,
@@ -478,7 +475,6 @@ export default function StudentDirectoryScreen() {
       const password = response?.data?.password;
       const message = response?.message;
       setModal({
-        name: '',
         visible: true,
         state: 'success',
         title: 'Password Reset',
@@ -487,7 +483,6 @@ export default function StudentDirectoryScreen() {
     } catch (error) {
       console.error('Failed to reset password:', error);
       setModal({
-        name: '',
         visible: true,
         state: 'failure',
         title: 'Password Reset',

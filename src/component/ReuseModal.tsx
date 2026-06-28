@@ -16,7 +16,6 @@ import { COLORS } from '../util';
 export type ModalState = 'confirm' | 'success' | 'failure';
 
 export interface ReuseModalProps {
-  name?: string;
   visible: boolean;
   state: ModalState;
   // Confirm state
