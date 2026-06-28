@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -23,12 +22,14 @@ import {
   LoadingState,
 } from '../component';
 import {
+  addAdminResponse,
   Admin,
   useAddTeacherMutation,
   useGetTeachersQuery,
   useUpdateTeacherMutation,
 } from '../store/api';
 import { RootState } from '../store/store';
+import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
 
 const TeacherSeparator = () => <View style={styles.separator} />;
 
@@ -116,11 +117,20 @@ function TeacherRow({ teacher, onEdit, onDelete, onRevert }: TeacherRowProps) {
   );
 }
 
+const modalInitial: ReuseModalProps = {
+  name: '',
+  state: 'confirm',
+  visible: false,
+  title: '',
+  description: '',
+};
+
 export default function TeacherDirectoryScreen() {
   const [teacherName, setTeacherName] = useState('');
   const [editingTeacher, setEditingTeacher] = useState<Admin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [modal, setModal] = useState<ReuseModalProps>(modalInitial);
 
   const adminRoles = useSelector((state: RootState) => state.common.adminRoles);
   const canManageTeachers = adminRoles.includes('superadmin');
@@ -135,8 +145,6 @@ export default function TeacherDirectoryScreen() {
   const [addTeacher, { isLoading: isAddingTeacher }] = useAddTeacherMutation();
   const [updateTeacher, { isLoading: isUpdatingTeacher }] =
     useUpdateTeacherMutation();
-
-  console.log('----------------', admins);
 
   const sortedTeachers = useMemo(
     () =>
@@ -194,85 +202,106 @@ export default function TeacherDirectoryScreen() {
           name: cleanName,
         }).unwrap();
       } else {
-        const teacherRes = await addTeacher({ name: cleanName }).unwrap();
+        const teacherRes: addAdminResponse = await addTeacher({
+          name: cleanName,
+        }).unwrap();
         password = teacherRes?.data?.password;
       }
 
       closeModal();
-      Alert.alert(
-        isEditMode ? 'Teacher Updated' : 'Teacher Created',
-        `${cleanName} has been ${
+      setModal({
+        name: '',
+        visible: true,
+        state: 'success',
+        title: isEditMode ? 'Teacher Updated' : 'Teacher Created',
+        description: `${cleanName} has been ${
           isEditMode ? 'updated' : 'created'
         } successfully. ${isEditMode ? '' : 'The password is '} ${
-          isEditMode ? '' : password
+          isEditMode ? '' : `*${password}*`
         }`,
-      );
+      });
     } catch (error) {
       console.error('Failed to save teacher:', error);
-      Alert.alert(
-        'Error',
-        `Failed to ${
+      setModal({
+        name: '',
+        visible: true,
+        state: 'failure',
+        title: 'Error',
+        description: `Failed to ${
           isEditMode ? 'update' : 'create'
         } teacher. Please try again.`,
-      );
+      });
+    }
+  };
+
+  const deleteTeacher = async (teacher: Admin) => {
+    try {
+      await updateTeacher({
+        teacherId: teacher.id,
+        isDeleted: true,
+      }).unwrap();
+
+      setModal({
+        name: '',
+        visible: true,
+        state: 'success',
+        title: 'Teacher Deleted',
+        description: 'Teacher deletion is pending.',
+      });
+    } catch (error) {
+      setModal({
+        name: '',
+        visible: true,
+        state: 'failure',
+        title: 'Error',
+        description: 'Failed to delete teacher. Please try again.',
+      });
+      console.error('Failed to delete teacher:', error);
     }
   };
 
   const confirmDelete = (teacher: Admin) => {
-    Alert.alert(
-      'Confirm Teacher Delete',
-      `This will take 2 days to delete. If you delete ${teacher.name}, the students under this teacher will also be deleted. Do you want to continue?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await updateTeacher({
-                teacherId: teacher.id,
-                isDeleted: true,
-              }).unwrap();
-              Alert.alert('Teacher Deleted', 'Teacher deletion is pending.');
-            } catch (error) {
-              console.error('Failed to delete teacher:', error);
-              Alert.alert(
-                'Error',
-                'Failed to delete teacher. Please try again.',
-              );
-            }
-          },
-        },
-      ],
-    );
+    setModal({
+      visible: true,
+      onConfirm: () => deleteTeacher(teacher),
+      state: 'confirm',
+      title: 'Confirm Teacher Delete',
+      description: `This will take *2 days* to delete. If you delete *${teacher.name}*, the students under this teacher will also be deleted. Do you want to continue?`,
+    });
+  };
+
+  const revertDelete = async (teacher: Admin) => {
+    try {
+      await updateTeacher({
+        teacherId: teacher.id,
+        isDeleted: false,
+      }).unwrap();
+      setModal({
+        visible: true,
+        state: 'success',
+        title: 'Teacher Restored',
+        description: `Teacher has been restored.`,
+      });
+    } catch (error) {
+      console.error('Failed to restore teacher:', error);
+      setModal({
+        name: '',
+        visible: true,
+        state: 'failure',
+        title: 'Error',
+        description: 'Failed to restore teacher. Please try again.',
+      });
+    }
   };
 
   const confirmRevert = (teacher: Admin) => {
-    Alert.alert(
-      'Revert Teacher Delete',
-      `Do you want to restore ${teacher.name}? This will cancel the pending delete request.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Revert',
-          onPress: async () => {
-            try {
-              await updateTeacher({
-                teacherId: teacher.id,
-                isDeleted: false,
-              }).unwrap();
-              Alert.alert('Teacher Restored', 'Teacher has been restored.');
-            } catch (error) {
-              console.error('Failed to restore teacher:', error);
-              Alert.alert(
-                'Error',
-                'Failed to restore teacher. Please try again.',
-              );
-            }
-          },
-        },
-      ],
-    );
+    setModal({
+      visible: true,
+      onConfirm: () => revertDelete(teacher),
+      state: 'confirm',
+      title: 'Revert Teacher Delete',
+      description: `Do you want to restore *${teacher.name}*? This will cancel the pending delete request.`,
+    });
   };
 
   if (!canManageTeachers) {
@@ -341,16 +370,18 @@ export default function TeacherDirectoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       </View>
-
-      {/* <TouchableOpacity
-        style={styles.fab}
-        onPress={openCreateModal}
-        activeOpacity={0.86}
-      >
-        <MaterialIcons name="add" size={22} color="#FFFFFF" />
-      </TouchableOpacity> */}
       <FloatingAddButton onPress={openCreateModal} />
 
+      <ReuseModal
+        visible={modal.visible}
+        state={modal.state}
+        title={modal.title}
+        description={modal.description}
+        onConfirm={modal.onConfirm}
+        onCancel={() => {
+          setModal(modalInitial);
+        }}
+      />
       <Modal
         visible={isModalOpen}
         transparent

@@ -66,11 +66,6 @@ const COLORSX = [
   '#EF9A9A',
 ];
 
-const STATE_NAME = {
-  PASSWORD_RESET: 'password-reset',
-  DELETE_STUDENT: 'delete-student',
-};
-
 // ─── Avatar Component ─────────────────────────────────────────────────────────
 
 const Avatar = ({
@@ -503,22 +498,12 @@ export default function StudentDirectoryScreen() {
     }
   };
 
-  const handleOnConfirm = () => {
-    if (!selectedStudent) return;
-    if (modal.name === STATE_NAME.PASSWORD_RESET) {
-      handleResetPassword();
-    } else if (modal.name === STATE_NAME.DELETE_STUDENT) {
-      deleteOrUndoStudent(selectedStudent, true);
-    }
-  };
-
   const handleModalResetPasswordPress = async () => {
     if (!selectedStudent) return;
-
     setModal({
-      name: STATE_NAME.PASSWORD_RESET,
       visible: true,
       state: 'confirm',
+      onConfirm: () => handleResetPassword(),
       title: 'Confirm Password Reset',
       description: `This will reset the password for *${selectedStudent.name}* and generate a new temporary password. Do you want to continue?`,
     });
@@ -528,11 +513,21 @@ export default function StudentDirectoryScreen() {
     if (!selectedStudent) return;
 
     setModal({
-      name: STATE_NAME.DELETE_STUDENT,
       visible: true,
       state: 'confirm',
+      onConfirm: () => deleteOrUndoStudent(selectedStudent, true),
       title: 'Are you sure, do you want to delete the student.',
       description: `This will be delete *${selectedStudent.name}'s* all the record. `,
+    });
+  };
+
+  const confirmRevert = (student: Student) => {
+    setModal({
+      visible: true,
+      state: 'confirm',
+      onConfirm: () => deleteOrUndoStudent(student, false),
+      title: 'Revert Student Delete',
+      description: `Do you want to restore *${student.name}*? This will cancel the pending delete request.`,
     });
   };
 
@@ -604,7 +599,7 @@ export default function StudentDirectoryScreen() {
             <StudentRow
               item={item}
               onViewPress={() => setSelectedStudent(item)}
-              onRevert={() => deleteOrUndoStudent(item, false)}
+              onRevert={() => confirmRevert(item)}
             />
           )}
           ItemSeparatorComponent={StudentSeparator}
@@ -655,7 +650,7 @@ export default function StudentDirectoryScreen() {
         state={modal.state}
         title={modal.title}
         description={modal.description}
-        onConfirm={() => handleOnConfirm()}
+        onConfirm={modal.onConfirm}
         onCancel={() => {
           setModal(modalInitial);
         }}

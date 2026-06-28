@@ -542,12 +542,12 @@ type ResetPasswordResponse = {
   };
 };
 
-type addAdminResponse = {
-  success?: boolean;
-  message?: string;
-  data?: {
-    adminId?: string;
-    password?: string;
+export type addAdminResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    adminId: string;
+    password: string;
   };
 };
 
