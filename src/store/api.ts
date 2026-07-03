@@ -3,7 +3,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { HomeworkState } from '../util/enum';
 import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
-import { baseQueryWithRetry as baseQuery, API_URL } from './baseQuery';
+import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 20;

@@ -27,14 +27,12 @@ export interface ReuseModalProps {
   onCancel?: () => void;
   // Success state
   successTitle?: string;
-  successMessage?: string;
   doneLabel?: string;
   onDone?: () => void;
   // Failure state
   failureTitle?: string;
   failureMessage?: string;
-  retryLabel?: string;
-  onRetry?: () => void;
+  closeLabel?: string;
 }
 
 // ─── Icon Badge ───────────────────────────────────────────────────────────────
@@ -199,12 +197,14 @@ interface FailureViewProps {
   title: string;
   message: string;
   onCancel: () => void;
+  closeLabel: string;
 }
 
 const FailureView: React.FC<FailureViewProps> = ({
   title,
   message,
   onCancel,
+  closeLabel,
 }) => (
   <>
     <Text style={[styles.title, styles.failureTitle]}>{title}</Text>
@@ -214,7 +214,7 @@ const FailureView: React.FC<FailureViewProps> = ({
       onPress={onCancel}
       activeOpacity={0.7}
     >
-      <Text style={styles.cancelText}>Close</Text>
+      <Text style={styles.cancelText}>{closeLabel}</Text>
     </TouchableOpacity>
   </>
 );
@@ -228,6 +228,7 @@ const ReuseModal: React.FC<ReuseModalProps> = ({
   description = '',
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  closeLabel = 'Close',
   onConfirm = () => {},
   onCancel = () => {},
   doneLabel = 'Done',
@@ -267,6 +268,7 @@ const ReuseModal: React.FC<ReuseModalProps> = ({
             <FailureView
               title={title}
               message={description}
+              closeLabel={closeLabel}
               onCancel={onCancel}
             />
           )}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -23,6 +23,7 @@ import {
   setAdminCredentials,
   setStudentCredentials,
   setMockDeviceId,
+  setModal,
 } from '../store/slices';
 import {
   clearSavedLoginCredentials,
@@ -43,60 +44,86 @@ export default function LoginScreen() {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
 
-  const finishLogin = useCallback(
-    async (studentId: string, password: string, shouldSave: boolean) => {
-      const cleanStudentId = studentId.trim();
-      const deviceId = await getDeviceId();
+  const finishLogin = async (
+    studentId: string,
+    password: string,
+    shouldSave: boolean,
+  ) => {
+    const cleanStudentId = studentId.trim();
+    const deviceId = await getDeviceId();
 
-      const result = await login({
-        username: cleanStudentId,
-        password,
-        deviceId,
-      });
+    const result = await login({
+      username: cleanStudentId,
+      password,
+      deviceId,
+    });
 
-      if ('data' in result && result.data) {
-        if (shouldSave) {
-          await saveLoginCredentials({ studentId: cleanStudentId, password });
-        }
+    console.log('result', result);
 
-        if (result.data.role === 'student') {
-          dispatch(
-            setStudentCredentials({
-              studentId: result.data.id,
-              studentCode: result.data.studentCode,
-              vertical: result.data.vertical,
-              isStudent: true,
-              studentName: result.data.name,
-              studentLevel: result.data.level,
-              studentProfilePic: result.data.profilePicPath,
-              token: result.data.token,
-            }),
-          );
-        } else {
-          dispatch(
-            setAdminCredentials({
-              adminId: result.data.id,
-              adminCode: result.data.adminCode,
-              isAdmin: true,
-              adminName: result.data.name,
-              adminProfilePic: result.data.profilePicPath,
-              adminOrgId: result.data.orgId,
-              adminRoles: result.data.roles,
-              token: result.data.token,
-            }),
-          );
-        }
-        navigation.reset({
-          index: 0,
-          routes: [{ name: result.data.role === 'student' ? 'Main' : 'Admin' }],
-        });
-        return true;
+    const errorStatus = result?.error?.originalStatus;
+    const errorCode = result?.error?.status;
+    const isSuccess = result?.isSuccess;
+
+    if (errorCode === 401 || errorCode === 403) {
+      return false;
+    } else if (isSuccess === false && errorCode !== 200) {
+      dispatch(
+        setModal({
+          state: 'failure',
+          visible: true,
+          title: 'Network Error',
+          description:
+            errorStatus === 'FETCH_ERROR'
+              ? 'Please check your internet connection.'
+              : 'Please try again...',
+          closeLabel: 'Try Again',
+          onCancel: trySavedLogin,
+        }),
+      );
+      return true;
+    }
+
+    if ('data' in result && result.data) {
+      if (shouldSave) {
+        await saveLoginCredentials({ studentId: cleanStudentId, password });
       }
 
-      return false;
-    },
-    [dispatch, login, navigation],
-  );
+      if (result.data.role === 'student') {
+        dispatch(
+          setStudentCredentials({
+            studentId: result.data.id,
+            studentCode: result.data.studentCode,
+            vertical: result.data.vertical,
+            isStudent: true,
+            studentName: result.data.name,
+            studentLevel: result.data.level,
+            studentProfilePic: result.data.profilePicPath,
+            token: result.data.token,
+          }),
+        );
+      } else {
+        dispatch(
+          setAdminCredentials({
+            adminId: result.data.id,
+            adminCode: result.data.adminCode,
+            isAdmin: true,
+            adminName: result.data.name,
+            adminProfilePic: result.data.profilePicPath,
+            adminOrgId: result.data.orgId,
+            adminRoles: result.data.roles,
+            token: result.data.token,
+          }),
+        );
+      }
+      navigation.reset({
+        index: 0,
+        routes: [{ name: result.data.role === 'student' ? 'Main' : 'Admin' }],
+      });
+      return true;
+    }
+
+    return false;
+  };
 
   useEffect(() => {
     getDeviceId().then(mockDeviceId => {
@@ -104,40 +131,34 @@ export default function LoginScreen() {
     });
   }, [dispatch]);
 
-  useEffect(() => {
-    let isMounted = true;
-    console.log('>>>>>>>>>>>>>>>>>>>>>>> useEffect');
-    const trySavedLogin = async () => {
-      console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> trySavedLogin');
-      try {
-        const savedCredentials = await getSavedLoginCredentials();
-        console.log('savedCredentials', savedCredentials);
-        if (!savedCredentials) {
-          return;
-        }
-
-        const loggedIn = await finishLogin(
-          savedCredentials.studentId,
-          savedCredentials.password,
-          false,
-        );
-
-        if (!loggedIn) {
-          await clearSavedLoginCredentials();
-        }
-      } finally {
-        if (isMounted) {
-          setCheckingSavedLogin(false);
-        }
+  const trySavedLogin = async () => {
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> trySavedLogin');
+    try {
+      const savedCredentials = await getSavedLoginCredentials();
+      console.log('savedCredentials', savedCredentials);
+      if (!savedCredentials) {
+        return;
       }
-    };
 
+      const loggedIn = await finishLogin(
+        savedCredentials.studentId,
+        savedCredentials.password,
+        false,
+      );
+      console.log('eeeeeeeeeeeee', loggedIn);
+
+      if (!loggedIn) {
+        await clearSavedLoginCredentials();
+      }
+    } finally {
+      setCheckingSavedLogin(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log('>>>>>>>>>>>>>>>>>>>>>>> useEffect');
     trySavedLogin();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [finishLogin]);
+  }, []);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {

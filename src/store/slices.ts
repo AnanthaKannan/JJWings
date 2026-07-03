@@ -1,5 +1,6 @@
 // src/store/slices/authSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { ReuseModalProps } from '../component/ReuseModal';
 
 interface AuthState {
   studentId: string | null;
@@ -29,6 +30,7 @@ interface AuthState {
   hasNotificationAttention: boolean;
   messageUnreadCount: number;
   mockDeviceId: string;
+  modal: ReuseModalProps;
 }
 
 const initialState: AuthState = {
@@ -59,6 +61,12 @@ const initialState: AuthState = {
   hasNotificationAttention: false,
   messageUnreadCount: 0,
   mockDeviceId: '',
+  modal: {
+    state: 'success',
+    visible: false,
+    title: '',
+    description: '',
+  },
 };
 
 const commonSlice = createSlice({
@@ -182,6 +190,12 @@ const commonSlice = createSlice({
     setAdminProfilePic: (state, action: PayloadAction<string | null>) => {
       state.adminProfilePic = action.payload;
     },
+    setModal: (state, action: PayloadAction<ReuseModalProps>) => {
+      state.modal = { ...state.modal, ...action.payload };
+    },
+    resetModal: state => {
+      state.modal = initialState.modal;
+    },
   },
 });
 
@@ -197,5 +211,7 @@ export const {
   setStudentProfilePic,
   setAdminProfilePic,
   setMockDeviceId,
+  setModal,
+  resetModal,
 } = commonSlice.actions;
 export default commonSlice.reducer;

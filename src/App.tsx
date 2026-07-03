@@ -28,6 +28,7 @@ import {
 import {
   setMessageUnreadCount,
   showNotificationAttention,
+  resetModal,
 } from './store/slices';
 import {
   getStudentPushToken as getPushToken,
@@ -64,6 +65,7 @@ import {
   AchievementsScreen,
   BillingRevenueScreen,
 } from './screens';
+import ReuseModal from './component/ReuseModal';
 
 type AnimatedTabIconProps = {
   name: string;
@@ -811,6 +813,17 @@ function PushNotificationRegistrar() {
   return null;
 }
 
+function ModelUse() {
+  const modal = useSelector((state: RootState) => state.common.modal);
+  const dispatch = useDispatch();
+  return (
+    <ReuseModal
+      {...modal}
+      onCancel={modal.onCancel || (() => dispatch(resetModal()))}
+    />
+  );
+}
+
 function PushNotificationListener() {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector(
@@ -883,6 +896,7 @@ function App() {
         <PushNotificationRegistrar />
         <PushNotificationListener />
         <Navigation />
+        <ModelUse />
       </SafeAreaProvider>
     </Provider>
   );

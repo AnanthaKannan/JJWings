@@ -29,7 +29,6 @@ import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 const modalInitial: ReuseModalProps = {
-  name: '',
   state: 'success',
   visible: false,
   title: '',
@@ -83,7 +82,6 @@ export default function AddStudentScreen() {
       }
 
       setModal({
-        name: '',
         state: 'success',
         visible: true,
         title: isEditMode ? 'Student Updated' : 'Student Added',
@@ -93,7 +91,6 @@ export default function AddStudentScreen() {
       console.log(err);
 
       setModal({
-        name: '',
         state: 'failure',
         visible: true,
         title: 'Error',
