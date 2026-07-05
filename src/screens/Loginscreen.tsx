@@ -61,8 +61,6 @@ export default function LoginScreen() {
       deviceId,
     });
 
-    console.log('result', result);
-
     const errorStatus = result?.error?.status; // can be number or string
     const isSuccess = result?.isSuccess;
 
@@ -137,11 +135,9 @@ export default function LoginScreen() {
   }, [dispatch]);
 
   const trySavedLogin = async () => {
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> trySavedLogin');
     setCheckingSavedLogin(true);
     try {
       const savedCredentials = await getSavedLoginCredentials();
-      console.log('savedCredentials', savedCredentials);
       if (!savedCredentials) {
         return;
       }
@@ -151,7 +147,6 @@ export default function LoginScreen() {
         savedCredentials.password,
         false,
       );
-      console.log('eeeeeeeeeeeee', loggedIn);
 
       if (!loggedIn) {
         await clearSavedLoginCredentials();
@@ -162,7 +157,6 @@ export default function LoginScreen() {
   };
 
   useEffect(() => {
-    console.log('>>>>>>>>>>>>>>>>>>>>>>> useEffect');
     trySavedLogin();
   }, []);
 

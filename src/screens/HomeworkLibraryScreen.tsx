@@ -469,7 +469,7 @@ export default function HomeworkLibraryScreen() {
                 ]}
                 numberOfLines={1}
               >
-                {label}
+                {label} {isSelected ? questionsData?.meta?.total || 0 : ''}
               </Text>
             </TouchableOpacity>
           );
