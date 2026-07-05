@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,14 @@ import {
   TextInput,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useIsFocused } from '@react-navigation/native';
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
+import {
+  AdminHeader,
+  BottomLodeMore,
+  EmptyData,
+  FloatingAddButton,
+  LoadingOverlay,
+} from '../component';
 import {
   useDeleteQuestionMutation,
   useGetQuestionsQuery,
@@ -201,17 +207,22 @@ const ModuleCard = ({
 
 export default function HomeworkLibraryScreen() {
   const isFocused = useIsFocused();
+  const flatListRef = useRef<FlatList<any>>(null);
+  const navigation = useNavigation<any>();
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
+  const [page, setPage] = useState(1);
   const {
     data: questionsData,
-    currentData: currentQuestionsData,
+    currentData,
+    refetch,
     isLoading,
     isFetching,
   } = useGetQuestionsQuery(
     {
       type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
+      page,
     },
     {
       skip: !isFocused,
@@ -231,11 +242,19 @@ export default function HomeworkLibraryScreen() {
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [isFilterLevelPickerOpen, setIsFilterLevelPickerOpen] = useState(false);
 
-  const modules = useMemo(() => {
-    const activeQuestionsData = currentQuestionsData ?? questionsData;
-    if (!activeQuestionsData) return [];
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter, selectedLevel]);
 
-    return activeQuestionsData.map((q, index) => ({
+  const activeQuestions = useMemo(
+    () => questionsData?.questions ?? currentData?.questions ?? [],
+    [currentData?.questions, questionsData?.questions],
+  );
+
+  const modules = useMemo(() => {
+    if (activeQuestions.length === 0) return [];
+
+    return activeQuestions.map((q, index) => ({
       id: q.id,
       title: q.questionId ?? q.id,
       questions: q.question,
@@ -244,7 +263,7 @@ export default function HomeworkLibraryScreen() {
       updatedAt: q.updatedAt,
       ...ICON_COLORS[index % ICON_COLORS.length],
     }));
-  }, [currentQuestionsData, questionsData]);
+  }, [activeQuestions]);
 
   const filteredModules = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -260,13 +279,16 @@ export default function HomeworkLibraryScreen() {
   }, [modules, searchTerm]);
   const selectedTypeLabel = getTaskTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getTaskTypeLabel(typeFilter);
-  const showLoader = isFocused && (isLoading || isFetching);
+  const showLoader = isFocused && isFetching && page === 1;
+  const isLoadingMore = isFetching && !isLoading && page > 1;
+  const hasMorePages = questionsData?.meta.hasNextPage === true;
 
   const handleTypeFilterPress = (type: LibraryTypeFilter) => {
     setTypeFilter(type);
     setSearchTerm('');
     setSelectedModule(null);
     setModalVisible(false);
+    setPage(1);
   };
 
   const handleModulePress = (item: Module) => {
@@ -292,6 +314,22 @@ export default function HomeworkLibraryScreen() {
     setIsLevelPickerOpen(false);
   };
 
+  const goToTop = () => {
+    flatListRef.current?.scrollToOffset({
+      offset: 0,
+      animated: true,
+    });
+  };
+
+  const onRefresh = async () => {
+    goToTop();
+    if (page === 1) {
+      await refetch();
+    } else {
+      setPage(1);
+    }
+  };
+  // console.log('isFetching', isFetching, 'isLoading', isLoading);
   const handleUpdateQuestion = async () => {
     const nextQuestionId = editQuestionId.trim();
 
@@ -306,7 +344,7 @@ export default function HomeworkLibraryScreen() {
         questionId: nextQuestionId,
         level: editLevel,
       }).unwrap();
-
+      onRefresh();
       if (selectedModule?.id === editModule.id) {
         setSelectedModule({
           ...selectedModule,
@@ -337,6 +375,7 @@ export default function HomeworkLibraryScreen() {
           onPress: async () => {
             try {
               await deleteQuestion({ questionId: item.id }).unwrap();
+              onRefresh();
               if (selectedModule?.id === item.id) {
                 closeModal();
               }
@@ -417,7 +456,10 @@ export default function HomeworkLibraryScreen() {
                 styles.typeFilterButton,
                 isSelected && styles.typeFilterButtonActive,
               ]}
-              onPress={() => handleTypeFilterPress(type)}
+              onPress={() => {
+                handleTypeFilterPress(type);
+                goToTop();
+              }}
               activeOpacity={0.82}
             >
               <Text
@@ -427,7 +469,7 @@ export default function HomeworkLibraryScreen() {
                 ]}
                 numberOfLines={1}
               >
-                {label}
+                {label} {isSelected ? questionsData?.meta?.total || 0 : ''}
               </Text>
             </TouchableOpacity>
           );
@@ -435,9 +477,16 @@ export default function HomeworkLibraryScreen() {
       </View>
       <FlatList
         data={showLoader ? [] : filteredModules}
+        ref={flatListRef}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        onEndReachedThreshold={0.4}
+        onEndReached={() => {
+          if (!showLoader && !isLoadingMore && hasMorePages) {
+            setPage(prev => prev + 1);
+          }
+        }}
         renderItem={({ item }) => (
           <ModuleCard
             item={item}
@@ -449,26 +498,28 @@ export default function HomeworkLibraryScreen() {
           />
         )}
         ListEmptyComponent={
-          showLoader ? (
-            <LoadingState label={`Loading ${selectedTypeLabel}...`} />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="library-books" size={48} color="#CBD5E0" />
-              <Text style={styles.emptyText}>
-                {searchTerm
-                  ? `No ${selectedTypeLabel} found`
-                  : `No ${selectedTypeLabel} yet`}
-              </Text>
-              <Text style={styles.emptySubText}>
-                {searchTerm
-                  ? 'Try searching another task or question'
-                  : `${selectedTypeDisplayLabel} will appear here when created`}
-              </Text>
-            </View>
-          )
+          <EmptyData
+            showLoader={showLoader}
+            loadingMessage={`Loading ${selectedTypeLabel}...`}
+            emptyTitle={
+              searchTerm
+                ? `No ${selectedTypeLabel} found`
+                : `No ${selectedTypeLabel} yet`
+            }
+            emptyText={
+              searchTerm
+                ? 'Try searching another task or question'
+                : `${selectedTypeDisplayLabel} will appear here when created`
+            }
+            icon="library-books"
+          />
+        }
+        ListFooterComponent={
+          <BottomLodeMore loading={questionsData?.meta.hasNextPage} />
         }
       />
 
+      <FloatingAddButton onPress={() => navigation.navigate('CreateNewTask')} />
       {/* ── Questions Modal ── */}
       <Modal
         visible={modalVisible}
@@ -1004,24 +1055,6 @@ const styles = StyleSheet.create({
   emptySubText: {
     fontSize: 13,
     color: '#CBD5E0',
-  },
-
-  // FAB
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
   },
 
   // Modal

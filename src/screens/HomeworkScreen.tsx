@@ -1,14 +1,14 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
   RefreshControl,
+  FlatList,
 } from 'react-native';
 import {
   useIsFocused,
@@ -27,6 +27,7 @@ import { BadgeType } from '../util/types';
 import { HomeworkState } from '../util/enum';
 import {
   AdminHeader,
+  BottomLodeMore,
   LoadingOverlay,
   LoadingState,
   StudentHeader,
@@ -243,6 +244,7 @@ export default function HomeworkScreen() {
     isAdminReview ? HomeworkState.COMPLETED : HomeworkState.NEW,
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
   const [unassigningQuestionId, setUnassigningQuestionId] = useState<
     string | null
   >(null);
@@ -257,7 +259,12 @@ export default function HomeworkScreen() {
     isFetching,
     refetch,
   } = useGetHomeworksQuery(
-    { studentId: studentId ?? '', state: selectedFilter, type: contentType },
+    {
+      studentId: studentId ?? '',
+      state: selectedFilter,
+      type: contentType,
+      page,
+    },
     {
       skip: !isFocused || !studentId,
     },
@@ -265,20 +272,36 @@ export default function HomeworkScreen() {
   const [unassignHomework, { isLoading: isUnassigning }] =
     useUnassignHomeworkMutation();
 
-  const filteredHomeworks = homeworks ?? [];
+  const filteredHomeworks = homeworks?.homeworks ?? [];
   const emptyStateLabel = selectedFilter.toLowerCase();
-  const showLoader = isFocused && (isLoading || isFetching) && !refreshing;
+  const showLoader = isFocused && isLoading && !refreshing;
+  const isLoadingMore = isFetching && !isLoading && page > 1;
+  const hasMorePages = homeworks?.meta.hasNextPage === true;
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedFilter, contentType, studentId]);
 
   const onRefresh = useCallback(async () => {
     if (!studentId) return;
 
     setRefreshing(true);
     try {
-      await refetch();
+      if (page === 1) {
+        await refetch();
+      } else {
+        setPage(1);
+      }
     } finally {
       setRefreshing(false);
     }
-  }, [refetch, studentId]);
+  }, [refetch, page, studentId]);
+
+  const onReachBottom = useCallback(() => {
+    if (!showLoader && !isLoadingMore && hasMorePages) {
+      setPage(prev => prev + 1);
+    }
+  }, [hasMorePages, isLoadingMore, showLoader]);
 
   const handleUnassignQuestion = (questionId: string) => {
     if (!studentId || unassigningQuestionId) return;
@@ -324,8 +347,10 @@ export default function HomeworkScreen() {
       ) : (
         <StudentHeader header={screenTitle} headerBackgroundColor="#EEF2FF" />
       )}
-      <ScrollView
+      <FlatList
         style={styles.scroll}
+        data={showLoader ? [] : filteredHomeworks}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -337,61 +362,70 @@ export default function HomeworkScreen() {
             progressBackgroundColor="#EEF2FF"
           />
         }
-      >
-        <View style={styles.filterBar}>
-          {FILTERS.map(filter => {
-            const isSelected = selectedFilter === filter.value;
+        onEndReached={onReachBottom}
+        onEndReachedThreshold={0.2}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.filterBar}>
+              {FILTERS.map(filter => {
+                const isSelected = selectedFilter === filter.value;
 
-            return (
-              <TouchableOpacity
-                key={filter.value}
-                style={[
-                  styles.filterButton,
-                  isSelected && styles.filterButtonActive,
-                ]}
-                activeOpacity={0.85}
-                onPress={() => setSelectedFilter(filter.value)}
-              >
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    isSelected && styles.filterButtonTextActive,
-                  ]}
-                >
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                return (
+                  <TouchableOpacity
+                    key={filter.value}
+                    style={[
+                      styles.filterButton,
+                      isSelected && styles.filterButtonActive,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setSelectedFilter(filter.value);
+                      setPage(1);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.filterButtonText,
+                        isSelected && styles.filterButtonTextActive,
+                      ]}
+                    >
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-        {showLoader && <LoadingState label={`Loading ${contentLabel}...`} />}
-
-        {!showLoader &&
-          filteredHomeworks.map(task => (
-            <HomeworkCard
-              key={task.id}
-              {...task}
-              homeworkId={task.id}
-              question={task?.question?.question ?? []}
-              marks={task?.question?.marks}
-              isAdminReview={isAdminReview}
-              studentId={studentId}
-              studentName={studentName}
-              contentType={contentType}
-              isUnassigning={unassigningQuestionId === task.questionId}
-              onUnassign={handleUnassignQuestion}
-            />
-          ))}
-
-        {!showLoader && filteredHomeworks.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              No {emptyStateLabel} {contentLabel}
-            </Text>
+            {showLoader && (
+              <LoadingState label={`Loading ${contentLabel}...`} />
+            )}
           </View>
+        }
+        renderItem={({ item }) => (
+          <HomeworkCard
+            {...item}
+            homeworkId={item.id}
+            question={item?.question?.question ?? []}
+            marks={item?.question?.marks}
+            isAdminReview={isAdminReview}
+            studentId={studentId}
+            studentName={studentName}
+            contentType={contentType}
+            isUnassigning={unassigningQuestionId === item.questionId}
+            onUnassign={handleUnassignQuestion}
+          />
         )}
-      </ScrollView>
+        ListEmptyComponent={
+          !showLoader ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>
+                No {emptyStateLabel} {contentLabel}
+              </Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={<BottomLodeMore loading={hasMorePages} />}
+      />
       <LoadingOverlay
         visible={isUnassigning}
         label={`Removing ${contentLabel}...`}

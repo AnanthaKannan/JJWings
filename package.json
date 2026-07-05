@@ -7,7 +7,7 @@
     "ios": "react-native run-ios",
     "android:release:apk": "cd android && gradlew.bat assembleRelease",
     "android:release:aab": "cd android && gradlew.bat bundleRelease",
-    "android:clean": "cd android && ./gradlew clean",
+    "android:clean": "cd android && gradlew.bat clean",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest"

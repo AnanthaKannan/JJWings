@@ -22,7 +22,12 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import { LoadingOverlay, LoadingState, StudentHeader } from '../component';
+import {
+  FloatingAddButton,
+  LoadingOverlay,
+  LoadingState,
+  StudentHeader,
+} from '../component';
 import {
   SameDeviceStudent,
   useDeleteStudentDeviceIdMutation,
@@ -32,7 +37,7 @@ import {
 } from '../store/api';
 import { logout, setStudentCredentials } from '../store/slices';
 import { RootState } from '../store/store';
-import { clearSavedLoginCredentials, getDeviceId } from '../util/authStorage';
+import { clearSavedLoginCredentials } from '../util/authStorage';
 import { getFileUrl } from '../util/fileUrl';
 
 const AVATAR_COLORS = [
@@ -136,6 +141,9 @@ export default function SameDeviceStudentsScreen() {
   const loggedInStudentId = useSelector(
     (state: RootState) => state.common.studentId,
   );
+  const mockDeviceId = useSelector(
+    (state: RootState) => state.common.mockDeviceId,
+  );
 
   const {
     data: students = [],
@@ -181,10 +189,9 @@ export default function SameDeviceStudentsScreen() {
       setDeletingStudentId(student.id);
 
       try {
-        const deviceId = await getDeviceId();
         await deleteStudentDeviceId({
           studentId: student.id,
-          deviceId,
+          deviceId: mockDeviceId,
         }).unwrap();
 
         if (student.id === loggedInStudentId) {
@@ -202,7 +209,13 @@ export default function SameDeviceStudentsScreen() {
         setDeletingStudentId(null);
       }
     },
-    [deleteStudentDeviceId, loggedInStudentId, logoutCurrentStudent, refetch],
+    [
+      deleteStudentDeviceId,
+      loggedInStudentId,
+      logoutCurrentStudent,
+      refetch,
+      mockDeviceId,
+    ],
   );
 
   const handleDeletePress = useCallback(
@@ -246,11 +259,10 @@ export default function SameDeviceStudentsScreen() {
     setLoginError('');
 
     try {
-      const deviceId = await getDeviceId();
       const result = await login({
         username: cleanStudentId,
         password,
-        deviceId,
+        deviceId: mockDeviceId,
       });
 
       if (
@@ -270,7 +282,7 @@ export default function SameDeviceStudentsScreen() {
     } catch {
       setLoginError('User Name or password incorrect.');
     }
-  }, [login, password, refetch, studentLoginId]);
+  }, [login, password, refetch, studentLoginId, mockDeviceId]);
 
   const handleStudentPress = useCallback(
     async (student: SameDeviceStudent) => {
@@ -372,13 +384,10 @@ export default function SameDeviceStudentsScreen() {
           }
         />
       )}
-      <TouchableOpacity
-        style={styles.fab}
+      <FloatingAddButton
+        icon="person-add-alt"
         onPress={() => setIsAddModalOpen(true)}
-        activeOpacity={0.86}
-      >
-        <MaterialIcons name="person-add-alt" size={25} color="#FFFFFF" />
-      </TouchableOpacity>
+      />
       <Modal
         visible={isAddModalOpen}
         transparent
@@ -506,22 +515,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    right: 18,
-    bottom: 18,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    elevation: 8,
   },
   modalBackdrop: {
     flex: 1,

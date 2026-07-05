@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -13,7 +12,12 @@ import { useIsFocused, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { AdminHeader, LoadingState, StudentHeader } from '../component';
+import {
+  AdminHeader,
+  BottomLodeMore,
+  EmptyData,
+  StudentHeader,
+} from '../component';
 import {
   useGetAdminNotificationsQuery,
   useGetNotificationsQuery,
@@ -195,27 +199,15 @@ export default function NotificationsScreen() {
         renderItem={({ item }) => <NotificationCard item={item} />}
         onEndReached={onReachNotificationBottom}
         onEndReachedThreshold={0.2}
-        ListFooterComponent={
-          meta?.hasNextPage === true ? (
-            <View style={styles.footerLoader}>
-              <ActivityIndicator color="#2563EB" />
-            </View>
-          ) : null
-        }
+        ListFooterComponent={<BottomLodeMore loading={meta?.hasNextPage} />}
         ListEmptyComponent={
-          showLoader ? (
-            <LoadingState label="Loading notifications..." />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons
-                name="notifications-off"
-                size={42}
-                color="#94A3B8"
-              />
-              <Text style={styles.emptyTitle}>No notifications yet</Text>
-              <Text style={styles.emptyText}>{emptyText}</Text>
-            </View>
-          )
+          <EmptyData
+            showLoader={showLoader}
+            loadingMessage="Loading notifications..."
+            emptyTitle="No notifications yet"
+            emptyText={emptyText}
+            icon="notifications-off"
+          />
         }
       />
     </SafeAreaView>
@@ -307,27 +299,6 @@ const styles = StyleSheet.create({
     color: '#475569',
     lineHeight: 19,
     fontWeight: '500',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 34,
-    paddingHorizontal: 18,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    color: '#1E293B',
-    fontWeight: '800',
-    marginTop: 10,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '600',
-    marginTop: 4,
-    textAlign: 'center',
   },
   footerLoader: {
     alignItems: 'center',

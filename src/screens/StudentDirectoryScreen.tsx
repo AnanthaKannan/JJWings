@@ -13,19 +13,26 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import {
   useGetStudentsQuery,
-  useUpdateStudentHorizontalMutation,
+  useUpdateStudentMutation,
   useResetPasswordMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import {
+  AdminHeader,
+  FloatingAddButton,
+  LoadingOverlay,
+  LoadingState,
+} from '../component';
 import { getFileUrl } from '../util/fileUrl';
+import ReuseModal from '../component/ReuseModal';
+import { ReuseModalProps } from '../component/ReuseModal';
+import { COLORS } from './../util/index';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,12 +50,13 @@ type Student = {
   horizontal: boolean;
   success: number;
   failure: number;
+  isDeleted?: boolean;
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const StudentSeparator = () => <View style={styles.separator} />;
 
-const COLORS = [
+const COLORSX = [
   '#E8A87C',
   '#7EB8D4',
   '#F4C56A',
@@ -115,14 +123,16 @@ const ProgressStat = ({
 const StudentRow = ({
   item,
   onViewPress,
+  onRevert,
 }: {
   item: Student;
   onViewPress: () => void;
+  onRevert: () => void;
 }) => (
-  <View style={styles.row}>
+  <View style={[styles.row, item.isDeleted && styles.deletedRow]}>
     <View style={styles.studentInfo}>
       <Avatar
-        color={COLORS[randomNumber(0, 6)]}
+        color={item.isDeleted ? '#E2E8F0' : COLORSX[randomNumber(0, 6)]}
         name={item.name}
         profilePic={item.profilePicPath}
       />
@@ -137,24 +147,44 @@ const StudentRow = ({
 
     <View style={styles.progressCell}>
       <View style={styles.progressStats}>
-        <ProgressStat
-          label="Done"
-          value={item.completed || 0}
-          color="#22c55e"
-        />
-        <ProgressStat
-          label="Progress"
-          value={item.progress || 0}
-          color="#4F46E5"
-        />
-        <ProgressStat label="New" value={item.new || 0} color="#f59e0b" />
+        {item.isDeleted && (
+          <Text style={styles.deletedLabel}>Pending delete</Text>
+        )}
+        {item.isDeleted !== true && (
+          <ProgressStat
+            label="Done"
+            value={item.completed || 0}
+            color="#22c55e"
+          />
+        )}
+        {item.isDeleted !== true && (
+          <ProgressStat
+            label="Progress"
+            value={item.progress || 0}
+            color="#4F46E5"
+          />
+        )}
+        {item.isDeleted !== true && (
+          <ProgressStat label="New" value={item.new || 0} color="#f59e0b" />
+        )}
       </View>
     </View>
 
     <View style={styles.actions}>
-      <TouchableOpacity style={styles.viewAction} onPress={onViewPress}>
-        <Text style={styles.viewActionText}>View</Text>
-      </TouchableOpacity>
+      {item.isDeleted ? (
+        <TouchableOpacity
+          style={styles.revertButton}
+          onPress={onRevert}
+          activeOpacity={0.82}
+        >
+          <MaterialIcons name="restore" size={16} color="#047857" />
+          <Text style={styles.revertButtonText}>Revert</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.viewAction} onPress={onViewPress}>
+          <Text style={styles.viewActionText}>View</Text>
+        </TouchableOpacity>
+      )}
     </View>
   </View>
 );
@@ -180,6 +210,27 @@ export const EmptyState = () => (
   </View>
 );
 
+const modalInitial: ReuseModalProps = {
+  state: 'confirm',
+  visible: false,
+  title: '',
+  description: '',
+};
+
+const TouchableBtn = ({
+  onPress,
+  text,
+}: {
+  onPress: () => void;
+  text: string;
+}) => {
+  return (
+    <TouchableOpacity style={styles.modalSecondaryAction} onPress={onPress}>
+      <Text style={styles.modalSecondaryActionText}>{text}</Text>
+    </TouchableOpacity>
+  );
+};
+
 export default function StudentDirectoryScreen() {
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
@@ -188,6 +239,7 @@ export default function StudentDirectoryScreen() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [page, setPage] = useState(1);
   const [loadingMorePage, setLoadingMorePage] = useState<number | null>(null);
+  const [modal, setModal] = useState<ReuseModalProps>(modalInitial);
 
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
@@ -207,8 +259,8 @@ export default function StudentDirectoryScreen() {
       skip: !isFocused,
     },
   );
-  const [updateStudentHorizontal, { isLoading: isHorizontalUpdating }] =
-    useUpdateStudentHorizontalMutation();
+  const [updateStudent, { isLoading: isHorizontalUpdating }] =
+    useUpdateStudentMutation();
   const [resetPassword, { isLoading: isResetPasswordLoading }] =
     useResetPasswordMutation();
 
@@ -238,6 +290,7 @@ export default function StudentDirectoryScreen() {
 
     return matchesSearch;
   });
+
   const showLoader = isFocused && isLoading && students.length === 0;
 
   const onRefresh = useCallback(async () => {
@@ -305,11 +358,46 @@ export default function StudentDirectoryScreen() {
   };
 
   const handleHorizontalPress = async (student: Student) => {
-    await updateStudentHorizontal({
+    await updateStudent({
       studentId: student.id,
       horizontal: !student.horizontal,
     }).unwrap();
-    // refetch();
+  };
+
+  const deleteOrUndoStudent = async (student: Student, isDeleted: boolean) => {
+    let title = 'Student deleted!';
+    let description = `The deletion process for *${student.name}* has been initiated successfully.
+\nThe student will be permanently deleted in *2 days*.
+\nIf needed, you can restore the student at any time within this 2-day period.`;
+
+    if (isDeleted === false) {
+      description = `The *${student.name}* has been restored successfully.`;
+      title = 'Student Restore!';
+    }
+    try {
+      await updateStudent({
+        studentId: student.id,
+        isDeleted,
+      }).unwrap();
+
+      setModal({
+        visible: true,
+        state: 'success',
+        title,
+        description,
+      });
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      setModal({
+        visible: true,
+        state: 'failure',
+        title,
+        description:
+          'Unable to do the operation right now. Please try again later.',
+      });
+    } finally {
+      closeActionsModal();
+    }
   };
 
   const closeActionsModal = () => setSelectedStudent(null);
@@ -377,49 +465,65 @@ export default function StudentDirectoryScreen() {
     closeActionsModal();
   };
 
+  const handleResetPassword = async () => {
+    if (!selectedStudent) return;
+    try {
+      const response = await resetPassword({
+        studentId: selectedStudent.id,
+      }).unwrap();
+
+      const password = response?.data?.password;
+      const message = response?.message;
+      setModal({
+        visible: true,
+        state: 'success',
+        title: 'Password Reset',
+        description: `${message}\n\nNew password: *${password}*`,
+      });
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      setModal({
+        visible: true,
+        state: 'failure',
+        title: 'Password Reset',
+        description: 'Unable to reset password right now. Please try again.',
+      });
+    } finally {
+      closeActionsModal();
+    }
+  };
+
   const handleModalResetPasswordPress = async () => {
     if (!selectedStudent) return;
+    setModal({
+      visible: true,
+      state: 'confirm',
+      onConfirm: () => handleResetPassword(),
+      title: 'Confirm Password Reset',
+      description: `This will reset the password for *${selectedStudent.name}* and generate a new temporary password. Do you want to continue?`,
+    });
+  };
 
-    closeActionsModal();
+  const handleDeleteStudent = async () => {
+    if (!selectedStudent) return;
 
-    Alert.alert(
-      'Confirm Password Reset',
-      `This will reset the password for ${
-        selectedStudent.name || 'this student'
-      } and generate a new temporary password. Do you want to continue?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Confirm',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await resetPassword({
-                studentId: selectedStudent.id,
-              }).unwrap();
+    setModal({
+      visible: true,
+      state: 'confirm',
+      onConfirm: () => deleteOrUndoStudent(selectedStudent, true),
+      title: 'Are you sure, do you want to delete the student.',
+      description: `This will be delete *${selectedStudent.name}'s* all the record. `,
+    });
+  };
 
-              const password = response?.data?.password;
-              const message =
-                response?.message || 'Password has been reset successfully.';
-
-              Alert.alert(
-                'Password Reset',
-                password ? `${message}\n\nNew password: ${password}` : message,
-              );
-            } catch (error) {
-              console.error('Failed to reset password:', error);
-              Alert.alert(
-                'Password Reset',
-                'Unable to reset password right now. Please try again.',
-              );
-            }
-          },
-        },
-      ],
-    );
+  const confirmRevert = (student: Student) => {
+    setModal({
+      visible: true,
+      state: 'confirm',
+      onConfirm: () => deleteOrUndoStudent(student, false),
+      title: 'Revert Student Delete',
+      description: `Do you want to restore *${student.name}*? This will cancel the pending delete request.`,
+    });
   };
 
   return (
@@ -490,6 +594,7 @@ export default function StudentDirectoryScreen() {
             <StudentRow
               item={item}
               onViewPress={() => setSelectedStudent(item)}
+              onRevert={() => confirmRevert(item)}
             />
           )}
           ItemSeparatorComponent={StudentSeparator}
@@ -515,6 +620,14 @@ export default function StudentDirectoryScreen() {
       </View>
 
       {/* FAB */}
+      <FloatingAddButton
+        icon="person-add"
+        onPress={() =>
+          navigation.navigate('AdminStudents', {
+            screen: 'AddStudent',
+          })
+        }
+      />
       {/* <TouchableOpacity style={styles.fab} activeOpacity={0.85}>
         <Text style={styles.fabIcon}>＋</Text>
       </TouchableOpacity> */}
@@ -525,6 +638,17 @@ export default function StudentDirectoryScreen() {
             ? 'Resetting password...'
             : 'Updating student...'
         }
+      />
+
+      <ReuseModal
+        visible={modal.visible}
+        state={modal.state}
+        title={modal.title}
+        description={modal.description}
+        onConfirm={modal.onConfirm}
+        onCancel={() => {
+          setModal(modalInitial);
+        }}
       />
       <Modal
         visible={isLevelPickerOpen}
@@ -619,50 +743,23 @@ export default function StudentDirectoryScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalPerformancePress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Progress</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalHomeworkPress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Homework</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalPracticePress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Practice</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
-              onPress={handleModalExamPress}
-            >
-              <Text style={styles.modalSecondaryActionText}>Exam</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalPrimaryAction}
+            <TouchableBtn
+              text="Assign Questions"
               onPress={handleModalAssignPress}
-            >
-              <Text style={styles.modalPrimaryActionText}>Assign</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalNotificationAction}
+            />
+            <TouchableBtn
+              text="Progress"
+              onPress={handleModalPerformancePress}
+            />
+            <TouchableBtn text="Homework" onPress={handleModalHomeworkPress} />
+            <TouchableBtn text="Practice" onPress={handleModalPracticePress} />
+            <TouchableBtn text="Exam" onPress={handleModalExamPress} />
+            <TouchableBtn
+              text="Notifications"
               onPress={handleModalNotificationsPress}
-            >
-              <Text style={styles.modalNotificationActionText}>
-                Notifications
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalEditAction}
-              onPress={handleModalEditPress}
-            >
-              <Text style={styles.modalEditActionText}>Edit</Text>
-            </TouchableOpacity>
+            />
+            <TouchableBtn text="Edit" onPress={handleModalEditPress} />
+
             <TouchableOpacity
               style={[
                 styles.modalHorizontalAction,
@@ -682,14 +779,15 @@ export default function StudentDirectoryScreen() {
                 {selectedStudent?.horizontal ? 'Vertical' : 'Horizontal'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalSecondaryAction}
+            <TouchableBtn
+              text="Reset Password"
               onPress={handleModalResetPasswordPress}
-              disabled={isResetPasswordLoading}
+            />
+            <TouchableOpacity
+              style={styles.modalDangerAction}
+              onPress={handleDeleteStudent}
             >
-              <Text style={styles.modalSecondaryActionText}>
-                {isResetPasswordLoading ? 'Resetting...' : 'Reset Password'}
-              </Text>
+              <Text style={styles.modalDangerActionText}>Delete</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -704,6 +802,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FB',
+  },
+  deletedRow: {
+    opacity: 0.7,
+  },
+  deletedLabel: {
+    color: '#B45309',
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 3,
   },
 
   // Header
@@ -944,6 +1051,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  revertButton: {
+    height: 40,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#ECFDF5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  revertButtonText: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
   // Actions
   actions: {
     flex: 1.4,
@@ -1032,9 +1155,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
   },
+  modalDangerAction: {
+    borderRadius: 10,
+    backgroundColor: COLORS.dangerLight,
+    borderColor: COLORS.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
   modalSecondaryActionText: {
     fontSize: 14,
     color: '#4F46E5',
+    fontWeight: '800',
+  },
+  modalDangerActionText: {
+    fontSize: 14,
+    color: COLORS.danger,
     fontWeight: '800',
   },
   modalPrimaryAction: {

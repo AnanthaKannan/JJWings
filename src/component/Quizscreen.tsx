@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   questionText: {
-    fontSize: 38,
+    fontSize: 30,
     fontWeight: '800',
     color: '#1A2259',
     letterSpacing: 1,

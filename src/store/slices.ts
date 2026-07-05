@@ -1,5 +1,6 @@
 // src/store/slices/authSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { ReuseModalProps } from '../component/ReuseModal';
 
 interface AuthState {
   studentId: string | null;
@@ -22,10 +23,14 @@ interface AuthState {
   adminCode: string | null;
   adminName: string;
   adminProfilePic: string | null;
+  adminOrgId: string | null;
+  adminRoles: string[];
   isAdmin: boolean;
   vertical: boolean;
   hasNotificationAttention: boolean;
   messageUnreadCount: number;
+  mockDeviceId: string;
+  modal: ReuseModalProps;
 }
 
 const initialState: AuthState = {
@@ -49,10 +54,19 @@ const initialState: AuthState = {
   adminCode: null,
   adminName: '',
   adminProfilePic: null,
+  adminOrgId: null,
+  adminRoles: [],
   isAdmin: false,
   vertical: false,
   hasNotificationAttention: false,
   messageUnreadCount: 0,
+  mockDeviceId: '',
+  modal: {
+    state: 'success',
+    visible: false,
+    title: '',
+    description: '',
+  },
 };
 
 const commonSlice = createSlice({
@@ -86,6 +100,9 @@ const commonSlice = createSlice({
       state.token = action.payload.token ?? null;
       state.vertical = action.payload.vertical;
     },
+    setMockDeviceId: (state, action) => {
+      state.mockDeviceId = action.payload.mockDeviceId ?? '';
+    },
     setAdminCredentials: (
       state,
       action: PayloadAction<{
@@ -94,6 +111,8 @@ const commonSlice = createSlice({
         isAdmin: boolean;
         adminName: string;
         adminProfilePic?: string | null;
+        adminOrgId?: string | null;
+        adminRoles?: string[];
         token?: string;
       }>,
     ) => {
@@ -101,6 +120,8 @@ const commonSlice = createSlice({
       state.adminCode = action.payload.adminCode ?? null;
       state.adminName = action.payload.adminName;
       state.adminProfilePic = action.payload.adminProfilePic ?? null;
+      state.adminOrgId = action.payload.adminOrgId ?? null;
+      state.adminRoles = action.payload.adminRoles ?? [];
       state.studentLevel = null;
       state.isAdmin = true;
       state.isStudent = false;
@@ -139,6 +160,8 @@ const commonSlice = createSlice({
       state.adminCode = null;
       state.adminName = '';
       state.adminProfilePic = null;
+      state.adminOrgId = null;
+      state.adminRoles = [];
       state.isStudent = false;
       state.isAdmin = false;
       state.isAuthenticated = false;
@@ -161,14 +184,17 @@ const commonSlice = createSlice({
         state.messageUnreadCount - action.payload,
       );
     },
-    setStudentProfilePic: (
-      state,
-      action: PayloadAction<string | null>,
-    ) => {
+    setStudentProfilePic: (state, action: PayloadAction<string | null>) => {
       state.studentProfilePic = action.payload;
     },
     setAdminProfilePic: (state, action: PayloadAction<string | null>) => {
       state.adminProfilePic = action.payload;
+    },
+    setModal: (state, action: PayloadAction<ReuseModalProps>) => {
+      state.modal = { ...state.modal, ...action.payload };
+    },
+    resetModal: state => {
+      state.modal = initialState.modal;
     },
   },
 });
@@ -184,5 +210,8 @@ export const {
   reduceMessageUnreadCount,
   setStudentProfilePic,
   setAdminProfilePic,
+  setMockDeviceId,
+  setModal,
+  resetModal,
 } = commonSlice.actions;
 export default commonSlice.reducer;

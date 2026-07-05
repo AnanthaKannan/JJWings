@@ -25,7 +25,31 @@ type AdminHeaderProps = {
   headerBackgroundColor?: string;
 };
 
-const adminNavItems = [
+type AdminNavItem = {
+  label: string;
+  icon: string;
+  routeName: string;
+  params?: object;
+  requiresRole?: string;
+};
+
+const adminNavItems: AdminNavItem[] = [
+  {
+    label: 'Rank',
+    icon: 'leaderboard',
+    routeName: 'AdminRanking',
+  },
+  // {
+  //   label: 'Question Papers',
+  //   icon: 'description',
+  //   routeName: 'AdminQuestionPapers',
+  // },
+  {
+    label: 'Achievements',
+    icon: 'emoji-events',
+    routeName: 'AdminAchievements',
+    requiresRole: 'superadmin',
+  },
   {
     label: 'Add Student',
     icon: 'person-add',
@@ -33,25 +57,16 @@ const adminNavItems = [
     params: { screen: 'AddStudent' },
   },
   {
-    label: 'Rank',
-    icon: 'leaderboard',
-    routeName: 'AdminRanking',
+    label: 'Add Teachers',
+    icon: 'school',
+    routeName: 'AdminTeachers',
+    requiresRole: 'superadmin',
   },
-  {
-    label: 'Question Papers',
-    icon: 'description',
-    routeName: 'AdminQuestionPapers',
-  },
-  {
-    label: 'Achievements',
-    icon: 'emoji-events',
-    routeName: 'AdminAchievements',
-  },
-  {
-    label: 'Notification Send',
-    icon: 'campaign',
-    routeName: 'AdminNotificationSend',
-  },
+  // {
+  //   label: 'Notification Send',
+  //   icon: 'campaign',
+  //   routeName: 'AdminNotificationSend',
+  // },
   {
     label: 'Update Password',
     icon: 'lock-reset',
@@ -61,6 +76,12 @@ const adminNavItems = [
     label: 'Profile',
     icon: 'person',
     routeName: 'AdminProfile',
+  },
+  {
+    label: 'Billing',
+    icon: 'attach-money',
+    routeName: 'BillingRevenue',
+    requiresRole: 'superadmin',
   },
   {
     label: 'Logout',
@@ -77,11 +98,14 @@ export default function AdminHeader({
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const adminName = useSelector((state: RootState) => state.common.adminName);
-  const adminProfilePic = useSelector(
-    (state: RootState) => state.common.adminProfilePic,
+  const { adminName, adminRoles, isAdmin, adminProfilePic } = useSelector(
+    (state: RootState) => state.common,
   );
-  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+  // const adminProfilePic = useSelector(
+  //   (state: RootState) => state.common.adminProfilePic,
+  // );
+  // const adminRoles = useSelector((state: RootState) => state.common.adminRoles);
+  // const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
   const displayName = adminName.trim() || 'Admin';
   const profilePicUrl = getFileUrl(adminProfilePic);
@@ -179,7 +203,7 @@ export default function AdminHeader({
                   <Text style={styles.adminName} numberOfLines={1}>
                     {displayName}
                   </Text>
-                  <Text style={styles.adminRole}>Admin</Text>
+                  <Text style={styles.adminRole}>{adminRoles?.toString()}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setIsNavOpen(false)}
@@ -195,22 +219,34 @@ export default function AdminHeader({
                 contentContainerStyle={styles.navList}
                 showsVerticalScrollIndicator={false}
               >
-                {adminNavItems.map(item => (
-                  <TouchableOpacity
-                    key={item.label}
-                    style={styles.navItem}
-                    onPress={() => handleNavigate(item.routeName, item.params)}
-                    activeOpacity={0.78}
-                  >
-                    <MaterialIcons name={item.icon} size={21} color="#4F46E5" />
-                    <Text style={styles.navItemText}>{item.label}</Text>
-                    <MaterialIcons
-                      name="chevron-right"
-                      size={22}
-                      color="#94A3B8"
-                    />
-                  </TouchableOpacity>
-                ))}
+                {adminNavItems
+                  .filter(
+                    item =>
+                      !item.requiresRole ||
+                      adminRoles.includes(item.requiresRole),
+                  )
+                  .map(item => (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={styles.navItem}
+                      onPress={() =>
+                        handleNavigate(item.routeName, item.params)
+                      }
+                      activeOpacity={0.78}
+                    >
+                      <MaterialIcons
+                        name={item.icon}
+                        size={21}
+                        color="#4F46E5"
+                      />
+                      <Text style={styles.navItemText}>{item.label}</Text>
+                      <MaterialIcons
+                        name="chevron-right"
+                        size={22}
+                        color="#94A3B8"
+                      />
+                    </TouchableOpacity>
+                  ))}
               </ScrollView>
 
               <Text style={styles.versionText}>v{APP_VERSION}</Text>

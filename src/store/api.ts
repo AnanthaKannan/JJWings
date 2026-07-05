@@ -7,7 +7,9 @@ import { baseQuery, API_URL } from './baseQuery';
 
 const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 20;
-const DEFAULT_STUDENTS_LIMIT = 20;
+const DEFAULT_STUDENTS_LIMIT = 500;
+const DEFAULT_QUESTIONS_LIMIT = 20;
+const DEFAULT_HOMEWORK_LIMIT = 20;
 
 type ApiMeta = {
   total: number;
@@ -46,6 +48,7 @@ type ApiStudent = {
   fcmToken?: string;
   fcmTokens?: string[];
   score?: ApiScore;
+  isDeleted: boolean;
 };
 
 type ApiQuestion = {
@@ -210,6 +213,7 @@ export type Student = {
   progress: number;
   success: number;
   failure: number;
+  isDeleted: boolean;
 };
 
 export type SameDeviceStudent = {
@@ -351,11 +355,13 @@ type LoginApiResponse = {
   message: string;
   token: string;
   role: 'student' | 'admin';
+  orgId: string;
   user: {
     id: string;
     name: string;
     studentId?: string;
     adminId?: string;
+    roles?: string[];
     level?: number;
     profilePicPath?: string;
     vertical: boolean;
@@ -368,6 +374,8 @@ type LoginResult = {
   adminCode?: string;
   name: string;
   role: 'student' | 'admin';
+  roles: string[];
+  orgId: string;
   token: string;
   level?: number;
   profilePicPath?: string;
@@ -433,6 +441,13 @@ type HomeworkArg = {
   studentId: string;
   state: 'PROGRESS' | 'NEW' | 'COMPLETED';
   type?: 'homework' | 'exam' | 'practice';
+  page?: number;
+  limit?: number;
+};
+
+type HomeworksResult = {
+  homeworks: Homework[];
+  meta: ApiMeta;
 };
 
 type HomeworkByIdArg = {
@@ -440,10 +455,6 @@ type HomeworkByIdArg = {
 };
 
 type ScoreArg = {
-  studentId: string;
-};
-
-type StudentByIdArg = {
   studentId: string;
 };
 
@@ -460,13 +471,51 @@ type AddStudentArg = {
 
 type UpdateStudentArg = {
   studentId: string;
-  name: string;
-  level: number;
+  name?: string;
+  level?: number;
+  isDeleted?: boolean;
+  horizontal?: boolean;
 };
 
-type UpdateStudentHorizontalArg = {
-  studentId: string;
-  horizontal: boolean;
+type ApiAdmin = {
+  _id: string;
+  adminId: string;
+  name: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+type ApiAdminsResponse =
+  | ApiAdmin[]
+  | {
+      data?: ApiAdmin[];
+      admins?: ApiAdmin[];
+      meta?: ApiMeta;
+    };
+
+export type Admin = {
+  id: string;
+  adminId: string;
+  name: string;
+  isDeleted: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminsResult = {
+  admins: Admin[];
+  meta?: ApiMeta;
+};
+
+type AddTeacherArg = {
+  name: string;
+};
+
+type UpdateTeacherArg = {
+  teacherId: string;
+  name?: string;
+  isDeleted?: boolean;
 };
 
 type UpdateStudentFcmTokenArg = {
@@ -490,6 +539,25 @@ type ResetPasswordResponse = {
     studentId?: string;
     name?: string;
     password?: string;
+  };
+};
+
+export type addAdminResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    adminId: string;
+    password: string;
+  };
+};
+
+export type addStudentResponse = {
+  success: boolean;
+  message: string;
+  student: {
+    name: string;
+    studentId: string;
+    password: string;
   };
 };
 
@@ -535,6 +603,13 @@ type QuestionsArg = {
   level?: number;
   type?: 'homework' | 'exam' | 'practice';
   search?: string;
+  page?: number;
+  limit?: number;
+};
+
+type QuestionsResult = {
+  questions: QuestionTask[];
+  meta: ApiMeta;
 };
 
 type UpdateQuestionArg = {
@@ -597,6 +672,8 @@ type AvailableQuestionsArg = {
   studentId: string;
   level?: number;
   type?: 'homework' | 'exam' | 'practice';
+  page?: number;
+  limit?: number;
 };
 
 type RankingArg = {
@@ -658,6 +735,35 @@ const mapStudent = (student: ApiStudent): Student => ({
   progress: student.score?.progress ?? 0,
   success: student.score?.correct ?? 0,
   failure: student.score?.wrong ?? 0,
+  isDeleted: student.isDeleted,
+});
+
+const mapLogin = (response: LoginApiResponse): LoginResult => {
+  return {
+    id: response.user.id,
+    studentCode: response.user.studentId,
+    adminCode: response.user.adminId,
+    name: response.user.name,
+    role: response.role,
+    roles: response.user.roles ?? [],
+    orgId: response.orgId,
+    token: response.token,
+    level: response.user.level,
+    profilePicPath: response.user.profilePicPath,
+    vertical: response.user.vertical,
+  };
+};
+
+const getTeachersFromResponse = (response: ApiAdminsResponse): ApiAdmin[] =>
+  response?.admins ?? [];
+
+const mapTeacher = (admin: ApiAdmin): Admin => ({
+  id: admin._id,
+  adminId: admin.adminId,
+  name: admin.name ?? '',
+  isDeleted: admin.isDeleted ?? false,
+  createdAt: admin.createdAt,
+  updatedAt: admin.updatedAt,
 });
 
 const mapSameDeviceStudent = (student: ApiStudent): SameDeviceStudent => ({
@@ -826,21 +932,14 @@ const mapAchievement = (file: ApiFileUpload): Achievement => ({
   name: file.name ?? file.originalName ?? 'Celebration',
 });
 
-const getNextStudentId = (students: Student[]): IdGenData => {
-  const lastId = students.reduce((highest, student) => {
-    const numericId = Number(student.studentId?.replace(/\D/g, '') ?? 0);
-    return Math.max(highest, numericId);
-  }, 100);
-
-  return { studentLastID: lastId + 1 };
-};
-
 export const jjWingsApi = createApi({
   reducerPath: 'jjWingsApi',
   baseQuery,
   tagTypes: [
     'Student',
     'Students',
+    'Admin',
+    'Admins',
     'Question',
     'Questions',
     'Homework',
@@ -849,19 +948,47 @@ export const jjWingsApi = createApi({
     'Messages',
     'Ranking',
     'FileUploads',
+    'Teachers',
   ],
   endpoints: builder => ({
-    getHomeworks: builder.query<Homework[], HomeworkArg>({
-      query: ({ studentId, state, type }) => ({
+    getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
+      query: ({ studentId, state, type, page, limit }) => ({
         url: `/homework/${studentId}/${state}`,
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: page ?? 1,
+          limit: limit ?? DEFAULT_HOMEWORK_LIMIT,
           ...(type ? { type } : {}),
         },
       }),
-      transformResponse: (response: ApiHomeworksResponse) =>
-        response.homeworks.map(mapHomework),
+      transformResponse: (response: ApiHomeworksResponse) => ({
+        homeworks: response.homeworks.map(mapHomework),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.studentId}-${queryArgs?.state}-${
+          queryArgs?.type ?? 'ALL'
+        }-${queryArgs?.limit ?? DEFAULT_HOMEWORK_LIMIT}`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.homeworks = newPage.homeworks;
+          currentCache.meta = newPage.meta;
+          return;
+        }
+
+        const existingIds = new Set(
+          currentCache.homeworks.map(homework => homework.id),
+        );
+        const nextItems = newPage.homeworks.filter(
+          homework => !existingIds.has(homework.id),
+        );
+        currentCache.homeworks.push(...nextItems);
+        currentCache.meta = newPage.meta;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.state !== previousArg?.state ||
+        currentArg?.type !== previousArg?.type ||
+        currentArg?.limit !== previousArg?.limit,
       providesTags: (_result, _error, { studentId, state }) => [
         { type: 'Homework', id: `${studentId}_${state}` },
       ],
@@ -875,25 +1002,6 @@ export const jjWingsApi = createApi({
         { type: 'Homework', id: homeworkId },
       ],
     }),
-
-    getStudentById: builder.query<Student | undefined, StudentByIdArg>({
-      query: () => ({
-        url: '/admin/students',
-        params: { page: 1, limit: DEFAULT_LIMIT },
-      }),
-      transformResponse: (
-        response: ApiStudentsResponse,
-        _meta,
-        { studentId },
-      ) =>
-        response.students
-          .map(mapStudent)
-          .find(student => student.id === studentId),
-      providesTags: (_result, _error, { studentId }) => [
-        { type: 'Student', id: studentId },
-      ],
-    }),
-
     getLogin: builder.query<LoginResult, LoginArg>({
       query: ({ username, password, deviceId }) => ({
         url: '/login',
@@ -904,17 +1012,7 @@ export const jjWingsApi = createApi({
           ...(deviceId ? { deviceId } : {}),
         },
       }),
-      transformResponse: (response: LoginApiResponse) => ({
-        id: response.user.id,
-        studentCode: response.user.studentId,
-        adminCode: response.user.adminId,
-        name: response.user.name,
-        role: response.role,
-        token: response.token,
-        level: response.user.level,
-        profilePicPath: response.user.profilePicPath,
-        vertical: response.user.vertical,
-      }),
+      transformResponse: mapLogin,
     }),
 
     switchStudentLogin: builder.mutation<LoginResult, SwitchStudentLoginArg>({
@@ -922,17 +1020,7 @@ export const jjWingsApi = createApi({
         url: `/login/${studentId}`,
         method: 'POST',
       }),
-      transformResponse: (response: LoginApiResponse) => ({
-        id: response.user.id,
-        studentCode: response.user.studentId,
-        adminCode: response.user.adminId,
-        name: response.user.name,
-        role: response.role,
-        token: response.token,
-        level: response.user.level,
-        profilePicPath: response.user.profilePicPath,
-        vertical: response.user.vertical,
-      }),
+      transformResponse: mapLogin,
     }),
 
     getStudents: builder.query<StudentsResult, StudentsArg | void>({
@@ -971,78 +1059,161 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Students', id: 'SAME_DEVICE' }],
     }),
 
-    getQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+    getTeachers: builder.query<AdminsResult, void>({
+      query: () => '/admin/teacher',
+      transformResponse: (response: ApiAdminsResponse) => ({
+        admins: getTeachersFromResponse(response).map(mapTeacher),
+        meta: Array.isArray(response) ? undefined : response.meta,
+      }),
+      providesTags: [{ type: 'Teachers', id: 'LIST' }],
+    }),
+
+    getQuestions: builder.query<QuestionsResult, QuestionsArg | void>({
       query: arg => ({
         url: '/admin/questions',
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: arg?.page ?? 1,
+          limit: arg?.limit ?? DEFAULT_QUESTIONS_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
           ...(arg?.type ? { type: arg.type } : {}),
           ...(arg?.search ? { search: arg.search } : {}),
         },
       }),
-      transformResponse: (response: ApiQuestionsResponse) =>
-        response.questions.map(mapQuestion),
+      transformResponse: (response: ApiQuestionsResponse) => ({
+        questions: response.questions.map(mapQuestion),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.type ?? 'ALL'}-${
+          queryArgs?.level ?? 'ALL'
+        }-${queryArgs?.search ?? ''}-${
+          queryArgs?.limit ?? DEFAULT_QUESTIONS_LIMIT
+        }`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.questions = newPage.questions;
+          currentCache.meta = newPage.meta;
+          return;
+        }
+
+        const existingIds = new Set(
+          currentCache.questions.map(question => question.id),
+        );
+        const nextItems = newPage.questions.filter(
+          question => !existingIds.has(question.id),
+        );
+        currentCache.questions.push(...nextItems);
+        currentCache.meta = newPage.meta;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.type !== previousArg?.type ||
+        currentArg?.level !== previousArg?.level ||
+        currentArg?.search !== previousArg?.search ||
+        currentArg?.limit !== previousArg?.limit,
       providesTags: result => [
         { type: 'Questions', id: 'LIST' },
-        ...(result ?? []).map(question => ({
+        ...((result?.questions ?? []).map(question => ({
           type: 'Question' as const,
           id: question.id,
-        })),
+        })) as Array<{ type: 'Question'; id: string }>),
       ],
     }),
 
-    getAvailableQuestions: builder.query<QuestionTask[], AvailableQuestionsArg>(
-      {
-        query: ({ studentId, level, type }) => ({
-          url: `/admin/questions/available/${studentId}`,
-          params: {
-            page: 1,
-            limit: DEFAULT_LIMIT,
-            ...(typeof level === 'number' ? { level } : {}),
-            ...(type ? { type } : {}),
-          },
-        }),
-        transformResponse: (response: ApiQuestionsResponse) =>
-          response.questions.map(mapQuestion),
-        providesTags: (_result, _error, { studentId }) => [
-          { type: 'Questions', id: `AVAILABLE_${studentId}` },
-        ],
-      },
-    ),
+    getAvailableQuestions: builder.query<
+      QuestionsResult,
+      AvailableQuestionsArg
+    >({
+      query: ({ studentId, level, type, page, limit }) => ({
+        url: `/admin/questions/available/${studentId}`,
+        params: {
+          page: page ?? 1,
+          limit: limit ?? DEFAULT_QUESTIONS_LIMIT,
+          ...(typeof level === 'number' ? { level } : {}),
+          ...(type ? { type } : {}),
+        },
+      }),
+      transformResponse: (response: ApiQuestionsResponse) => ({
+        questions: response.questions.map(mapQuestion),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs.studentId}-${queryArgs.type ?? 'ALL'}-${
+          queryArgs.level ?? 'ALL'
+        }-${queryArgs.limit ?? DEFAULT_QUESTIONS_LIMIT}`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.questions = newPage.questions;
+          currentCache.meta = newPage.meta;
+          return;
+        }
 
-    getPracticeQuestions: builder.query<QuestionTask[], QuestionsArg | void>({
+        const existingIds = new Set(
+          currentCache.questions.map(question => question.id),
+        );
+        const nextItems = newPage.questions.filter(
+          question => !existingIds.has(question.id),
+        );
+        currentCache.questions.push(...nextItems);
+        currentCache.meta = newPage.meta;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.type !== previousArg?.type ||
+        currentArg?.level !== previousArg?.level ||
+        currentArg?.limit !== previousArg?.limit,
+      providesTags: (_result, _error, { studentId }) => [
+        { type: 'Questions', id: `AVAILABLE_${studentId}` },
+      ],
+    }),
+
+    getPracticeQuestions: builder.query<QuestionsResult, QuestionsArg | void>({
       query: arg => ({
         url: '/questions/practice',
         params: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
+          page: arg?.page ?? 1,
+          limit: DEFAULT_QUESTIONS_LIMIT,
           ...(typeof arg?.level === 'number' ? { level: arg.level } : {}),
           ...(arg?.search ? { search: arg.search } : {}),
         },
       }),
-      transformResponse: (response: ApiQuestionsResponse) =>
-        response.questions.map(mapQuestion),
+      transformResponse: (response: ApiQuestionsResponse) => ({
+        questions: response.questions.map(mapQuestion),
+        meta: response.meta,
+      }),
+      serializeQueryArgs: ({ endpointName, queryArgs }) =>
+        `${endpointName}-${queryArgs?.level ?? 'ALL'}-${
+          queryArgs?.search ?? ''
+        }-${DEFAULT_QUESTIONS_LIMIT}`,
+      merge: (currentCache, newPage) => {
+        if (newPage.meta.page === 1) {
+          currentCache.questions = newPage.questions;
+          currentCache.meta = newPage.meta;
+          return;
+        }
+
+        const existingIds = new Set(
+          currentCache.questions.map(question => question.id),
+        );
+        const nextItems = newPage.questions.filter(
+          question => !existingIds.has(question.id),
+        );
+        currentCache.questions.push(...nextItems);
+        currentCache.meta = newPage.meta;
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        currentArg?.page !== previousArg?.page ||
+        currentArg?.level !== previousArg?.level ||
+        currentArg?.search !== previousArg?.search ||
+        currentArg?.limit !== previousArg?.limit,
       providesTags: result => [
         { type: 'Questions', id: 'PRACTICE_LIST' },
-        ...(result ?? []).map(question => ({
+        ...((result?.questions ?? []).map(question => ({
           type: 'Question' as const,
           id: question.id,
-        })),
+        })) as Array<{ type: 'Question'; id: string }>),
       ],
     }),
-
-    getIdGen: builder.query<IdGenData, void>({
-      query: () => ({
-        url: '/admin/students',
-        params: { page: 1, limit: DEFAULT_LIMIT },
-      }),
-      transformResponse: (response: ApiStudentsResponse) =>
-        getNextStudentId(response.students.map(mapStudent)),
-      providesTags: [{ type: 'Students', id: 'LIST' }],
-    }),
-
     getScore: builder.query<Score, ScoreArg>({
       query: ({ studentId }) => `/scores/${studentId}`,
       transformResponse: (response: ApiScore, _meta, { studentId }) => ({
@@ -1188,21 +1359,26 @@ export const jjWingsApi = createApi({
       ],
     }),
 
-    addStudent: builder.mutation<string, AddStudentArg>({
+    addStudent: builder.mutation<addStudentResponse, AddStudentArg>({
       query: ({ name, level }) => ({
         url: '/admin/students',
         method: 'POST',
         body: { name, level },
       }),
-      transformResponse: () => 'success',
+      transformResponse: (response: addStudentResponse) => response,
       invalidatesTags: [{ type: 'Students', id: 'LIST' }],
     }),
 
     updateStudent: builder.mutation<string, UpdateStudentArg>({
-      query: ({ studentId, name, level }) => ({
+      query: ({ studentId, name, level, isDeleted, horizontal }) => ({
         url: `/admin/students/${studentId}`,
         method: 'PATCH',
-        body: { name, level },
+        body: {
+          ...(name !== undefined && { name }),
+          ...(level !== undefined && { level }),
+          ...(isDeleted !== undefined && { isDeleted }),
+          ...(horizontal !== undefined && { vertical: !horizontal }),
+        },
       }),
       transformResponse: () => 'success',
       invalidatesTags: (_result, _error, { studentId }) => [
@@ -1210,21 +1386,27 @@ export const jjWingsApi = createApi({
         { type: 'Students', id: 'LIST' },
       ],
     }),
+    addTeacher: builder.mutation<addAdminResponse, AddTeacherArg>({
+      query: ({ name }) => ({
+        url: '/admin/teacher',
+        method: 'POST',
+        body: { name },
+      }),
+      transformResponse: (response: addAdminResponse) => response,
+      invalidatesTags: [{ type: 'Teachers', id: 'LIST' }],
+    }),
 
-    updateStudentHorizontal: builder.mutation<
-      string,
-      UpdateStudentHorizontalArg
-    >({
-      query: ({ studentId, horizontal }) => ({
-        url: `/admin/students/${studentId}`,
+    updateTeacher: builder.mutation<string, UpdateTeacherArg>({
+      query: ({ teacherId, name, isDeleted }) => ({
+        url: `/admin/teacher/${teacherId}`,
         method: 'PATCH',
-        body: { vertical: !horizontal },
+        body: {
+          ...(typeof name === 'string' ? { name } : {}),
+          ...(typeof isDeleted === 'boolean' ? { isDeleted } : {}),
+        },
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { studentId }) => [
-        { type: 'Student', id: studentId },
-        { type: 'Students', id: 'LIST' },
-      ],
+      invalidatesTags: [{ type: 'Teachers', id: 'LIST' }],
     }),
 
     updateStudentFcmToken: builder.mutation<string, UpdateStudentFcmTokenArg>({
@@ -1453,10 +1635,10 @@ export const jjWingsApi = createApi({
         method: 'DELETE',
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { questionId }) => [
-        { type: 'Question', id: questionId },
-        'Questions',
-      ],
+      // invalidatesTags: (_result, _error, { questionId }) => [
+      //   { type: 'Question', id: questionId },
+      //   'Questions',
+      // ],
     }),
 
     updateQuestion: builder.mutation<string, UpdateQuestionArg>({
@@ -1466,10 +1648,11 @@ export const jjWingsApi = createApi({
         body: { questionId, level },
       }),
       transformResponse: () => 'success',
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: 'Question', id },
-        'Questions',
-      ],
+      // invalidatesTags: (_result, _error, { id }) => [
+      //   { type: 'Question', id },
+      //   { type: 'Questions', id: 'LIST' },
+      //   'Questions',
+      // ],
     }),
 
     assignHomework: builder.mutation<AssignHomeworkResult, AssignHomeworkArg>({
@@ -1643,15 +1826,16 @@ export const {
   useSwitchStudentLoginMutation,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
-  useGetStudentByIdQuery,
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
+  useGetTeachersQuery,
   useGetQuestionsQuery,
   useGetPracticeQuestionsQuery,
   useGetAvailableQuestionsQuery,
   useAddStudentMutation,
   useUpdateStudentMutation,
-  useUpdateStudentHorizontalMutation,
+  useAddTeacherMutation,
+  useUpdateTeacherMutation,
   useUpdateStudentFcmTokenMutation,
   useUpdateStudentPasswordMutation,
   useUpdateAdminPasswordMutation,
@@ -1668,7 +1852,6 @@ export const {
   useUnassignHomeworkMutation,
   useAssignPracticeQuestionsMutation,
   useUnassignPracticeQuestionsMutation,
-  useGetIdGenQuery,
   useGetScoreQuery,
   useGetNotificationsQuery,
   useGetAdminNotificationsQuery,
