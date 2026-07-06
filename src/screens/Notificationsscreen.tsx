@@ -12,7 +12,12 @@ import { useIsFocused, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { AdminHeader, LoadingState, StudentHeader } from '../component';
+import {
+  AdminHeader,
+  BottomLodeMore,
+  EmptyData,
+  StudentHeader,
+} from '../component';
 import {
   useGetAdminNotificationsQuery,
   useGetNotificationsQuery,
@@ -46,7 +51,9 @@ const NotificationCard = ({ item }: { item: Notification }) => (
         <Text style={styles.cardTitle} numberOfLines={1}>
           {item.title || 'Notification'}
         </Text>
-        <Text style={styles.timeText}>{formatNotificationTime(item.createdAt)}</Text>
+        <Text style={styles.timeText}>
+          {formatNotificationTime(item.createdAt)}
+        </Text>
       </View>
 
       <Text style={styles.messageText}>{item.message}</Text>
@@ -66,20 +73,38 @@ export default function NotificationsScreen() {
   const targetStudentId = isStudentNotificationReview
     ? routeStudentId
     : studentId;
+
+  const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMorePage, setLoadingMorePage] = useState<number | null>(null);
+  const notificationSourceKey =
+    isAdmin && !isStudentNotificationReview
+      ? 'admin'
+      : targetStudentId ?? 'student';
   const studentNotificationsQuery = useGetNotificationsQuery(
-    { studentId: targetStudentId ?? '' },
-    { skip: !isFocused || (!isStudentNotificationReview && isAdmin) || !targetStudentId },
+    { studentId: targetStudentId ?? '', page },
+    {
+      skip:
+        !isFocused ||
+        (!isStudentNotificationReview && isAdmin) ||
+        !targetStudentId,
+    },
   );
-  const adminNotificationsQuery = useGetAdminNotificationsQuery(undefined, {
-    skip: !isFocused || !isAdmin || isStudentNotificationReview,
-  });
-  const activeQuery = isAdmin && !isStudentNotificationReview
-    ? adminNotificationsQuery
-    : studentNotificationsQuery;
+  const adminNotificationsQuery = useGetAdminNotificationsQuery(
+    { page },
+    {
+      skip: !isFocused || !isAdmin || isStudentNotificationReview,
+    },
+  );
+  const activeQuery =
+    isAdmin && !isStudentNotificationReview
+      ? adminNotificationsQuery
+      : studentNotificationsQuery;
   const {
-    data: notifications = [],
+    data: { notifications = [], meta } = {},
     isLoading,
+    isFetching,
+    isError,
     refetch,
   } = activeQuery;
 
@@ -89,10 +114,11 @@ export default function NotificationsScreen() {
   const emptyText = isStudentNotificationReview
     ? 'This student has not received notifications yet.'
     : isAdmin
-      ? 'Sent notifications will appear here.'
-      : 'New homework updates will appear here.';
+    ? 'Sent notifications will appear here.'
+    : 'New homework updates will appear here.';
 
-  const canRefresh = (isAdmin && !isStudentNotificationReview) || Boolean(targetStudentId);
+  const canRefresh =
+    (isAdmin && !isStudentNotificationReview) || Boolean(targetStudentId);
 
   const showLoader = isFocused && isLoading && notifications.length === 0;
 
@@ -102,16 +128,43 @@ export default function NotificationsScreen() {
     }
   }, [dispatch, isFocused]);
 
+  useEffect(() => {
+    setPage(1);
+    setLoadingMorePage(null);
+  }, [notificationSourceKey]);
+
+  useEffect(() => {
+    if (
+      loadingMorePage !== null &&
+      (meta?.page === loadingMorePage || isError)
+    ) {
+      setLoadingMorePage(null);
+    }
+  }, [isError, loadingMorePage, meta?.page]);
+
   const onRefresh = useCallback(async () => {
     if (!canRefresh) return;
 
     setRefreshing(true);
     try {
-      await refetch();
+      if (page === 1) {
+        await refetch();
+      } else {
+        setPage(1);
+      }
     } finally {
       setRefreshing(false);
     }
-  }, [canRefresh, refetch]);
+  }, [canRefresh, page, refetch]);
+
+  const onReachNotificationBottom = useCallback(() => {
+    if (!isFetching && meta?.hasNextPage === true) {
+      const nextPage = meta.page + 1;
+
+      setLoadingMorePage(nextPage);
+      setPage(nextPage);
+    }
+  }, [isFetching, meta]);
 
   const header = isAdmin ? (
     <AdminHeader
@@ -120,10 +173,7 @@ export default function NotificationsScreen() {
       headerBackgroundColor="#EEF2FF"
     />
   ) : (
-    <StudentHeader
-      header="Notifications"
-      headerBackgroundColor="#EEF2FF"
-    />
+    <StudentHeader header="Notifications" headerBackgroundColor="#EEF2FF" />
   );
 
   return (
@@ -147,16 +197,17 @@ export default function NotificationsScreen() {
           />
         }
         renderItem={({ item }) => <NotificationCard item={item} />}
+        onEndReached={onReachNotificationBottom}
+        onEndReachedThreshold={0.2}
+        ListFooterComponent={<BottomLodeMore loading={meta?.hasNextPage} />}
         ListEmptyComponent={
-          showLoader ? (
-            <LoadingState label="Loading notifications..." />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="notifications-off" size={42} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No notifications yet</Text>
-              <Text style={styles.emptyText}>{emptyText}</Text>
-            </View>
-          )
+          <EmptyData
+            showLoader={showLoader}
+            loadingMessage="Loading notifications..."
+            emptyTitle="No notifications yet"
+            emptyText={emptyText}
+            icon="notifications-off"
+          />
         }
       />
     </SafeAreaView>
@@ -249,25 +300,8 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontWeight: '500',
   },
-  emptyState: {
+  footerLoader: {
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 34,
-    paddingHorizontal: 18,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    color: '#1E293B',
-    fontWeight: '800',
-    marginTop: 10,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '600',
-    marginTop: 4,
-    textAlign: 'center',
+    paddingVertical: 18,
   },
 });

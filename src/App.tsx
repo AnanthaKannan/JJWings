@@ -28,6 +28,7 @@ import {
 import {
   setMessageUnreadCount,
   showNotificationAttention,
+  resetModal,
 } from './store/slices';
 import {
   getStudentPushToken as getPushToken,
@@ -40,11 +41,14 @@ import {
   LoginScreen,
   ProfileScreen,
   StudentProfileScreen,
+  UpdatePasswordScreen,
+  GameScreen,
   HomeworkScreen,
   PracticeScreen,
   QuizReviewScreen,
   // ── Admin screens (create these in your screens folder) ──
   StudentDirectoryScreen,
+  TeacherDirectoryScreen,
   SameDeviceStudentsScreen,
   AddStudentScreen,
   HomeworkLibraryScreen,
@@ -59,7 +63,9 @@ import {
   AdminProfileScreen,
   QuestionPaperScreen,
   AchievementsScreen,
+  BillingRevenueScreen,
 } from './screens';
+import ReuseModal from './component/ReuseModal';
 
 type AnimatedTabIconProps = {
   name: string;
@@ -460,6 +466,39 @@ const MainTabs = createBottomTabNavigator({
         ),
       },
     },
+    UpdatePassword: {
+      screen: UpdatePasswordScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Update Password',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="emoji-events"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
+    Game: {
+      screen: GameScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarStyle: { display: 'none' },
+        tabBarLabel: 'Game',
+        tabBarIcon: ({ color, size, focused }) => (
+          <AnimatedTabIcon
+            name="sports-esports"
+            color={color}
+            size={size}
+            focused={focused}
+          />
+        ),
+      },
+    },
     Logout: {
       screen: ProfileScreen,
       options: {
@@ -612,6 +651,17 @@ const AdminTabs = createBottomTabNavigator({
         ),
       },
     },
+    AdminTeachers: {
+      screen: TeacherDirectoryScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Teachers',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="school" color={color} size={size} />
+        ),
+      },
+    },
     AdminNotifications: {
       screen: NotificationsScreen,
       options: {
@@ -665,6 +715,28 @@ const AdminTabs = createBottomTabNavigator({
         ),
       },
     },
+    UpdatePassword: {
+      screen: UpdatePasswordScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Update Password',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
+        ),
+      },
+    },
+    BillingRevenue: {
+      screen: BillingRevenueScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Achievements',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
+        ),
+      },
+    },
     // Tab — Settings / Logout
     Logout: {
       screen: ProfileScreen,
@@ -692,6 +764,7 @@ const RootStack = createNativeStackNavigator({
     Login: { screen: LoginScreen },
     Main: { screen: MainTabs }, // student flow
     Admin: { screen: AdminTabs }, // admin flow
+    // UpdatePassword: { screen: UpdatePasswordScreen },
   },
 });
 
@@ -738,6 +811,17 @@ function PushNotificationRegistrar() {
   }, [adminId, isAdmin, isStudent, studentId, updateStudentFcmToken]);
 
   return null;
+}
+
+function ModelUse() {
+  const modal = useSelector((state: RootState) => state.common.modal);
+  const dispatch = useDispatch();
+  return (
+    <ReuseModal
+      {...modal}
+      onCancel={modal.onCancel || (() => dispatch(resetModal()))}
+    />
+  );
 }
 
 function PushNotificationListener() {
@@ -812,6 +896,7 @@ function App() {
         <PushNotificationRegistrar />
         <PushNotificationListener />
         <Navigation />
+        <ModelUse />
       </SafeAreaProvider>
     </Provider>
   );

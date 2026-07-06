@@ -80,17 +80,12 @@ const ParticipantAvatar = ({
   fallbackName,
   size = 42,
 }: {
-  participant?: Pick<
-    MessageParticipant,
-    'name' | 'profilePic' | 'profilePicPath'
-  >;
+  participant?: Pick<MessageParticipant, 'name' | 'profilePicPath'>;
   fallbackName: string;
   size?: number;
 }) => {
   const name = participant?.name || fallbackName;
-  const imageUrl = getFileUrl(
-    participant?.profilePicPath ?? participant?.profilePic,
-  );
+  const imageUrl = getFileUrl(participant?.profilePicPath);
 
   return (
     <View
@@ -285,7 +280,6 @@ export default function AdminMessageScreen() {
           name: selectedMessageStudent.name,
           code: selectedMessageStudent.studentId,
           model: 'Student',
-          profilePic: selectedMessageStudent.profilePic,
           profilePicPath: selectedMessageStudent.profilePicPath,
         },
         messages: [],

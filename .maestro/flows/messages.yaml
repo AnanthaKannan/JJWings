@@ -1,0 +1,5 @@
+- tapOn: "Message"
+- extendedWaitUntil:
+    visible: "Messages"
+    timeout: 15000
+- assertVisible: "Messages"

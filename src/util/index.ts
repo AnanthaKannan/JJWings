@@ -1,0 +1,16 @@
+export const COLORS = {
+  overlay: 'rgba(0,0,0,0.45)',
+  card: '#FFFFFF',
+  primary: '#1A4FA8',
+  primaryLight: '#EAF0FB',
+  success: '#22A86A',
+  successLight: '#E6F9F0',
+  danger: '#E03A3A',
+  dangerLight: '#FEE2E2',
+  textDark: '#1A2340',
+  textMid: '#4A5568',
+  textCancel: '#6B7280',
+  iconBg: '#EAF0FB',
+  dot1: '#F6C94E',
+  dot2: '#6EC6F5',
+};

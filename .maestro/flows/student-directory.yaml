@@ -1,0 +1,5 @@
+- extendedWaitUntil:
+    visible: "Student Directory"
+    timeout: 15000
+- assertVisible: "Student Directory"
+- assertVisible: "Search by name..."

@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Alert,
   FlatList,
@@ -6,7 +12,6 @@ import {
   Pressable,
   RefreshControl,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -22,8 +27,14 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import { AdminHeader, LoadingState, StudentHeader } from '../component';
 import {
+  AdminHeader,
+  BottomLodeMore,
+  LoadingState,
+  StudentHeader,
+} from '../component';
+import {
+  Homework,
   QuestionTask,
   useAssignPracticeQuestionsMutation,
   useGetHomeworksQuery,
@@ -36,6 +47,7 @@ import { HomeworkState } from '../util/enum';
 import { BadgeType } from '../util/types';
 
 type PracticeFilter = BadgeType | 'QUESTIONS';
+type PracticeListItem = Homework | QuestionTask;
 
 interface PracticeCardProps {
   questionId: string;
@@ -185,7 +197,10 @@ function PracticeCard({
           </TouchableOpacity>
           {state === HomeworkState.NEW && onUnassign && (
             <TouchableOpacity
-              style={[styles.unassignBtn, isUnassigning && styles.disabledButton]}
+              style={[
+                styles.unassignBtn,
+                isUnassigning && styles.disabledButton,
+              ]}
               activeOpacity={0.85}
               onPress={() => onUnassign(questionId)}
               disabled={isUnassigning}
@@ -202,7 +217,9 @@ function PracticeCard({
         <View
           style={[
             styles.progressFill,
-            { width: `${(result.length / Math.max(question.length, 1)) * 100}%` },
+            {
+              width: `${(result.length / Math.max(question.length, 1)) * 100}%`,
+            },
           ]}
         />
       </View>
@@ -272,6 +289,7 @@ export default function PracticeScreen() {
   );
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
   const [assigningQuestionId, setAssigningQuestionId] = useState<string | null>(
     null,
   );
@@ -294,7 +312,7 @@ export default function PracticeScreen() {
   }, [isAdminReview, loggedInStudentLevel]);
 
   const {
-    data: homeworks,
+    data: homeworksData,
     isLoading: isHomeworksLoading,
     isFetching: isHomeworksFetching,
     refetch: refetchHomeworks,
@@ -303,6 +321,7 @@ export default function PracticeScreen() {
       studentId: studentId ?? '',
       state: isQuestionsTab ? HomeworkState.NEW : selectedFilter,
       type: 'practice',
+      page,
     },
     {
       skip: !isFocused || !studentId || isQuestionsTab,
@@ -311,7 +330,7 @@ export default function PracticeScreen() {
 
   const cleanSearch = search.trim();
   const {
-    data: practiceQuestions,
+    data: practiceQuestionsData,
     isLoading: isQuestionsLoading,
     isFetching: isQuestionsFetching,
     refetch: refetchQuestions,
@@ -319,6 +338,7 @@ export default function PracticeScreen() {
     {
       ...(typeof selectedLevel === 'number' ? { level: selectedLevel } : {}),
       ...(cleanSearch.length > 0 ? { search: cleanSearch } : {}),
+      page,
     },
     {
       skip: !isFocused || !isQuestionsTab,
@@ -326,10 +346,14 @@ export default function PracticeScreen() {
   );
   const [assignPracticeQuestions] = useAssignPracticeQuestionsMutation();
   const [unassignPracticeQuestions] = useUnassignPracticeQuestionsMutation();
+  const practiceQuestions = useMemo(
+    () => practiceQuestionsData?.questions ?? [],
+    [practiceQuestionsData?.questions],
+  );
 
   const filteredQuestions = useMemo(() => {
     const searchText = search.trim().toLowerCase();
-    return (practiceQuestions ?? []).filter(question => {
+    return practiceQuestions.filter(question => {
       const matchesLevel =
         selectedLevel === null || Number(question.level) === selectedLevel;
       const questionText = question.question.join(' ').toLowerCase();
@@ -346,25 +370,45 @@ export default function PracticeScreen() {
   const showLoader =
     isFocused &&
     !refreshing &&
-    (isQuestionsTab
-      ? isQuestionsLoading || isQuestionsFetching
-      : isHomeworksLoading || isHomeworksFetching);
-  const filteredHomeworks = homeworks ?? [];
+    (isQuestionsTab ? isQuestionsLoading : isHomeworksLoading);
+  const filteredHomeworks = homeworksData?.homeworks ?? [];
+  const activeMeta = isQuestionsTab
+    ? practiceQuestionsData?.meta
+    : homeworksData?.meta;
+  const isLoadingMore =
+    page > 1 &&
+    (isQuestionsTab ? isQuestionsFetching : isHomeworksFetching) &&
+    !showLoader;
+  const hasMorePages = activeMeta?.hasNextPage === true;
+
+  useEffect(() => {
+    setPage(1);
+  }, [cleanSearch, isQuestionsTab, selectedFilter, selectedLevel, studentId]);
 
   const onRefresh = useCallback(async () => {
     if (!studentId && !isQuestionsTab) return;
 
     setRefreshing(true);
     try {
-      if (isQuestionsTab) {
-        await refetchQuestions();
+      if (page === 1) {
+        if (isQuestionsTab) {
+          await refetchQuestions();
+        } else {
+          await refetchHomeworks();
+        }
       } else {
-        await refetchHomeworks();
+        setPage(1);
       }
     } finally {
       setRefreshing(false);
     }
-  }, [isQuestionsTab, refetchHomeworks, refetchQuestions, studentId]);
+  }, [isQuestionsTab, page, refetchHomeworks, refetchQuestions, studentId]);
+
+  const onReachBottom = useCallback(() => {
+    if (!isLoadingMore && hasMorePages && !showLoader) {
+      setPage(prev => prev + 1);
+    }
+  }, [hasMorePages, isLoadingMore, showLoader]);
 
   const handleAssignQuestion = async (questionId: string) => {
     if (!studentId) return;
@@ -375,7 +419,10 @@ export default function PracticeScreen() {
         questionIds: [questionId],
         studentId,
       }).unwrap();
-      Alert.alert('Practice Assigned', 'The question is added to your practice.');
+      Alert.alert(
+        'Practice Assigned',
+        'The question is added to your practice.',
+      );
       setSelectedFilter(HomeworkState.NEW);
     } catch {
       Alert.alert('Assign Failed', 'Unable to assign this practice question.');
@@ -430,8 +477,16 @@ export default function PracticeScreen() {
         <StudentHeader header="Practice" headerBackgroundColor="#EEF2FF" />
       )}
 
-      <ScrollView
+      <FlatList
         style={styles.scroll}
+        data={
+          (showLoader
+            ? []
+            : isQuestionsTab
+            ? filteredQuestions
+            : filteredHomeworks) as PracticeListItem[]
+        }
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -443,124 +498,126 @@ export default function PracticeScreen() {
             progressBackgroundColor="#EEF2FF"
           />
         }
-      >
-        <View style={styles.filterBar}>
-          {FILTERS.map(filter => {
-            const isSelected = selectedFilter === filter.value;
+        onEndReached={onReachBottom}
+        onEndReachedThreshold={0.2}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.filterBar}>
+              {FILTERS.map(filter => {
+                const isSelected = selectedFilter === filter.value;
 
-            return (
-              <TouchableOpacity
-                key={filter.value}
-                style={[
-                  styles.filterButton,
-                  isSelected && styles.filterButtonActive,
-                ]}
-                activeOpacity={0.85}
-                onPress={() => setSelectedFilter(filter.value)}
-              >
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    isSelected && styles.filterButtonTextActive,
-                  ]}
-                >
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {isQuestionsTab && (
-          <View style={styles.questionFilters}>
-            <View style={styles.searchWrapper}>
-              <MaterialIcons name="search" size={18} color="#64748B" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search questions..."
-                placeholderTextColor="#94A3B8"
-                value={search}
-                onChangeText={setSearch}
-              />
-              {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch('')}>
-                  <MaterialIcons name="close" size={18} color="#94A3B8" />
-                </TouchableOpacity>
-              )}
+                return (
+                  <TouchableOpacity
+                    key={filter.value}
+                    style={[
+                      styles.filterButton,
+                      isSelected && styles.filterButtonActive,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setSelectedFilter(filter.value);
+                      setPage(1);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.filterButtonText,
+                        isSelected && styles.filterButtonTextActive,
+                      ]}
+                    >
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <TouchableOpacity
-              style={[
-                styles.levelFilterButton,
-                selectedLevel !== null && styles.levelFilterButtonActive,
-              ]}
-              activeOpacity={0.82}
-              onPress={() => setIsLevelPickerOpen(true)}
-            >
-              <MaterialIcons name="filter-list" size={18} color="#64748B" />
-              <Text style={styles.levelFilterText}>
-                {selectedLevel === null ? 'All' : `L${selectedLevel}`}
-              </Text>
-            </TouchableOpacity>
+
+            {isQuestionsTab && (
+              <View style={styles.questionFilters}>
+                <View style={styles.searchWrapper}>
+                  <MaterialIcons name="search" size={18} color="#64748B" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search questions..."
+                    placeholderTextColor="#94A3B8"
+                    value={search}
+                    onChangeText={setSearch}
+                  />
+                  {search.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearch('')}>
+                      <MaterialIcons name="close" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.levelFilterButton,
+                    selectedLevel !== null && styles.levelFilterButtonActive,
+                  ]}
+                  activeOpacity={0.82}
+                  onPress={() => setIsLevelPickerOpen(true)}
+                >
+                  <MaterialIcons name="filter-list" size={18} color="#64748B" />
+                  <Text style={styles.levelFilterText}>
+                    {selectedLevel === null ? 'All' : `L${selectedLevel}`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {showLoader && (
+              <LoadingState
+                label={
+                  isQuestionsTab
+                    ? 'Loading questions...'
+                    : 'Loading practice...'
+                }
+              />
+            )}
           </View>
-        )}
-
-        {showLoader && (
-          <LoadingState
-            label={isQuestionsTab ? 'Loading questions...' : 'Loading practice...'}
-          />
-        )}
-
-        {!showLoader &&
-          !isQuestionsTab &&
-          filteredHomeworks.map(task => (
+        }
+        renderItem={({ item }) =>
+          isQuestionsTab ? (
+            <PracticeQuestionCard
+              item={item as QuestionTask}
+              isAssigning={assigningQuestionId === item.id}
+              onAssign={handleAssignQuestion}
+            />
+          ) : (
             <PracticeCard
-              key={task.id}
-              {...task}
-              homeworkId={task.id}
-              question={task?.question?.question ?? []}
-              marks={task?.question?.marks}
-              isUnassigning={unassigningQuestionId === task.questionId}
+              {...(item as Homework)}
+              homeworkId={item.id}
+              question={(item as Homework)?.question?.question ?? []}
+              marks={(item as Homework)?.question?.marks}
+              isUnassigning={unassigningQuestionId === item.questionId}
               onUnassign={handleUnassignQuestion}
             />
-          ))}
-
-        {!showLoader && isQuestionsTab && (
-          <FlatList
-            data={filteredQuestions}
-            keyExtractor={item => item.id}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <PracticeQuestionCard
-                item={item}
-                isAssigning={assigningQuestionId === item.id}
-                onAssign={handleAssignQuestion}
-              />
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No practice questions found</Text>
-              </View>
-            }
-          />
-        )}
-
-        {!showLoader && !isQuestionsTab && filteredHomeworks.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              No {selectedFilter.toLowerCase()} practice
-            </Text>
-            {!isAdminReview && selectedFilter === HomeworkState.NEW && (
-              <TouchableOpacity
-                style={styles.emptyAction}
-                activeOpacity={0.85}
-                onPress={() => setSelectedFilter('QUESTIONS')}
-              >
-                <Text style={styles.emptyActionText}>Find Questions</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </ScrollView>
+          )
+        }
+        ListEmptyComponent={
+          !showLoader ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>
+                {isQuestionsTab
+                  ? 'No practice questions found'
+                  : `No ${selectedFilter.toLowerCase()} practice`}
+              </Text>
+              {!isQuestionsTab &&
+                !isAdminReview &&
+                selectedFilter === HomeworkState.NEW && (
+                  <TouchableOpacity
+                    style={styles.emptyAction}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedFilter('QUESTIONS')}
+                  >
+                    <Text style={styles.emptyActionText}>Find Questions</Text>
+                  </TouchableOpacity>
+                )}
+            </View>
+          ) : null
+        }
+        ListFooterComponent={<BottomLodeMore loading={hasMorePages} />}
+      />
 
       <Modal
         visible={isLevelPickerOpen}

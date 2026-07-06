@@ -1,0 +1,6 @@
+- tapOn: "Homework"
+- extendedWaitUntil:
+    visible: "Homework Library"
+    timeout: 15000
+- assertVisible: "Homework Library"
+- assertVisible: "Search homework"

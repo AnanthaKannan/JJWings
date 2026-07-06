@@ -85,12 +85,16 @@ const formatHorizontalQuestion = (question = '') => {
 };
 
 const getOralSpeechDuration = (question = '') => {
-  const wordCount = formatQuestionForSpeech(question).split(/\s+/).filter(Boolean)
-    .length;
+  const wordCount = formatQuestionForSpeech(question)
+    .split(/\s+/)
+    .filter(Boolean).length;
   return Math.min(Math.max((wordCount * 430) / ORAL_SPEECH_RATE, 1800), 4200);
 };
 
-export default function QuizScreen({ timer, returnRouteName }: QuizScreenProps) {
+export default function QuizScreen({
+  timer,
+  returnRouteName,
+}: QuizScreenProps) {
   const selResult = useSelector((state: RootState) => state.common.result);
   const selAnswer = useSelector((state: RootState) => state.common.answer);
   const selMarks = useSelector((state: RootState) => state.common.marks);
@@ -145,16 +149,19 @@ export default function QuizScreen({ timer, returnRouteName }: QuizScreenProps) 
     setIsSpeaking(false);
   }, []);
 
-  const playOralQuestion = useCallback((question: string) => {
-    if (!speakOralQuestion(question)) return;
+  const playOralQuestion = useCallback(
+    (question: string) => {
+      if (!speakOralQuestion(question)) return;
 
-    stopSpeakerAnimation();
-    setIsSpeaking(true);
-    speechTimerRef.current = setTimeout(
-      stopSpeakerAnimation,
-      getOralSpeechDuration(question),
-    );
-  }, [stopSpeakerAnimation]);
+      stopSpeakerAnimation();
+      setIsSpeaking(true);
+      speechTimerRef.current = setTimeout(
+        stopSpeakerAnimation,
+        getOralSpeechDuration(question),
+      );
+    },
+    [stopSpeakerAnimation],
+  );
 
   useEffect(() => {
     if (!isSpeaking) {
@@ -218,6 +225,7 @@ export default function QuizScreen({ timer, returnRouteName }: QuizScreenProps) 
     if (updatedData.answer.length === updatedData.questions.length) {
       // consider all the question are attend
       // apiCall
+      setModalVisible(true);
       await updateHomework({
         homeworkId,
         state: HomeworkState.COMPLETED,
@@ -231,7 +239,6 @@ export default function QuizScreen({ timer, returnRouteName }: QuizScreenProps) 
         timeTaken: formatTime(timer),
         accuracy: formatAccuracy(updatedData.result),
       });
-      setModalVisible(true);
     } else {
       await updateHomework({
         homeworkId,
@@ -517,7 +524,7 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   questionText: {
-    fontSize: 38,
+    fontSize: 30,
     fontWeight: '800',
     color: '#1A2259',
     letterSpacing: 1,

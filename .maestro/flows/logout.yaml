@@ -1,0 +1,9 @@
+- tapOn: "Logout"
+- extendedWaitUntil:
+    visible: "Ready to fly away?"
+    timeout: 15000
+- tapOn: "Yes, Logout"
+- extendedWaitUntil:
+    visible: "Explorer ID"
+    timeout: 15000
+- assertVisible: "Explorer ID"

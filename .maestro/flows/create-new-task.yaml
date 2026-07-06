@@ -1,0 +1,7 @@
+- tapOn: "new Task"
+- extendedWaitUntil:
+    visible: "Create New Task"
+    timeout: 15000
+- assertVisible: "Create New Task"
+- assertVisible: "TASK IDENTIFIER"
+- assertVisible: "e.g. 5A-01"

@@ -21,7 +21,12 @@ import {
 } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import {
+  AdminHeader,
+  BottomLodeMore,
+  EmptyData,
+  LoadingOverlay,
+} from '../component';
 import {
   useAssignHomeworkMutation,
   useGetAvailableQuestionsQuery,
@@ -131,11 +136,17 @@ export default function AssignHomeworkScreen() {
     useState<AssignmentTypeFilter>('homework');
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const { data: tasks = [], isLoading } = useGetAvailableQuestionsQuery(
+  const [page, setPage] = useState(1);
+  const {
+    data: tasksData,
+    isLoading,
+    isFetching,
+  } = useGetAvailableQuestionsQuery(
     {
       studentId: studentId ?? '',
       type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
+      page,
     },
     {
       skip: !isFocused || !studentId,
@@ -146,24 +157,31 @@ export default function AssignHomeworkScreen() {
   const showLoader = isFocused && isLoading;
   const selectedTypeLabel = getAssignmentTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getAssignmentTypeLabel(typeFilter);
+  const tasks = tasksData?.questions ?? [];
+  const hasMorePages = tasksData?.meta.hasNextPage === true;
+  const isLoadingMore = isFetching && !isLoading && page > 1;
 
   useEffect(() => {
     setSelectedLevel(studentLevel);
     setTypeFilter('homework');
     setSelectedIds(new Set());
+    setPage(1);
   }, [studentId, studentLevel]);
 
-  const filtered = tasks
-    .filter(task => {
-      return (
-        task.id.toLowerCase().includes(search.toLowerCase()) ||
-        task.questionId?.toLowerCase().includes(search.toLowerCase()) ||
-        task.question.some(question =>
-          question.toLowerCase().includes(search.toLowerCase()),
-        )
-      );
-    })
-    .sort((a, b) => a.id.localeCompare(b.id));
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter, selectedLevel]);
+
+  const filtered = tasks.filter(task => {
+    return (
+      task.id.toLowerCase().includes(search.toLowerCase()) ||
+      task.questionId?.toLowerCase().includes(search.toLowerCase()) ||
+      task.question.some(question =>
+        question.toLowerCase().includes(search.toLowerCase()),
+      )
+    );
+  });
+  // .sort((a, b) => a.id.localeCompare(b.id));
   const hasAvailableTasks = filtered.length > 0;
   const allAvailableSelected =
     hasAvailableTasks && filtered.every(task => selectedIds.has(task.id));
@@ -190,6 +208,7 @@ export default function AssignHomeworkScreen() {
   const handleTypeFilterChange = (type: AssignmentTypeFilter) => {
     setTypeFilter(type);
     setSelectedIds(new Set());
+    setPage(1);
   };
 
   const handleConfirm = async () => {
@@ -243,6 +262,12 @@ export default function AssignHomeworkScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          onEndReached={() => {
+            if (!showLoader && !isLoadingMore && hasMorePages) {
+              setPage(prev => prev + 1);
+            }
+          }}
+          onEndReachedThreshold={0.2}
           ListHeaderComponent={
             <>
               <View style={styles.titleSection}>
@@ -336,7 +361,9 @@ export default function AssignHomeworkScreen() {
                   </Text>
                 </View>
                 <View style={styles.totalBadge}>
-                  <Text style={styles.totalBadgeNum}>{filtered.length}</Text>
+                  <Text style={styles.totalBadgeNum}>
+                    {tasksData?.meta?.total ?? 0}
+                  </Text>
                   <Text style={styles.totalBadgeLabel}>Total</Text>
                 </View>
                 <TouchableOpacity
@@ -360,15 +387,15 @@ export default function AssignHomeworkScreen() {
             />
           )}
           ListEmptyComponent={
-            showLoader ? (
-              <LoadingState label="Loading tasks..." />
-            ) : (
-              <View style={styles.emptyState}>
-                <MaterialIcons name="search-off" size={40} color="#CBD5E0" />
-                <Text style={styles.emptyText}>No tasks found</Text>
-              </View>
-            )
+            <EmptyData
+              showLoader={showLoader}
+              loadingMessage="Loading tasks..."
+              emptyTitle="No questions found"
+              emptyText=""
+              icon="search-off"
+            />
           }
+          ListFooterComponent={<BottomLodeMore loading={hasMorePages} />}
         />
 
         {selectedIds.size > 0 && (
@@ -463,10 +490,7 @@ export default function AssignHomeworkScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-      <LoadingOverlay
-        visible={isAssigning}
-        label="Assigning homework..."
-      />
+      <LoadingOverlay visible={isAssigning} label="Assigning homework..." />
     </SafeAreaView>
   );
 }

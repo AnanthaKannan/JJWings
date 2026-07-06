@@ -20,14 +20,12 @@ Password: Welcome123
 ```adb devices
 ```
 ### connect to wifi
-```adb tcpip 5555
-adb connect 10.70.190.83:5555
 ```
+adb tcpip 5555
+adb connect <phone_ip>:5555
 
-## how to get device Ipaddress
-1. Go to Settings on your Android device.
-2. Navigate to "Network & Internet" or "Wi-Fi" settings.
-3. Tap on the connected Wi-Fi network to view its details.
+to get the phone_ip, select the wifi network on the mobile and click on it, then scroll down to find the IP address. It should be something like 192.168.x.x
+```
 
 ## Keystore
 keystore.properties - android\keystore.properties

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -16,7 +16,12 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import {
+  AdminHeader,
+  BottomLodeMore,
+  EmptyData,
+  LoadingOverlay,
+} from '../component';
 import {
   AssignmentStudentResult,
   AssignHomeworkResult,
@@ -36,7 +41,9 @@ const getAssignmentTypeIcon = (type: AssignmentTypeFilter) =>
   type === 'exam' ? 'fact-check' : 'assignment';
 
 const getStudentLabel = (student: AssignmentStudentResult) =>
-  `${student.name || 'Student'}${student.studentId ? ` (${student.studentId})` : ''}`;
+  `${student.name || 'Student'}${
+    student.studentId ? ` (${student.studentId})` : ''
+  }`;
 
 const getQuestionLabels = (
   questions: AssignmentStudentResult['assignedQuestions'],
@@ -91,6 +98,7 @@ export default function AssignByLevelScreen() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] =
     useState<AssignmentTypeFilter>('homework');
+  const [page, setPage] = useState(1);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(
     new Set(),
   );
@@ -101,13 +109,14 @@ export default function AssignByLevelScreen() {
 
   const cleanSearch = search.trim();
   const {
-    data: questions = [],
+    data: questionsData,
     isLoading,
     isFetching,
   } = useGetQuestionsQuery(
     {
       type: typeFilter,
       ...(cleanSearch.length > 0 ? { search: cleanSearch } : {}),
+      page,
     },
     {
       skip: !isFocused,
@@ -115,24 +124,35 @@ export default function AssignByLevelScreen() {
   );
   const [assignHomework, { isLoading: isAssigning }] =
     useAssignHomeworkMutation();
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter, cleanSearch]);
+
+  const questions = useMemo(
+    () => questionsData?.questions ?? [],
+    [questionsData?.questions],
+  );
+  const hasMorePages = questionsData?.meta.hasNextPage === true;
+  const isLoadingMore = isFetching && !isLoading && page > 1;
 
   const filteredQuestions = useMemo(() => {
     const searchText = cleanSearch.toLowerCase();
 
-    return questions
-      .filter(question => {
-        if (searchText.length === 0) return true;
+    return questions.filter(question => {
+      if (searchText.length === 0) return true;
 
-        return (
-          question.id.toLowerCase().includes(searchText) ||
-          question.questionId?.toLowerCase().includes(searchText) ||
-          question.question.some(item =>
-            item.toLowerCase().includes(searchText),
-          ) ||
-          String(question.level ?? '').includes(searchText)
-        );
-      })
-      .sort((a, b) => (a.questionId ?? a.id).localeCompare(b.questionId ?? b.id));
+      return (
+        question.id.toLowerCase().includes(searchText) ||
+        question.questionId?.toLowerCase().includes(searchText) ||
+        question.question.some(item =>
+          item.toLowerCase().includes(searchText),
+        ) ||
+        String(question.level ?? '').includes(searchText)
+      );
+    });
+    // .sort((a, b) =>
+    //   (a.questionId ?? a.id).localeCompare(b.questionId ?? b.id),
+    // );
   }, [cleanSearch, questions]);
 
   const hasQuestions = filteredQuestions.length > 0;
@@ -141,7 +161,7 @@ export default function AssignByLevelScreen() {
     filteredQuestions.every(question => selectedQuestionIds.has(question.id));
   const selectedTypeLabel = getAssignmentTypeLabel(typeFilter).toLowerCase();
   const canAssign = selectedQuestionIds.size > 0 && selectedLevels.size > 0;
-  const showLoader = isFocused && (isLoading || isFetching);
+  const showLoader = isFocused && isLoading && questions.length === 0;
   const selectedLevelList = useMemo(
     () => Array.from(selectedLevels).sort((a, b) => a - b),
     [selectedLevels],
@@ -150,8 +170,8 @@ export default function AssignByLevelScreen() {
     selectedLevelList.length === 0
       ? 'Select levels'
       : selectedLevelList.length <= 4
-        ? selectedLevelList.map(level => `L${level}`).join(', ')
-        : `${selectedLevelList.length} levels selected`;
+      ? selectedLevelList.map(level => `L${level}`).join(', ')
+      : `${selectedLevelList.length} levels selected`;
   const newlyAssignedStudents = assignmentResult
     ? assignmentResult.students.filter(
         student => student.assignedQuestionIds.length > 0,
@@ -190,6 +210,13 @@ export default function AssignByLevelScreen() {
   const handleTypeChange = (type: AssignmentTypeFilter) => {
     setTypeFilter(type);
     setSelectedQuestionIds(new Set());
+    setPage(1);
+  };
+
+  const onReachBottom = () => {
+    if (!showLoader && !isLoadingMore && hasMorePages) {
+      setPage(prev => prev + 1);
+    }
   };
 
   const handleAssign = async () => {
@@ -227,6 +254,8 @@ export default function AssignByLevelScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        onEndReached={onReachBottom}
+        onEndReachedThreshold={0.4}
         ListHeaderComponent={
           <>
             <View style={styles.searchBar}>
@@ -305,14 +334,20 @@ export default function AssignByLevelScreen() {
                       : 'Tap to edit selected levels'}
                   </Text>
                 </View>
-                <MaterialIcons name="keyboard-arrow-down" size={22} color="#64748B" />
+                <MaterialIcons
+                  name="keyboard-arrow-down"
+                  size={22}
+                  color="#64748B"
+                />
               </TouchableOpacity>
             </View>
 
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={styles.sectionTitle}>Questions</Text>
-                <Text style={styles.sectionMeta}>{filteredQuestions.length} total</Text>
+                <Text style={styles.sectionMeta}>
+                  {filteredQuestions.length} total
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.selectAllButton}
@@ -335,14 +370,16 @@ export default function AssignByLevelScreen() {
           />
         )}
         ListEmptyComponent={
-          showLoader ? (
-            <LoadingState label="Loading questions..." />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="search-off" size={38} color="#CBD5E1" />
-              <Text style={styles.emptyText}>No questions found</Text>
-            </View>
-          )
+          <EmptyData
+            showLoader={showLoader}
+            loadingMessage="Loading questions..."
+            emptyTitle="No questions found"
+            emptyText=""
+            icon="search-off"
+          />
+        }
+        ListFooterComponent={
+          <BottomLodeMore loading={questionsData?.meta.hasNextPage} />
         }
       />
 
@@ -352,12 +389,15 @@ export default function AssignByLevelScreen() {
             <Text style={styles.footerLabel}>READY</Text>
             <Text style={styles.footerText}>
               {selectedQuestionIds.size} question
-              {selectedQuestionIds.size > 1 ? 's' : ''} to{' '}
-              {selectedLevels.size} level{selectedLevels.size > 1 ? 's' : ''}
+              {selectedQuestionIds.size > 1 ? 's' : ''} to {selectedLevels.size}{' '}
+              level{selectedLevels.size > 1 ? 's' : ''}
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.assignButton, isAssigning && styles.assignButtonBusy]}
+            style={[
+              styles.assignButton,
+              isAssigning && styles.assignButtonBusy,
+            ]}
             activeOpacity={0.86}
             onPress={handleAssign}
             disabled={isAssigning}
@@ -421,7 +461,11 @@ export default function AssignByLevelScreen() {
                       Level {level}
                     </Text>
                     {isSelected ? (
-                      <MaterialIcons name="check-circle" size={18} color="#4F46E5" />
+                      <MaterialIcons
+                        name="check-circle"
+                        size={18}
+                        color="#4F46E5"
+                      />
                     ) : (
                       <View style={styles.levelOptionEmpty} />
                     )}
@@ -461,10 +505,16 @@ export default function AssignByLevelScreen() {
             <View style={styles.resultModalHeader}>
               <View style={styles.resultTitleRow}>
                 <View style={styles.resultIconBox}>
-                  <MaterialIcons name="assignment-turned-in" size={20} color="#15803D" />
+                  <MaterialIcons
+                    name="assignment-turned-in"
+                    size={20}
+                    color="#15803D"
+                  />
                 </View>
                 <View style={styles.resultTitleCopy}>
-                  <Text style={styles.resultModalTitle}>Assignment Details</Text>
+                  <Text style={styles.resultModalTitle}>
+                    Assignment Details
+                  </Text>
                   <Text style={styles.resultModalSubtitle}>
                     {assignmentResult?.message ?? 'Questions assigned'}
                   </Text>
@@ -500,8 +550,10 @@ export default function AssignByLevelScreen() {
             </View>
             <Text style={styles.resultCountSummary}>
               {assignmentResult?.assignedCount ?? 0} question assignment
-              {(assignmentResult?.assignedCount ?? 0) === 1 ? '' : 's'} added,{' '}
-              {assignmentResult?.skippedCount ?? 0} already existed.
+              {(assignmentResult?.assignedCount ?? 0) === 1
+                ? ''
+                : 's'} added, {assignmentResult?.skippedCount ?? 0} already
+              existed.
             </Text>
 
             <ScrollView
@@ -522,13 +574,19 @@ export default function AssignByLevelScreen() {
                     );
 
                     return (
-                      <View key={`assigned-${student.id}`} style={styles.resultStudentRow}>
+                      <View
+                        key={`assigned-${student.id}`}
+                        style={styles.resultStudentRow}
+                      >
                         <View style={styles.resultStudentTop}>
                           <Text style={styles.resultStudentName}>
                             {getStudentLabel(student)}
                           </Text>
                           <Text style={styles.resultStudentLevel}>
-                            Level {typeof student.level === 'number' ? student.level : '-'}
+                            Level{' '}
+                            {typeof student.level === 'number'
+                              ? student.level
+                              : '-'}
                           </Text>
                         </View>
                         <Text style={styles.resultQuestionText}>
@@ -557,13 +615,19 @@ export default function AssignByLevelScreen() {
                     );
 
                     return (
-                      <View key={`skipped-${student.id}`} style={styles.resultStudentRow}>
+                      <View
+                        key={`skipped-${student.id}`}
+                        style={styles.resultStudentRow}
+                      >
                         <View style={styles.resultStudentTop}>
                           <Text style={styles.resultStudentName}>
                             {getStudentLabel(student)}
                           </Text>
                           <Text style={styles.resultStudentLevel}>
-                            Level {typeof student.level === 'number' ? student.level : '-'}
+                            Level{' '}
+                            {typeof student.level === 'number'
+                              ? student.level
+                              : '-'}
                           </Text>
                         </View>
                         <Text style={styles.resultQuestionText}>
