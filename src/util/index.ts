@@ -14,3 +14,12 @@ export const COLORS = {
   dot1: '#F6C94E',
   dot2: '#6EC6F5',
 };
+
+export function convertDateFormat(dateString: string | undefined) {
+  if (!dateString) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(dateString));
+}

@@ -4,6 +4,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { HomeworkState } from '../util/enum';
 import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
 import { baseQuery, API_URL } from './baseQuery';
+import { OrgDetailResult, paymentListResult } from './apiType';
 
 const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 20;
@@ -78,6 +79,13 @@ type ApiStudentsResponse = {
   meta: ApiMeta;
 };
 
+export type OrderResponse = {
+  currency: number;
+  keyId: string;
+  amount: number;
+  id: string;
+};
+
 type ApiSameDeviceStudentsResponse = {
   students: ApiStudent[];
   count: number;
@@ -109,6 +117,10 @@ type ApiNotification = {
 type ApiNotificationsResponse = {
   data: ApiNotification[];
   meta: ApiMeta;
+};
+
+type CreateOrderResponse = {
+  data: OrderResponse;
 };
 
 type ApiMessageParticipant = {
@@ -612,6 +624,12 @@ type QuestionsResult = {
   meta: ApiMeta;
 };
 
+export type AddPaymentBody = {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+};
+
 type UpdateQuestionArg = {
   id: string;
   questionId: string;
@@ -949,6 +967,7 @@ export const jjWingsApi = createApi({
     'Ranking',
     'FileUploads',
     'Teachers',
+    'Payment',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
@@ -1635,10 +1654,6 @@ export const jjWingsApi = createApi({
         method: 'DELETE',
       }),
       transformResponse: () => 'success',
-      // invalidatesTags: (_result, _error, { questionId }) => [
-      //   { type: 'Question', id: questionId },
-      //   'Questions',
-      // ],
     }),
 
     updateQuestion: builder.mutation<string, UpdateQuestionArg>({
@@ -1648,11 +1663,6 @@ export const jjWingsApi = createApi({
         body: { questionId, level },
       }),
       transformResponse: () => 'success',
-      // invalidatesTags: (_result, _error, { id }) => [
-      //   { type: 'Question', id },
-      //   { type: 'Questions', id: 'LIST' },
-      //   'Questions',
-      // ],
     }),
 
     assignHomework: builder.mutation<AssignHomeworkResult, AssignHomeworkArg>({
@@ -1817,12 +1827,53 @@ export const jjWingsApi = createApi({
         { type: 'Ranking', id: 'LIST' },
       ],
     }),
+
+    createOrder: builder.mutation<OrderResponse, null>({
+      query: () => ({
+        url: '/admin/payment/order',
+        method: 'POST',
+        body: {},
+      }),
+      transformResponse: (res: CreateOrderResponse) => ({
+        amount: res.data.amount,
+        currency: res.data.currency,
+        id: res.data.id,
+        keyId: res.data.keyId,
+      }),
+    }),
+
+    addPaymentStatus: builder.mutation<string, AddPaymentBody>({
+      query: body => ({
+        url: '/admin/payment/webhook',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Payment', id: 'CELEBRATION' }],
+    }),
+
+    getOrgDetail: builder.query<OrgDetailResult, null>({
+      query: () => ({
+        url: '/admin/org',
+        method: 'GET',
+      }),
+    }),
+
+    billingList: builder.query<paymentListResult, null>({
+      query: () => ({
+        url: '/admin/payment',
+        method: 'GET',
+      }),
+      providesTags: [{ type: 'Payment', id: 'CELEBRATION' }],
+    }),
   }),
 });
 
 export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
+  useGetOrgDetailQuery,
+  useBillingListQuery,
   useSwitchStudentLoginMutation,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
@@ -1869,4 +1920,6 @@ export const {
   useGetAchievementsQuery,
   useUploadAchievementMutation,
   useDeleteAchievementMutation,
+  useCreateOrderMutation,
+  useAddPaymentStatusMutation,
 } = jjWingsApi;

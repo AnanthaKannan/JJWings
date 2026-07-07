@@ -78,7 +78,7 @@ const adminNavItems: AdminNavItem[] = [
     routeName: 'AdminProfile',
   },
   {
-    label: 'Billing',
+    label: 'Payments & Invoices',
     icon: 'attach-money',
     routeName: 'BillingRevenue',
     requiresRole: 'superadmin',
