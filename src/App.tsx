@@ -64,6 +64,7 @@ import {
   QuestionPaperScreen,
   AchievementsScreen,
   BillingRevenueScreen,
+  CreateAcademyScreen,
 } from './screens';
 import ReuseModal from './component/ReuseModal';
 
@@ -764,7 +765,7 @@ const RootStack = createNativeStackNavigator({
     Login: { screen: LoginScreen },
     Main: { screen: MainTabs }, // student flow
     Admin: { screen: AdminTabs }, // admin flow
-    // UpdatePassword: { screen: UpdatePasswordScreen },
+    CreateAcademy: { screen: CreateAcademyScreen },
   },
 });
 

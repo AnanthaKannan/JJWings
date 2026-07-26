@@ -284,6 +284,19 @@ export default function LoginScreen() {
               </Text>
             )}
           </View>
+
+          <TouchableOpacity
+            style={styles.createAcademyLink}
+            onPress={() => navigation.navigate('CreateAcademy')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.createAcademyLinkText}>
+              New to JJWings?{' '}
+              <Text style={styles.createAcademyLinkTextBold}>
+                Create your Academy
+              </Text>
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -430,5 +443,18 @@ const styles = StyleSheet.create({
     color: color.RED,
     textAlign: 'center',
     marginTop: 10,
+  },
+  // add to LoginScreen's StyleSheet
+  createAcademyLink: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  createAcademyLinkText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  createAcademyLinkTextBold: {
+    color: '#4C5FE8',
+    fontWeight: '700',
   },
 });
