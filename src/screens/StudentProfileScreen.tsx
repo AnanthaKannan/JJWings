@@ -4,7 +4,6 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -24,6 +23,7 @@ import { RootState } from '../store/store';
 import { getFileUrl } from '../util/fileUrl';
 import { formatUploadLimit } from '../util/formatUploadLimit';
 import { compressProfileImage } from '../util/profileImage';
+import { StudentProfileScreenStyles as styles } from './styles/StudentProfileScreen.styles';
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <View style={styles.detailRow}>
@@ -121,7 +121,10 @@ export default function StudentProfileScreen() {
       }).unwrap();
 
       dispatch(setStudentProfilePic(uploadedUrl ?? compressedImage.uri));
-      Alert.alert('Profile photo updated', 'Your profile picture was uploaded.');
+      Alert.alert(
+        'Profile photo updated',
+        'Your profile picture was uploaded.',
+      );
     } catch (error) {
       console.error('Failed to upload profile picture', error);
       Alert.alert(
@@ -165,7 +168,9 @@ export default function StudentProfileScreen() {
           <View style={styles.profileTextWrap}>
             <Text style={styles.name}>{displayName}</Text>
             <Text style={styles.subtitle}>
-              {studentLevel === null ? 'Student profile' : `Level ${studentLevel}`}
+              {studentLevel === null
+                ? 'Student profile'
+                : `Level ${studentLevel}`}
             </Text>
           </View>
         </View>
@@ -181,114 +186,3 @@ export default function StudentProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#EEF2FF',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-  },
-  profileCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 22,
-    paddingBottom: 18,
-    marginBottom: 16,
-  },
-  photoWrap: {
-    width: 118,
-    height: 118,
-    borderRadius: 59,
-    padding: 4,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  photoEditBadge: {
-    position: 'absolute',
-    right: 2,
-    bottom: 4,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#4F46E5',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 55,
-  },
-  avatarFallback: {
-    flex: 1,
-    borderRadius: 55,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    color: '#FFFFFF',
-    fontSize: 42,
-    fontWeight: '900',
-  },
-  name: {
-    color: '#1E293B',
-    fontSize: 24,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  profileTextWrap: {
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 18,
-  },
-  detailsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
-  },
-  detailRow: {
-    minHeight: 58,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    justifyContent: 'center',
-  },
-  detailLabel: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 3,
-  },
-  detailValue: {
-    color: '#1E293B',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-});

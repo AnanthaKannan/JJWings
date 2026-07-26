@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, SafeAreaView, StatusBar } from 'react-native';
+import { ScrollView, SafeAreaView, StatusBar } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useRoute } from '@react-navigation/native';
 
@@ -7,6 +7,7 @@ import { QuizScreen, Header } from '../component/index';
 import Timer from '../component/Timer';
 import { RootState } from '../store/store';
 import { useEffect } from 'react';
+import { CalulateStyles as styles } from './styles/Calulate.styles';
 
 export default function Calculate() {
   const route = useRoute<any>();
@@ -36,19 +37,3 @@ export default function Calculate() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F0F4FF',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 16,
-  },
-  // content: {
-  //   gap: 16,
-  //   paddingHorizontal: 20,
-  // },
-});

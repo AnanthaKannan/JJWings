@@ -7,7 +7,6 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -17,7 +16,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 
 import bannerImage from '../../assets/images/banner.png';
-import color from '../util/colors';
 import { useLazyGetLoginQuery } from '../store/api';
 import {
   setAdminCredentials,
@@ -33,6 +31,7 @@ import {
   getDeviceId,
 } from '../util/authStorage';
 import { RootState } from '../store/store';
+import { LoginscreenStyles as styles } from './styles/Loginscreen.styles';
 
 export default function LoginScreen() {
   const [name, setName] = useState('');
@@ -289,146 +288,3 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  splashArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 32,
-  },
-  splashImage: {
-    width: '100%',
-    height: 120,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#EEF2FF',
-  },
-  keyboardAvoiding: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scroll: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 36,
-    paddingBottom: 32,
-  },
-  scrollKeyboardOpen: {
-    justifyContent: 'flex-start',
-  },
-  bannerImage: {
-    width: '110%',
-    height: 100,
-  },
-  avatarWrapper: {
-    marginBottom: -28,
-    zIndex: 10,
-  },
-  avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#F5C97A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: '#fff',
-    shadowColor: '#D4A044',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  avatarEmoji: {
-    fontSize: 36,
-  },
-  avatarText: {
-    color: '#1A2259',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  card: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    paddingHorizontal: 24,
-    paddingTop: 44,
-    paddingBottom: 28,
-    shadowColor: '#B0BADF',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A2259',
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F4FF',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  inputIcon: {
-    minWidth: 24,
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#5A6AA8',
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1A2259',
-    fontWeight: '500',
-  },
-  eyeIcon: {
-    minWidth: 38,
-    fontSize: 13,
-    color: '#1A3A6B',
-    fontWeight: '800',
-    textAlign: 'right',
-  },
-  loginBtn: {
-    backgroundColor: '#1A3A6B',
-    borderRadius: 50,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: 28,
-    shadowColor: '#1A3A6B',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  loginBtnDisabled: {
-    backgroundColor: '#A0AECC',
-    shadowOpacity: 0.1,
-  },
-  loginBtnText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  forgotText: {
-    fontSize: 14,
-    color: color.RED,
-    textAlign: 'center',
-    marginTop: 10,
-  },
-});

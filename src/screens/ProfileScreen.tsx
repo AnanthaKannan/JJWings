@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   SafeAreaView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -15,6 +14,7 @@ import { clearSavedLoginCredentials, getDeviceId } from '../util/authStorage';
 import { logout } from '../store/slices';
 import { RootState } from '../store/store';
 import { useDeleteStudentDeviceIdMutation } from '../store/api';
+import { ProfileScreenStyles as styles } from './styles/ProfileScreen.styles';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -181,116 +181,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#EEF4FF',
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 22,
-    overflow: 'hidden',
-  },
-  backgroundCircleOne: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#DBEAFE',
-    top: -80,
-    right: -80,
-  },
-  backgroundCircleTwo: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: '#CFFAFE',
-    bottom: -70,
-    left: -60,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 360,
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 26,
-    paddingHorizontal: 24,
-    paddingTop: 34,
-    paddingBottom: 24,
-    shadowColor: '#1D4ED8',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  iconWrap: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4F46E5',
-    marginBottom: 20,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  sparkleOne: {
-    position: 'absolute',
-    top: 28,
-    right: 62,
-  },
-  sparkleTwo: {
-    position: 'absolute',
-    top: 92,
-    left: 52,
-  },
-  title: {
-    fontSize: 25,
-    fontWeight: '900',
-    color: '#1E293B',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: '#64748B',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 24,
-  },
-  primaryButton: {
-    width: '100%',
-    minHeight: 52,
-    borderRadius: 18,
-    backgroundColor: '#EF4444',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  primaryText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  secondaryButton: {
-    marginTop: 12,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
-  secondaryText: {
-    color: '#4F46E5',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-});
