@@ -502,7 +502,7 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
         </View>
 
         {/* Academy Brand Logo Card */}
-        <View style={styles.card}>
+        {/* <View style={styles.card}>
           <View style={styles.rowBetween}>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>Academy Brand Logo</Text>
@@ -519,7 +519,7 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
               />
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
 
         {/* Identity System Card */}
         <View style={[styles.card, styles.idSystemCard]}>
