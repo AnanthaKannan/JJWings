@@ -291,7 +291,7 @@ export default function LoginScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.createAcademyLinkText}>
-              New to JJWings?{' '}
+              Running a coaching center?{'  '}
               <Text style={styles.createAcademyLinkTextBold}>
                 Create your Academy
               </Text>
@@ -456,5 +456,11 @@ const styles = StyleSheet.create({
   createAcademyLinkTextBold: {
     color: '#4C5FE8',
     fontWeight: '700',
+  },
+  createAcademyLinkSubtext: {
+    fontSize: 12,
+    color: '#8A8A8A',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
