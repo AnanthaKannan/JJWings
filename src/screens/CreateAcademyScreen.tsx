@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, FC } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+
+import {
+  useGenerateOtpMutation,
+  useVerifyOtpMutation,
+  useVerifyPrefixMutation,
+  useCreateOrgMutation,
+} from '../store/api';
+import { UserType } from '../types';
 
 const COLORS = {
   background: '#F4F6FB',
@@ -48,39 +57,11 @@ interface FormErrors {
 // Minimal navigation shape so this file doesn't need to import your full
 // RootStack param list. Swap this for your actual typed navigation prop,
 // e.g. NativeStackScreenProps<RootStackParamList, 'CreateAcademy'>.
-interface CreateAcademyNavigation {
-  navigate: (screen: 'Login') => void;
-  reset: (state: { index: number; routes: { name: 'Login' }[] }) => void;
-}
-
-interface CreateAcademyScreenProps {
-  navigation?: CreateAcademyNavigation;
-  onCreateAcademy?: (data: {
-    academyName: string;
-    adminName: string;
-    email: string;
-    studentIdPrefix: string;
-    teacherIdPrefix: string;
-  }) => Promise<boolean> | boolean | void;
-  // Replace these with real API calls (RTK Query mutations, etc.)
-  sendOtp?: (email: string) => Promise<boolean>;
-  verifyOtp?: (email: string, otp: string) => Promise<boolean>;
-  checkPrefixAvailability?: (
-    prefix: string,
-    type: 'student' | 'teacher',
-  ) => Promise<boolean>;
-}
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PREFIX_REGEX = /^[A-Z]{2}$/;
 
-const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
-  navigation,
-  onCreateAcademy,
-  sendOtp,
-  verifyOtp,
-  checkPrefixAvailability,
-}) => {
+const CreateAcademyScreen: FC = () => {
   const [academyName, setAcademyName] = useState('');
   const [adminName, setAdminName] = useState('');
   const [email, setEmail] = useState('');
@@ -97,9 +78,16 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
   const [teacherPrefixStatus, setTeacherPrefixStatus] =
     useState<PrefixStatus>('idle');
 
+  const navigation = useNavigation<any>();
+
   const setError = (field: keyof FormErrors, message?: string) => {
     setErrors(prev => ({ ...prev, [field]: message }));
   };
+
+  const [sendOtp] = useGenerateOtpMutation();
+  const [verifyOtp] = useVerifyOtpMutation();
+  const [checkPrefixAvailability] = useVerifyPrefixMutation();
+  const [onCreateAcademy] = useCreateOrgMutation();
 
   // ---------- Field-level validation ----------
   const validateAcademyName = (value: string) => {
@@ -175,9 +163,7 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
     if (!validateEmail(email)) return;
     setEmailStage('sendingOtp');
     try {
-      const sent = sendOtp
-        ? await sendOtp(email)
-        : await new Promise<boolean>(res => setTimeout(() => res(true), 800));
+      const sent = await sendOtp({ email });
       if (sent) {
         setEmailStage('otpSent');
         setError('email', undefined);
@@ -195,14 +181,13 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
     if (!validateOtp(otp)) return;
     setEmailStage('verifying');
     try {
-      const verified = verifyOtp
-        ? await verifyOtp(email, otp)
-        : await new Promise<boolean>(res =>
-            setTimeout(() => res(otp.length === 6), 800),
-          );
-      if (verified) {
+      const verified = await verifyOtp({ email, otp });
+      if (verified.data?.success === true) {
         setEmailStage('verified');
         setError('otp', undefined);
+      } else if (verified.error) {
+        setEmailStage('otpSent');
+        setError('otp', (verified.error as any)?.data?.message);
       } else {
         setEmailStage('otpSent');
         setError('otp', 'Incorrect OTP. Please try again.');
@@ -223,7 +208,7 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
   };
 
   // ---------- Prefix availability flow ----------
-  const handleCheckPrefix = async (type: 'student' | 'teacher') => {
+  const handleCheckPrefix = async (type: UserType) => {
     const value = type === 'student' ? studentIdPrefix : teacherIdPrefix;
     const field = type === 'student' ? 'studentIdPrefix' : 'teacherIdPrefix';
     const setStatus =
@@ -236,14 +221,8 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
 
     setStatus('checking');
     try {
-      const available = checkPrefixAvailability
-        ? await checkPrefixAvailability(value, type)
-        : await new Promise<boolean>(res =>
-            setTimeout(
-              () => res(!['JJ', 'AB'].includes(value.toUpperCase())),
-              700,
-            ),
-          );
+      const response = await checkPrefixAvailability({ prefix: value, type });
+      const available = response.data?.isPrefixAvailable;
       setStatus(available ? 'available' : 'unavailable');
       setError(
         field,
@@ -313,17 +292,15 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
 
     setIsSubmitting(true);
     try {
-      // If onCreateAcademy returns false, treat it as a failed submission
-      // (e.g. the backend rejected it) and stay on this screen.
-      const result = await onCreateAcademy?.({
-        academyName,
+      const result = await onCreateAcademy({
+        name: academyName,
         adminName,
         email,
-        studentIdPrefix,
-        teacherIdPrefix,
+        studentPrefix: studentIdPrefix,
+        teacherPrefix: teacherIdPrefix,
       });
 
-      if (result === false) {
+      if (result.error || result.data?.success === false) {
         setError('academyName', 'Could not create academy. Please try again.');
         return;
       }
@@ -581,14 +558,14 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
               </Text>
             </View>
           )}
-          {studentPrefixStatus === 'unavailable' && (
+          {/* {studentPrefixStatus === 'unavailable' && (
             <View style={styles.statusRow}>
               <MaterialIcons name="cancel" size={14} color={COLORS.errorText} />
               <Text style={styles.statusUnavailableText}>
                 "{studentIdPrefix}" is taken — please choose another
               </Text>
             </View>
-          )}
+          )} */}
 
           <Text style={styles.label}>Teacher ID Prefix</Text>
           <View style={styles.inlineRow}>
@@ -611,7 +588,7 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
                 teacherPrefixStatus === 'checking' &&
                   styles.inlineButtonDisabled,
               ]}
-              onPress={() => handleCheckPrefix('teacher')}
+              onPress={() => handleCheckPrefix('admin')}
               disabled={teacherPrefixStatus === 'checking'}
               activeOpacity={0.8}
             >
@@ -637,21 +614,21 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
               </Text>
             </View>
           )}
-          {teacherPrefixStatus === 'unavailable' && (
+          {/* {teacherPrefixStatus === 'unavailable' && (
             <View style={styles.statusRow}>
               <MaterialIcons name="cancel" size={14} color={COLORS.errorText} />
               <Text style={styles.statusUnavailableText}>
                 "{teacherIdPrefix}" is taken — please choose another
               </Text>
             </View>
-          )}
+          )} */}
 
           <View style={styles.previewRow}>
             <View style={styles.previewPill}>
               <Text style={styles.previewLabel}>PREVIEW</Text>
             </View>
             <Text style={styles.previewValue}>
-              {studentIdPrefix || 'JJ'}0001{'   '}
+              {studentIdPrefix || 'JJ'}0001{'                  '}
               {teacherIdPrefix || 'JW'}0001
             </Text>
           </View>
@@ -680,9 +657,9 @@ const CreateAcademyScreen: React.FC<CreateAcademyScreenProps> = ({
           )}
         </TouchableOpacity>
 
-        <Text style={styles.disclaimer}>
+        {/* <Text style={styles.disclaimer}>
           By clicking "Create Academy", you agree to
-        </Text>
+        </Text> */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -729,7 +706,6 @@ const styles = StyleSheet.create({
   helperTextSmall: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: -6,
     marginBottom: 10,
   },
   label: {

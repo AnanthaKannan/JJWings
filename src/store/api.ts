@@ -4,6 +4,14 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { HomeworkState } from '../util/enum';
 import { reduceMessageUnreadCount, setMessageUnreadCount } from './slices';
 import { baseQuery, API_URL } from './baseQuery';
+import {
+  CreateOrgReq,
+  GeneralResponse,
+  GenerateOtpReq,
+  VerifyOtpReq,
+  VerifyPrefixReq,
+  VerifyPrefixRes,
+} from '../types';
 
 const DEFAULT_LIMIT = 500;
 const DEFAULT_NOTIFICATION_LIMIT = 20;
@@ -1635,10 +1643,6 @@ export const jjWingsApi = createApi({
         method: 'DELETE',
       }),
       transformResponse: () => 'success',
-      // invalidatesTags: (_result, _error, { questionId }) => [
-      //   { type: 'Question', id: questionId },
-      //   'Questions',
-      // ],
     }),
 
     updateQuestion: builder.mutation<string, UpdateQuestionArg>({
@@ -1648,11 +1652,6 @@ export const jjWingsApi = createApi({
         body: { questionId, level },
       }),
       transformResponse: () => 'success',
-      // invalidatesTags: (_result, _error, { id }) => [
-      //   { type: 'Question', id },
-      //   { type: 'Questions', id: 'LIST' },
-      //   'Questions',
-      // ],
     }),
 
     assignHomework: builder.mutation<AssignHomeworkResult, AssignHomeworkArg>({
@@ -1688,6 +1687,38 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'Messages', id: 'LIST' }],
+    }),
+
+    generateOtp: builder.mutation<GeneralResponse, GenerateOtpReq>({
+      query: ({ email }) => ({
+        url: '/send-otp',
+        method: 'POST',
+        body: { email },
+      }),
+    }),
+
+    verifyOtp: builder.mutation<GeneralResponse, VerifyOtpReq>({
+      query: ({ email, otp }) => ({
+        url: '/verify-otp',
+        method: 'POST',
+        body: { email, otp },
+      }),
+    }),
+
+    verifyPrefix: builder.mutation<VerifyPrefixRes, VerifyPrefixReq>({
+      query: body => ({
+        url: 'verify-prefix',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    createOrg: builder.mutation<GeneralResponse, CreateOrgReq>({
+      query: body => ({
+        url: '/org',
+        method: 'POST',
+        body,
+      }),
     }),
 
     readMessages: builder.mutation<string, ReadMessagesArg>({
@@ -1869,4 +1900,8 @@ export const {
   useGetAchievementsQuery,
   useUploadAchievementMutation,
   useDeleteAchievementMutation,
+  useGenerateOtpMutation,
+  useVerifyOtpMutation,
+  useVerifyPrefixMutation,
+  useCreateOrgMutation,
 } = jjWingsApi;
