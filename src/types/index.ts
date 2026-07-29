@@ -26,7 +26,40 @@ export interface GameLevelConfig {
   speedUpPerPoint: number;
 }
 
+export type UserType = 'admin' | 'student';
+
 export interface BeadTheme {
   base: string;
   shine: string;
 }
+
+export type GenerateOtpReq = {
+  email: string;
+};
+
+export type VerifyOtpReq = {
+  email: string;
+  otp: string;
+};
+
+export type VerifyPrefixReq = {
+  type: UserType;
+  prefix: string;
+};
+
+export type VerifyPrefixRes = GeneralResponse & {
+  isPrefixAvailable: string;
+};
+
+export type CreateOrgReq = {
+  name: string;
+  studentPrefix: string;
+  teacherPrefix: string;
+  adminName: string;
+  email: string;
+};
+
+export type GeneralResponse = {
+  success: boolean;
+  message: string;
+};

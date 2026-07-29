@@ -78,7 +78,8 @@ export default function AddStudentScreen() {
           name: fullName.trim(),
           level,
         }).unwrap();
-        description = `*${fullName}* has been registered successfully. The password is : *${addStudentRes.student.password}*`;
+        description = `*${fullName}* has been registered successfully. 
+        The Student Id is: *${addStudentRes.student.studentId}* and the password is : *${addStudentRes.student.password}*`;
       }
 
       setModal({

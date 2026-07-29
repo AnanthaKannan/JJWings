@@ -22,7 +22,6 @@ import {
   LoadingState,
 } from '../component';
 import {
-  addAdminResponse,
   Admin,
   useAddTeacherMutation,
   useGetTeachersQuery,
@@ -195,29 +194,31 @@ export default function TeacherDirectoryScreen() {
 
     try {
       let password = '';
+      let adminId = '';
+
       if (editingTeacher) {
         await updateTeacher({
           teacherId: editingTeacher.id,
           name: cleanName,
         }).unwrap();
       } else {
-        const teacherRes: addAdminResponse = await addTeacher({
+        const teacherRes = await addTeacher({
           name: cleanName,
         }).unwrap();
         password = teacherRes?.data?.password;
+        adminId = teacherRes?.data?.adminId;
       }
 
       closeModal();
-      setModal({
-        visible: true,
-        state: 'success',
-        title: isEditMode ? 'Teacher Updated' : 'Teacher Created',
-        description: `${cleanName} has been ${
-          isEditMode ? 'updated' : 'created'
-        } successfully. ${isEditMode ? '' : 'The password is '} ${
-          isEditMode ? '' : `*${password}*`
-        }`,
-      });
+
+      let title = 'Teacher Updated';
+      let description = `${cleanName} has been updated successfully.`;
+      if (!isEditMode) {
+        title = 'Teacher Created';
+        description = `${cleanName} has been created successfully, The Teacher Id is: *${adminId}* and the password is *${password}*`;
+      }
+
+      setModal({ visible: true, state: 'success', title, description });
     } catch (error) {
       console.error('Failed to save teacher:', error);
       setModal({

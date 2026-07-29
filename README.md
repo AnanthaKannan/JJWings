@@ -10,6 +10,9 @@ Node: v24.14.0
 Admin: JW001
 Password: Welcome123
 
+## Privacy policy created
+https://sites.google.com/
+
 ## Build
 1. cd android
 2. ./gradlew assembleRelease
