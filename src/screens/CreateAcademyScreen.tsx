@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -19,6 +20,7 @@ import {
   useCreateOrgMutation,
 } from '../store/api';
 import { UserType } from '../types';
+import { setModal, resetModal } from '../store/slices';
 
 const COLORS = {
   background: '#F4F6FB',
@@ -79,6 +81,7 @@ const CreateAcademyScreen: FC = () => {
     useState<PrefixStatus>('idle');
 
   const navigation = useNavigation<any>();
+  const dispatch = useDispatch();
 
   const setError = (field: keyof FormErrors, message?: string) => {
     setErrors(prev => ({ ...prev, [field]: message }));
@@ -301,21 +304,42 @@ const CreateAcademyScreen: FC = () => {
       });
 
       if (result.error || result.data?.success === false) {
-        setError('academyName', 'Could not create academy. Please try again.');
+        dispatch(
+          setModal({
+            state: 'failure',
+            visible: true,
+            title: 'Failed to create academy',
+            description: 'Could not create academy. Please try again.',
+          }),
+        );
         return;
       }
 
-      // Success — send them back to Login so they can sign in to the
-      // academy they just created.
-      if (navigation?.reset) {
-        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-      } else {
-        navigation?.navigate('Login');
-      }
+      dispatch(
+        setModal({
+          state: 'success',
+          visible: true,
+          title: 'Academy created successfully',
+          description: `We've sent your login credentials to your email — please use them to sign in.`,
+          onCancel: () => {
+            dispatch(resetModal());
+            if (navigation?.reset) {
+              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            } else {
+              navigation?.navigate('Login');
+            }
+          },
+        }),
+      );
     } catch {
-      setError(
-        'academyName',
-        'Something went wrong creating your academy. Please try again.',
+      dispatch(
+        setModal({
+          state: 'failure',
+          visible: true,
+          title: 'Failed to create academy',
+          description:
+            'Something went wrong creating your academy. Please try again.',
+        }),
       );
     } finally {
       setIsSubmitting(false);
