@@ -27,6 +27,9 @@ import {
   getFallDuration,
 } from '../util/questionGenerator';
 import { BeadTheme, GameLevel, GamePhase, Question } from '../types';
+import TopGamer from '../component/TopGamer';
+
+import { useGetTopGameScoreByLevelQuery } from '../store/api';
 
 function Cloud({ style }: { style: object }) {
   return (
@@ -261,6 +264,10 @@ export default function GameScreen() {
     navigation.navigate('Progress');
   }
 
+  const { data: topGamersData, isFetching } = useGetTopGameScoreByLevelQuery({
+    level: selectedLevel,
+  });
+
   const selectedLevelConfig =
     GAME_LEVELS.find(entry => entry.level === selectedLevel) ?? GAME_LEVELS[0];
 
@@ -349,6 +356,13 @@ export default function GameScreen() {
                     </View>
                   </View>
                 </TouchableOpacity>
+
+                {(isFetching || topGamersData?.result?.length) && (
+                  <TopGamer
+                    students={topGamersData?.result || []}
+                    isFetching={isFetching}
+                  />
+                )}
               </View>
             </ScrollView>
           </View>

@@ -11,6 +11,8 @@ import {
   VerifyOtpReq,
   VerifyPrefixReq,
   VerifyPrefixRes,
+  AddGameScore,
+  TopGameScoreByLevel,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -1721,6 +1723,24 @@ export const jjWingsApi = createApi({
       }),
     }),
 
+    addGameScore: builder.mutation<GeneralResponse, AddGameScore>({
+      query: body => ({
+        url: '/game/score',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    getTopGameScoreByLevel: builder.query<
+      TopGameScoreByLevel,
+      { level: number }
+    >({
+      query: ({ level }) => ({
+        url: `/game/toppers/${level}`,
+        method: 'GET',
+      }),
+    }),
+
     readMessages: builder.mutation<string, ReadMessagesArg>({
       query: body => ({
         url: '/messages/read',
@@ -1857,6 +1877,8 @@ export const {
   useSwitchStudentLoginMutation,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
+  useAddGameScoreMutation,
+  useGetTopGameScoreByLevelQuery,
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
   useGetTeachersQuery,
