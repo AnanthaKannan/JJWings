@@ -85,12 +85,18 @@ export default function GameScreen() {
 
   const [addGameScore] = useAddGameScoreMutation();
 
-  const { data: topGamersData, isFetching } = useGetTopGameScoreByLevelQuery({
-    level: selectedLevel,
-  });
-  const { data: scoreDetails } = useGetScoreDetailsQuery({
-    level: selectedLevel,
-  });
+  const { data: topGamersData, isFetching } = useGetTopGameScoreByLevelQuery(
+    {
+      level: selectedLevel,
+    },
+    { skip: phase !== 'ready' },
+  );
+  const { data: scoreDetails } = useGetScoreDetailsQuery(
+    {
+      level: selectedLevel,
+    },
+    { skip: phase !== 'ready' },
+  );
 
   useFocusEffect(
     useCallback(() => {
