@@ -91,6 +91,8 @@ export type Feed = {
   adminPicPath: string;
   filePath: string;
   createdAt: string;
+  createdBy: string;
+  isPrivate: boolean;
 };
 
 type FilePath = 'feed' | 'profile';

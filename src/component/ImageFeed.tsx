@@ -9,12 +9,15 @@ import {
   Text,
   ListRenderItemInfo,
 } from 'react-native';
+import { useSelector } from 'react-redux';
+
 import Avatar from './Avatar';
 import PostActionsBar from './PostActionsBar';
 import { Feed } from '../types';
-
 import { getFileUrl } from '../util/fileUrl';
 import { formatFeedDate } from '../util/fn';
+import PostOptionsMenu from './PostOptionsMenu';
+import { RootState } from '../store/store';
 
 export interface ImageFeedProps {
   images: Feed[];
@@ -29,19 +32,33 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
   aspectRatio,
 }) => {
   const [loaded, setLoaded] = useState(false);
+  const { adminRoles, adminId } = useSelector(
+    (state: RootState) => state.common,
+  );
 
   return (
     <View style={styles.card}>
-      <View style={styles.profile}>
-        <Avatar
-          color="#9b85f1"
-          name={item.adminName}
-          profilePic={item.adminPicPath}
-        />
-        <View>
-          <Text style={styles.name}>{item.adminName}</Text>
-          <Text style={styles.dateTime}>{formatFeedDate(item.createdAt)}</Text>
+      <View style={styles.headContainer}>
+        <View style={styles.profile}>
+          <Avatar
+            color="#9b85f1"
+            name={item.adminName}
+            profilePic={item.adminPicPath}
+          />
+          <View>
+            <Text style={styles.name}>{item.adminName} </Text>
+            <Text style={styles.dateTime}>
+              {formatFeedDate(item.createdAt)}
+            </Text>
+          </View>
         </View>
+        {(adminRoles.includes('superadmin') || adminId === item.createdBy) && (
+          <PostOptionsMenu
+            isPrivate={item.isPrivate}
+            onDelete={() => {}}
+            onTogglePrivate={() => {}}
+          />
+        )}
       </View>
 
       {!!item.content && <Text style={styles.content}>{item.content}</Text>}
@@ -206,6 +223,11 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: 20,
+  },
+  headContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 });
 

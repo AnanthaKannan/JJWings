@@ -14,3 +14,4 @@ export { default as Loader } from './Loader';
 export { default as ImageFeed } from './ImageFeed';
 export { default as PostActionsBar } from './PostActionsBar';
 export { default as CreatePostScreen } from './CreatePostScreen';
+export { default as PostOptionsMenu } from './PostOptionsMenu';
