@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   FlatList,
   Modal,
@@ -28,8 +27,8 @@ import {
   FloatingAddButton,
   LoadingOverlay,
   LoadingState,
+  Avatar,
 } from '../component';
-import { getFileUrl } from '../util/fileUrl';
 import ReuseModal from '../component/ReuseModal';
 import { ReuseModalProps } from '../component/ReuseModal';
 import { COLORS } from './../util/index';
@@ -66,38 +65,7 @@ const COLORSX = [
   '#EF9A9A',
 ];
 
-// ─── Avatar Component ─────────────────────────────────────────────────────────
-
-const Avatar = ({
-  color,
-  name,
-  profilePic,
-}: {
-  color: string;
-  name: string;
-  profilePic?: string;
-}) => {
-  const initials = name
-    .split(' ')
-    .map(n => n[0])
-    .join('');
-  const profilePicUrl = getFileUrl(profilePic);
-
-  return (
-    <View style={[styles.avatar, { backgroundColor: color }]}>
-      {profilePicUrl ? (
-        <Image source={{ uri: profilePicUrl }} style={styles.avatarImage} />
-      ) : (
-        <Text style={styles.avatarText}>{initials}</Text>
-      )}
-    </View>
-  );
-};
-
-// ─── Accuracy Badge ───────────────────────────────────────────────────────────
-
 // ─── Student Row ──────────────────────────────────────────────────────────────
-
 const ProgressStat = ({
   label,
   value,
@@ -981,19 +949,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   nameBlock: { flex: 1 },
   studentName: {
     fontSize: 13,

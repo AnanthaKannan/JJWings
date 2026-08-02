@@ -9,3 +9,5 @@ export { default as LoadingOverlay } from './LoadingOverlay';
 export { default as FloatingAddButton } from './FloatingAddButton';
 export { default as BottomLodeMore } from './BottomLodeMore';
 export { default as EmptyData } from './EmptyData';
+export { default as Avatar } from './Avatar';
+export { default as Loader } from './Loader';

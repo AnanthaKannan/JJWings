@@ -27,6 +27,13 @@ import {
   getFallDuration,
 } from '../util/questionGenerator';
 import { BeadTheme, GameLevel, GamePhase, Question } from '../types';
+import TopGamer from '../component/TopGamer';
+
+import {
+  useGetTopGameScoreByLevelQuery,
+  useGetScoreDetailsQuery,
+  useAddGameScoreMutation,
+} from '../store/api';
 
 function Cloud({ style }: { style: object }) {
   return (
@@ -45,7 +52,6 @@ export default function GameScreen() {
   const [selectedLevel, setSelectedLevel] = useState<GameLevel>(0);
   const [levelModalVisible, setLevelModalVisible] = useState(false);
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(0);
   const [lives, setLives] = useState(TOTAL_LIVES);
   const [question, setQuestion] = useState<Question | null>(null);
   const [input, setInput] = useState('');
@@ -75,6 +81,21 @@ export default function GameScreen() {
     setScore(0);
     setLives(TOTAL_LIVES);
   }, []);
+
+  const [addGameScore] = useAddGameScoreMutation();
+
+  const { data: topGamersData, isFetching } = useGetTopGameScoreByLevelQuery(
+    {
+      level: selectedLevel,
+    },
+    { skip: phase !== 'ready' },
+  );
+  const { data: scoreDetails } = useGetScoreDetailsQuery(
+    {
+      level: selectedLevel,
+    },
+    { skip: phase !== 'ready' },
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -194,8 +215,11 @@ export default function GameScreen() {
       }),
     ]).start(() => {
       const next = scoreRef.current + 1;
+
+      if ((scoreDetails?.data?.points || 0) < next) {
+        addGameScore({ level: selectedLevel, points: next });
+      }
       updateScore(next);
-      setBest(prevBest => Math.max(prevBest, next));
       setQuestion(null);
       spawnBall(next);
     });
@@ -349,6 +373,13 @@ export default function GameScreen() {
                     </View>
                   </View>
                 </TouchableOpacity>
+
+                {(isFetching || topGamersData?.result?.length) && (
+                  <TopGamer
+                    students={topGamersData?.result || []}
+                    isFetching={isFetching}
+                  />
+                )}
               </View>
             </ScrollView>
           </View>
@@ -375,7 +406,11 @@ export default function GameScreen() {
       <GameOverModal
         visible={phase === 'gameover'}
         score={score}
-        best={best}
+        best={
+          (scoreDetails?.data?.points || 0) > score
+            ? scoreDetails?.data?.points || 0
+            : score
+        }
         onPlayAgain={startGame}
         onExit={exitGame}
       />

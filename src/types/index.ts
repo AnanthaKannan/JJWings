@@ -59,6 +59,28 @@ export type CreateOrgReq = {
   email: string;
 };
 
+export type AddGameScore = {
+  level: number;
+  points: number;
+};
+
+export type TopGamerDetail = {
+  points: string;
+  name: string;
+  profilePic: string;
+  studentId: string;
+};
+
+export type TopGameScoreByLevel = GeneralResponse & {
+  result: TopGamerDetail[];
+};
+
+export type ScoreDetail = {
+  data: {
+    points: number;
+  };
+};
+
 export type GeneralResponse = {
   success: boolean;
   message: string;

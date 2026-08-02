@@ -11,6 +11,9 @@ import {
   VerifyOtpReq,
   VerifyPrefixReq,
   VerifyPrefixRes,
+  AddGameScore,
+  TopGameScoreByLevel,
+  ScoreDetail,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -957,6 +960,7 @@ export const jjWingsApi = createApi({
     'Ranking',
     'FileUploads',
     'Teachers',
+    'Game',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
@@ -1721,6 +1725,34 @@ export const jjWingsApi = createApi({
       }),
     }),
 
+    addGameScore: builder.mutation<GeneralResponse, AddGameScore>({
+      query: body => ({
+        url: '/game/score',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Game', id: 'LIST' }],
+    }),
+
+    getTopGameScoreByLevel: builder.query<
+      TopGameScoreByLevel,
+      { level: number }
+    >({
+      query: ({ level }) => ({
+        url: `/game/toppers/${level}`,
+        method: 'GET',
+      }),
+      providesTags: [{ type: 'Game', id: 'LIST' }],
+    }),
+
+    getScoreDetails: builder.query<ScoreDetail, { level: number }>({
+      query: ({ level }) => ({
+        url: `/game/${level}`,
+        method: 'GET',
+      }),
+      providesTags: [{ type: 'Game', id: 'LIST' }],
+    }),
+
     readMessages: builder.mutation<string, ReadMessagesArg>({
       query: body => ({
         url: '/messages/read',
@@ -1857,8 +1889,11 @@ export const {
   useSwitchStudentLoginMutation,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
+  useAddGameScoreMutation,
+  useGetTopGameScoreByLevelQuery,
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
+  useGetScoreDetailsQuery,
   useGetTeachersQuery,
   useGetQuestionsQuery,
   useGetPracticeQuestionsQuery,
