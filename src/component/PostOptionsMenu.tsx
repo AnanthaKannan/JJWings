@@ -16,15 +16,15 @@ const MENU_WIDTH = 200;
 
 export interface PostOptionsMenuProps {
   /** Current privacy state of the post, so the label can flip appropriately */
-  isPrivate: boolean;
+  // isPrivate: boolean;
   onDelete: () => void;
-  onTogglePrivate: () => void;
+  // onTogglePrivate: () => void;
 }
 
 const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
-  isPrivate,
+  // isPrivate,
   onDelete,
-  onTogglePrivate,
+  // onTogglePrivate,
 }) => {
   const anchorRef = useRef<View>(null);
   const [visible, setVisible] = useState(false);
@@ -59,10 +59,10 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
     }, 150);
   }, [closeMenu, onDelete]);
 
-  const handleTogglePrivate = useCallback(() => {
-    closeMenu();
-    onTogglePrivate();
-  }, [closeMenu, onTogglePrivate]);
+  // const handleTogglePrivate = useCallback(() => {
+  //   closeMenu();
+  //   onTogglePrivate();
+  // }, [closeMenu, onTogglePrivate]);
 
   return (
     <>
@@ -90,7 +90,7 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
                   { top: position.top, left: position.left },
                 ]}
               >
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   style={styles.menuItem}
                   onPress={handleTogglePrivate}
                 >
@@ -102,7 +102,7 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
                   <Text style={styles.menuItemText}>
                     {isPrivate ? 'Make public' : 'Make private'}
                   </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <View style={styles.divider} />
 

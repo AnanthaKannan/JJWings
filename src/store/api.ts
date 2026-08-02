@@ -1599,6 +1599,15 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
     }),
 
+    deleteFeed: builder.mutation<string, { feedId: string }>({
+      query: ({ feedId }) => ({
+        url: `/feed/admin/${feedId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
+    }),
+
     deleteQuestionPaper: builder.mutation<string, string>({
       query: id => ({
         url: `/admin/file-uploads/${id}`,
@@ -1960,6 +1969,7 @@ export const {
   useGetAchievementsQuery,
   useDeleteAchievementMutation,
   useGenerateOtpMutation,
+  useDeleteFeedMutation,
   useVerifyOtpMutation,
   useVerifyPrefixMutation,
   useCreateContentFeedMutation,

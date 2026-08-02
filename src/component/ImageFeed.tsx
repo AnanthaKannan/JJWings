@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Text,
+  Alert,
   ListRenderItemInfo,
 } from 'react-native';
 import { useSelector } from 'react-redux';
@@ -18,6 +19,7 @@ import { getFileUrl } from '../util/fileUrl';
 import { formatFeedDate } from '../util/fn';
 import PostOptionsMenu from './PostOptionsMenu';
 import { RootState } from '../store/store';
+import { useDeleteFeedMutation } from '../store/api';
 
 export interface ImageFeedProps {
   images: Feed[];
@@ -35,6 +37,16 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
   const { adminRoles, adminId } = useSelector(
     (state: RootState) => state.common,
   );
+  const [deleteFeed, { isLoading: isDeleting }] = useDeleteFeedMutation();
+
+  const handleDelete = async (feedId: string) => {
+    try {
+      await deleteFeed({ feedId }).unwrap();
+    } catch (error) {
+      console.error('Failed to delete feed', error);
+      Alert.alert('Delete failed', 'Please try deleting the feed again.');
+    }
+  };
 
   return (
     <View style={styles.card}>
@@ -54,9 +66,9 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
         </View>
         {(adminRoles.includes('superadmin') || adminId === item.createdBy) && (
           <PostOptionsMenu
-            isPrivate={item.isPrivate}
-            onDelete={() => {}}
-            onTogglePrivate={() => {}}
+            // isPrivate={item.isPrivate}
+            onDelete={() => handleDelete(item._id)}
+            // onTogglePrivate={() => {}}
           />
         )}
       </View>
@@ -64,7 +76,7 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
       {!!item.content && <Text style={styles.content}>{item.content}</Text>}
       {item.filePath && (
         <View style={[styles.imageBox, { aspectRatio }]}>
-          {!loaded && (
+          {(!loaded || isDeleting) && (
             <View style={styles.placeholder}>
               <ActivityIndicator size="small" color="#8a8d91" />
             </View>
