@@ -6,8 +6,6 @@ import {
   getAvailableLevels,
 } from '../config/levelDifficulty';
 
-let idCounter = 0;
-
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -45,28 +43,26 @@ export function getLevelConfig(level: GameLevel): GameLevelConfig {
 /**
  * Generates a math question scaled by selected level and in-game score.
  */
+let idCounter = 0;
 export function generateQuestion(score: number, level: GameLevel): Question {
   idCounter += 1;
 
   const config = getLevelConfig(level);
-  const progress = Math.min(score / 12, 1);
-  const max = Math.round(
-    config.minMax + (config.maxMax - config.minMax) * progress,
-  );
+  const min = config.minMax;
+  const max = config.maxMax;
 
   const operator: Operator =
     config.allowSubtraction && Math.random() < config.subtractionChance
       ? '-'
       : '+';
 
-  let a = randomInt(1, max);
-  let b = randomInt(1, max);
+  let a = randomInt(min, max);
+  let b = randomInt(min, max);
   let answer: number;
 
   if (operator === '+') {
-    const halfMax = Math.max(Math.floor(max / 2), 2);
-    a = randomInt(1, halfMax);
-    b = randomInt(1, halfMax);
+    a = randomInt(min, max);
+    b = randomInt(min, max);
     answer = a + b;
   } else {
     if (a < b) {
