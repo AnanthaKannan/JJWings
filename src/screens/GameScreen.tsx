@@ -52,7 +52,6 @@ export default function GameScreen() {
   const [selectedLevel, setSelectedLevel] = useState<GameLevel>(0);
   const [levelModalVisible, setLevelModalVisible] = useState(false);
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(0);
   const [lives, setLives] = useState(TOTAL_LIVES);
   const [question, setQuestion] = useState<Question | null>(null);
   const [input, setInput] = useState('');
@@ -221,7 +220,6 @@ export default function GameScreen() {
         addGameScore({ level: selectedLevel, points: next });
       }
       updateScore(next);
-      setBest(prevBest => Math.max(prevBest, next));
       setQuestion(null);
       spawnBall(next);
     });
@@ -408,7 +406,11 @@ export default function GameScreen() {
       <GameOverModal
         visible={phase === 'gameover'}
         score={score}
-        best={best}
+        best={
+          (scoreDetails?.data?.points || 0) > score
+            ? scoreDetails?.data?.points || 0
+            : score
+        }
         onPlayAgain={startGame}
         onExit={exitGame}
       />
