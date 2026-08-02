@@ -1,32 +1,18 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   Dimensions,
-  FlatList,
-  Image,
   Modal,
-  RefreshControl,
   SafeAreaView,
   StatusBar,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
-  ViewToken,
 } from 'react-native';
-import {
-  errorCodes,
-  isErrorWithCode,
-  pick,
-  types,
-} from '@react-native-documents/picker';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
 
 import {
   AdminHeader,
   LoadingOverlay,
-  LoadingState,
   StudentHeader,
   ImageFeed,
   FloatingAddButton,
@@ -35,33 +21,17 @@ import {
 import {
   Achievement,
   useDeleteAchievementMutation,
-  useGetAchievementsQuery,
-  useUploadAchievementMutation,
   useGetFeedListQuery,
 } from '../store/api';
-import { IMAGE_UPLOAD_LIMITS } from '../config/imageUpload';
 import { RootState } from '../store/store';
-import { getFileUrl } from '../util/fileUrl';
-import { formatUploadLimit } from '../util/formatUploadLimit';
-import { compressAchievementImage } from '../util/profileImage';
 
 const { width: screenWidth } = Dimensions.get('window');
 const carouselWidth = Math.max(screenWidth - 32, 280);
-
-const getAchievementImageUrl = (item: Achievement) =>
-  getFileUrl(item.url ?? item.path) ?? item.url ?? item.path ?? '';
 
 export default function AchievementsScreen() {
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
   const [creatingPost, setCreatingPost] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const {
-    data: achievements = [],
-    // isLoading,
-    // isFetching,
-    refetch,
-  } = useGetAchievementsQuery();
 
   const {
     data: feedList = [],
@@ -70,86 +40,17 @@ export default function AchievementsScreen() {
     // refetch,
   } = useGetFeedListQuery();
 
-  const [uploadAchievement, uploadResult] = useUploadAchievementMutation();
   const [deleteAchievement, deleteResult] = useDeleteAchievementMutation();
-  const [isPreparingImage, setIsPreparingImage] = useState(false);
-  const isBusy =
-    isPreparingImage || uploadResult.isLoading || deleteResult.isLoading;
-  const showLoader = isLoading && achievements.length === 0;
+  const isBusy = isLoading || deleteResult.isLoading;
 
-  const visibleAchievements = useMemo(
-    () => achievements.filter(item => getAchievementImageUrl(item).length > 0),
-    [achievements],
-  );
-
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 55 }).current;
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      const nextIndex = viewableItems[0]?.index;
-      if (typeof nextIndex === 'number') {
-        setActiveIndex(nextIndex);
-      }
-    },
-  ).current;
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
-
-  const handleUpload = async () => {
-    try {
-      const [file] = await pick({
-        allowMultiSelection: false,
-        type: [types.images],
-      });
-
-      if (!file?.uri) {
-        Alert.alert('No image selected', 'Please choose an image to upload.');
-        return;
-      }
-
-      setIsPreparingImage(true);
-      const compressedImage = await compressAchievementImage({
-        uri: file.uri,
-        fileName: file.name ?? undefined,
-      });
-
-      await uploadAchievement({
-        file: {
-          uri: compressedImage.uri,
-          type: compressedImage.type,
-          name: compressedImage.name,
-        },
-      }).unwrap();
-
-      Alert.alert('Uploaded', 'Achievement image uploaded successfully.');
-    } catch (error) {
-      if (
-        isErrorWithCode(error) &&
-        error.code === errorCodes.OPERATION_CANCELED
-      ) {
-        return;
-      }
-
-      console.error('Failed to upload achievement image', error);
-      Alert.alert(
-        'Upload failed',
-        error instanceof Error &&
-          error.message === 'ACHIEVEMENT_IMAGE_TOO_LARGE'
-          ? `Please choose a smaller image. Achievement images must be under ${formatUploadLimit(
-              IMAGE_UPLOAD_LIMITS.achievementMaxBytes,
-            )}.`
-          : 'Please try uploading the achievement image again.',
-      );
-    } finally {
-      setIsPreparingImage(false);
-    }
-  };
+  // const onRefresh = useCallback(async () => {
+  //   setRefreshing(true);
+  //   try {
+  //     await refetch();
+  //   } finally {
+  //     setRefreshing(false);
+  //   }
+  // }, [refetch]);
 
   const handleDelete = (item: Achievement) => {
     Alert.alert('Delete achievement image?', 'This image will be removed.', [
@@ -203,102 +104,14 @@ export default function AchievementsScreen() {
           <CreatePostScreen
             userName="Sree Kannan"
             onClose={() => setCreatingPost(false)}
-            onPosted={() => setCreatingPost(false)}
+            // onPosted={() => setCreatingPost(false)}
           />
         </Modal>
 
         {isAdmin && <FloatingAddButton onPress={() => setCreatingPost(true)} />}
-
-        {/* <View style={styles.carouselCard}>
-          {showLoader ? (
-            <LoadingState label="Loading achievements..." />
-          ) : (
-            <FlatList
-              data={visibleAchievements}
-              keyExtractor={item => item.id}
-              style={styles.carouselList}
-              contentContainerStyle={
-                visibleAchievements.length === 0
-                  ? styles.emptyListContent
-                  : undefined
-              }
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={carouselWidth}
-              decelerationRate="fast"
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing || isFetching}
-                  onRefresh={onRefresh}
-                  tintColor="#4F46E5"
-                  colors={['#4F46E5']}
-                  progressBackgroundColor="#EEF2FF"
-                />
-              }
-              viewabilityConfig={viewabilityConfig}
-              onViewableItemsChanged={onViewableItemsChanged}
-              renderItem={({ item }) => {
-                const imageUrl = getAchievementImageUrl(item);
-
-                return (
-                  <View style={styles.slide}>
-                    <Image
-                      source={{ uri: imageUrl }}
-                      style={styles.achievementImage}
-                      resizeMode="cover"
-                    />
-                    {isAdmin && (
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => handleDelete(item)}
-                        activeOpacity={0.82}
-                      >
-                        <MaterialIcons
-                          name="delete-outline"
-                          size={21}
-                          color="#FFFFFF"
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                );
-              }}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <MaterialIcons
-                    name="emoji-events"
-                    size={42}
-                    color="#94A3B8"
-                  />
-                  <Text style={styles.emptyTitle}>No achievements yet</Text>
-                  <Text style={styles.emptyText}>
-                    {isAdmin
-                      ? 'Upload celebration images to share them here.'
-                      : 'Celebration images will appear here soon.'}
-                  </Text>
-                </View>
-              }
-            />
-          )}
-
-          {visibleAchievements.length > 1 && (
-            <View style={styles.dots}>
-              {visibleAchievements.map((item, index) => (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.dot,
-                    index === activeIndex && styles.activeDot,
-                  ]}
-                />
-              ))}
-            </View>
-          )}
-        </View> */}
       </View>
 
-      <LoadingOverlay visible={isBusy} label="Updating achievements..." />
+      <LoadingOverlay visible={isBusy} label="Updating Feeds..." />
     </SafeAreaView>
   );
 }

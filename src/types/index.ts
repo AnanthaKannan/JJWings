@@ -93,6 +93,23 @@ export type Feed = {
   createdAt: string;
 };
 
+type FilePath = 'feed' | 'profile';
+
+type FileType = 'content' | 'file';
+
+export type UploadFileArg = {
+  uri: string;
+  type?: FileType;
+  content?: string;
+  path: FilePath;
+  name?: string;
+};
+
+export type CreateContentArg = {
+  type: FileType;
+  content: string;
+};
+
 export type FeedData = GeneralResponse & {
   data: Feed[];
 };

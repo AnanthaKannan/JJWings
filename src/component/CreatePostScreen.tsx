@@ -16,11 +16,16 @@ import {
   types,
   isErrorWithCode,
   errorCodes,
-} from '@react-native-documents/picker'; // adjust to your actual picker import
+} from '@react-native-documents/picker';
+
 import { compressAchievementImage } from '../util/profileImage';
-import { useCreateFeedMutation } from '../store/api'; // adjust to your actual RTK Query slice
 import { IMAGE_UPLOAD_LIMITS } from '../config/imageUpload';
 import { formatUploadLimit } from '../util/formatUploadLimit';
+import { UploadFileArg } from '../types';
+import {
+  useUploadFileMutation,
+  useCreateContentFeedMutation,
+} from '../store/api'; // adjust to your actual RTK Query slice
 
 interface SelectedImage {
   uri: string;
@@ -47,7 +52,9 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
     null,
   );
   const [isPreparingImage, setIsPreparingImage] = useState(false);
-  const [createFeed, { isLoading: isPosting }] = useCreateFeedMutation();
+  const [uploadFile, { isLoading: isPosting }] = useUploadFileMutation();
+  const [createContent, { isLoading: isContentCreating }] =
+    useCreateContentFeedMutation();
 
   const canPost = content.trim().length > 0 || !!selectedImage;
 
@@ -107,24 +114,27 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
     }
 
     try {
-      const formData = new FormData();
-      formData.append('type', selectedImage ? 'file' : 'content');
-
       const trimmedContent = content.trim();
-      if (trimmedContent) {
-        formData.append('content', trimmedContent);
-      }
 
       if (selectedImage) {
-        // RN's FormData accepts this {uri, type, name} shape directly as a file part
-        formData.append('file', {
+        const formData: UploadFileArg = {
+          type: selectedImage ? 'file' : 'content',
           uri: selectedImage.uri,
-          type: selectedImage.type,
           name: selectedImage.name,
-        } as unknown as Blob);
-      }
+          path: 'feed',
+        };
 
-      // await createFeed(formData).unwrap();
+        if (trimmedContent) {
+          formData.content = trimmedContent;
+        }
+
+        await uploadFile(formData).unwrap();
+      } else {
+        await createContent({
+          content: trimmedContent,
+          type: 'content',
+        }).unwrap();
+      }
 
       setContent('');
       setSelectedImage(null);
@@ -134,9 +144,17 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
       console.error('Failed to create post', error);
       Alert.alert('Post failed', 'Please try posting again.');
     }
-  }, [canPost, content, selectedImage, createFeed, onPosted, onClose]);
+  }, [
+    canPost,
+    content,
+    selectedImage,
+    uploadFile,
+    createContent,
+    onPosted,
+    onClose,
+  ]);
 
-  const busy = isPreparingImage || isPosting;
+  const busy = isPreparingImage || isPosting || isContentCreating;
 
   return (
     <SafeAreaView style={styles.container}>

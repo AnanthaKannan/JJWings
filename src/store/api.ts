@@ -15,7 +15,9 @@ import {
   TopGameScoreByLevel,
   ScoreDetail,
   FeedData,
+  UploadFileArg,
   Feed,
+  CreateContentArg,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -404,10 +406,6 @@ type UploadFile = {
 type UploadQuestionPaperArg = {
   file: UploadFile;
   name: string;
-};
-
-type UploadAchievementArg = {
-  file: UploadFile;
 };
 
 type UploadProfilePicArg = {
@@ -1362,6 +1360,7 @@ export const jjWingsApi = createApi({
         url: '/feed',
       }),
       transformResponse: (response: FeedData) => response.data,
+      providesTags: [{ type: 'FileUploads', id: 'FEED' }],
     }),
 
     sendNotification: builder.mutation<string, SendNotificationArg>({
@@ -1564,15 +1563,18 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
     }),
 
-    uploadAchievement: builder.mutation<string, UploadAchievementArg>({
-      query: ({ file }) => {
+    uploadFile: builder.mutation<string, UploadFileArg>({
+      query: ({ ...file }) => {
         const formData = new FormData();
-        formData.append('path', 'celebration');
-        formData.append('name', 'celebration');
+        formData.append('path', file.path);
+
+        if (file.content) formData.append('content', file.content);
+        if (file.type) formData.append('type', file.type);
+
         formData.append('file', {
           uri: file.uri,
-          type: file.type ?? 'image/jpeg',
-          name: file.name ?? 'celebration.jpg',
+          type: 'image/jpeg',
+          name: file.name ?? 'random.jpg',
         } as any);
 
         return {
@@ -1582,28 +1584,19 @@ export const jjWingsApi = createApi({
         };
       },
       transformResponse: () => 'success',
-      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
     }),
 
-    createFeed: builder.mutation<string, UploadAchievementArg>({
-      query: ({ file }) => {
-        const formData = new FormData();
-        formData.append('path', 'celebration');
-        formData.append('name', 'celebration');
-        formData.append('file', {
-          uri: file.uri,
-          type: file.type ?? 'image/jpeg',
-          name: file.name ?? 'celebration.jpg',
-        } as any);
-
+    createContentFeed: builder.mutation<string, CreateContentArg>({
+      query: body => {
         return {
-          url: '/uploads',
+          url: '/feed/admin/content',
           method: 'POST',
-          body: formData,
+          body,
         };
       },
       transformResponse: () => 'success',
-      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
     }),
 
     deleteQuestionPaper: builder.mutation<string, string>({
@@ -1939,6 +1932,7 @@ export const {
   useResetPasswordMutation,
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
+  useUploadFileMutation,
   useRemoveStudentFcmTokenMutation,
   useUploadProfilePicMutation,
   useDeleteProfilePicMutation,
@@ -1964,11 +1958,10 @@ export const {
   useDeleteQuestionPaperMutation,
   useLazyGetQuestionPaperDownloadQuery,
   useGetAchievementsQuery,
-  useUploadAchievementMutation,
   useDeleteAchievementMutation,
   useGenerateOtpMutation,
   useVerifyOtpMutation,
   useVerifyPrefixMutation,
-  useCreateFeedMutation,
+  useCreateContentFeedMutation,
   useCreateOrgMutation,
 } = jjWingsApi;
