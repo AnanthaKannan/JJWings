@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
   Text,
   ListRenderItemInfo,
 } from 'react-native';
@@ -19,6 +20,8 @@ export interface ImageFeedProps {
   images: Feed[];
   onLoadMore?: () => Promise<Feed[]>;
   aspectRatio?: number;
+  refreshing: boolean;
+  onRefresh: () => void;
 }
 
 const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
@@ -75,6 +78,8 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
 const ImageFeed: React.FC<ImageFeedProps> = ({
   images,
   onLoadMore,
+  refreshing,
+  onRefresh,
   aspectRatio = 1,
 }) => {
   const [data, setData] = useState<Feed[]>(images);
@@ -120,6 +125,15 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
       removeClippedSubviews
       onEndReached={handleEndReached}
       onEndReachedThreshold={0.6}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#2563EB"
+          colors={['#2563EB']}
+          progressBackgroundColor="#EEF2FF"
+        />
+      }
       ListFooterComponent={
         loadingMore ? (
           <View style={styles.footer}>
