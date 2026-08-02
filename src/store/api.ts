@@ -1585,6 +1585,27 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
     }),
 
+    createFeed: builder.mutation<string, UploadAchievementArg>({
+      query: ({ file }) => {
+        const formData = new FormData();
+        formData.append('path', 'celebration');
+        formData.append('name', 'celebration');
+        formData.append('file', {
+          uri: file.uri,
+          type: file.type ?? 'image/jpeg',
+          name: file.name ?? 'celebration.jpg',
+        } as any);
+
+        return {
+          url: '/uploads',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+    }),
+
     deleteQuestionPaper: builder.mutation<string, string>({
       query: id => ({
         url: `/admin/file-uploads/${id}`,
@@ -1948,5 +1969,6 @@ export const {
   useGenerateOtpMutation,
   useVerifyOtpMutation,
   useVerifyPrefixMutation,
+  useCreateFeedMutation,
   useCreateOrgMutation,
 } = jjWingsApi;

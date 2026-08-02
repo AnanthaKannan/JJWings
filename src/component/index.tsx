@@ -13,3 +13,4 @@ export { default as Avatar } from './Avatar';
 export { default as Loader } from './Loader';
 export { default as ImageFeed } from './ImageFeed';
 export { default as PostActionsBar } from './PostActionsBar';
+export { default as CreatePostScreen } from './CreatePostScreen';

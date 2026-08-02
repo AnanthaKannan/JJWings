@@ -37,6 +37,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
   },
   avatarImage: {
     width: '100%',

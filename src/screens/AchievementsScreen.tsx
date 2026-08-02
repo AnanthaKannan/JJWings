@@ -4,6 +4,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Modal,
   RefreshControl,
   SafeAreaView,
   StatusBar,
@@ -28,6 +29,8 @@ import {
   LoadingState,
   StudentHeader,
   ImageFeed,
+  FloatingAddButton,
+  CreatePostScreen,
 } from '../component';
 import {
   Achievement,
@@ -50,6 +53,7 @@ const getAchievementImageUrl = (item: Achievement) =>
 
 export default function AchievementsScreen() {
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+  const [creatingPost, setCreatingPost] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const {
@@ -169,9 +173,9 @@ export default function AchievementsScreen() {
   };
 
   const header = isAdmin ? (
-    <AdminHeader header="Achievements" />
+    <AdminHeader header="Feeds" />
   ) : (
-    <StudentHeader header="Achievements" headerBackgroundColor="#EEF2FF" />
+    <StudentHeader header="Feeds" headerBackgroundColor="#EEF2FF" />
   );
 
   return (
@@ -180,24 +184,6 @@ export default function AchievementsScreen() {
       {header}
 
       <View style={styles.content}>
-        {isAdmin && (
-          <View style={styles.uploadCard}>
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={handleUpload}
-              disabled={isBusy}
-              activeOpacity={0.84}
-            >
-              <MaterialIcons
-                name="add-photo-alternate"
-                size={21}
-                color="#FFFFFF"
-              />
-              <Text style={styles.uploadButtonText}>Upload Image</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         <ImageFeed
           images={feedList}
           aspectRatio={1080 / 1350}
@@ -208,6 +194,21 @@ export default function AchievementsScreen() {
           //   ];
           // }}
         />
+
+        <Modal
+          visible={creatingPost}
+          animationType="fade"
+          onRequestClose={() => setCreatingPost(false)}
+        >
+          <CreatePostScreen
+            userName="Sree Kannan"
+            onClose={() => setCreatingPost(false)}
+            onPosted={() => setCreatingPost(false)}
+          />
+        </Modal>
+
+        {isAdmin && <FloatingAddButton onPress={() => setCreatingPost(true)} />}
+
         {/* <View style={styles.carouselCard}>
           {showLoader ? (
             <LoadingState label="Loading achievements..." />
