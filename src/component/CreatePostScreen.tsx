@@ -26,6 +26,7 @@ import {
   useUploadFileMutation,
   useCreateContentFeedMutation,
 } from '../store/api'; // adjust to your actual RTK Query slice
+import Avatar from './Avatar';
 
 interface SelectedImage {
   uri: string;
@@ -35,7 +36,7 @@ interface SelectedImage {
 
 export interface CreatePostScreenProps {
   userName: string;
-  userAvatarUri?: string;
+  userAvatarUri?: string | null;
   onClose: () => void;
   /** Called after a successful post, e.g. to refetch the feed */
   onPosted?: () => void;
@@ -173,13 +174,7 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
       </View>
 
       <View style={styles.userRow}>
-        {userAvatarUri ? (
-          <Image source={{ uri: userAvatarUri }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <Text style={styles.avatarInitial}>{userName.charAt(0)}</Text>
-          </View>
-        )}
+        <Avatar profilePic={userAvatarUri} name={userName} />
         <Text style={styles.userName}>{userName}</Text>
       </View>
 

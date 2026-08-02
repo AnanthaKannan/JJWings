@@ -4,13 +4,13 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { getFileUrl } from '../util/fileUrl';
 
 export const Avatar = ({
-  color,
+  color = '#8db4e8',
   name,
   profilePic,
 }: {
-  color: string;
+  color?: string;
   name: string;
-  profilePic?: string;
+  profilePic?: string | null;
 }) => {
   const initials = name
     .split(' ')

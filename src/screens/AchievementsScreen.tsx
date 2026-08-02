@@ -14,7 +14,7 @@ import { useGetFeedListQuery } from '../store/api';
 import { RootState } from '../store/store';
 
 export default function AchievementsScreen() {
-  const { isAdmin, adminName } = useSelector(
+  const { isAdmin, adminName, adminProfilePic } = useSelector(
     (state: RootState) => state.common,
   );
   const [creatingPost, setCreatingPost] = useState(false);
@@ -65,6 +65,7 @@ export default function AchievementsScreen() {
         >
           <CreatePostScreen
             userName={adminName}
+            userAvatarUri={adminProfilePic}
             onClose={() => setCreatingPost(false)}
             // onPosted={() => setCreatingPost(false)}
           />
