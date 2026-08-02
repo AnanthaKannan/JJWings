@@ -29,7 +29,11 @@ import {
 import { BeadTheme, GameLevel, GamePhase, Question } from '../types';
 import TopGamer from '../component/TopGamer';
 
-import { useGetTopGameScoreByLevelQuery } from '../store/api';
+import {
+  useGetTopGameScoreByLevelQuery,
+  useGetScoreDetailsQuery,
+  useAddGameScoreMutation,
+} from '../store/api';
 
 function Cloud({ style }: { style: object }) {
   return (
@@ -78,6 +82,15 @@ export default function GameScreen() {
     setScore(0);
     setLives(TOTAL_LIVES);
   }, []);
+
+  const [addGameScore] = useAddGameScoreMutation();
+
+  const { data: topGamersData, isFetching } = useGetTopGameScoreByLevelQuery({
+    level: selectedLevel,
+  });
+  const { data: scoreDetails } = useGetScoreDetailsQuery({
+    level: selectedLevel,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -197,6 +210,10 @@ export default function GameScreen() {
       }),
     ]).start(() => {
       const next = scoreRef.current + 1;
+
+      if ((scoreDetails?.data?.points || 0) < next) {
+        addGameScore({ level: selectedLevel, points: next });
+      }
       updateScore(next);
       setBest(prevBest => Math.max(prevBest, next));
       setQuestion(null);
@@ -263,10 +280,6 @@ export default function GameScreen() {
     }
     navigation.navigate('Progress');
   }
-
-  const { data: topGamersData, isFetching } = useGetTopGameScoreByLevelQuery({
-    level: selectedLevel,
-  });
 
   const selectedLevelConfig =
     GAME_LEVELS.find(entry => entry.level === selectedLevel) ?? GAME_LEVELS[0];

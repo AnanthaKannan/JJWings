@@ -75,6 +75,12 @@ export type TopGameScoreByLevel = GeneralResponse & {
   result: TopGamerDetail[];
 };
 
+export type ScoreDetail = {
+  data: {
+    points: number;
+  };
+};
+
 export type GeneralResponse = {
   success: boolean;
   message: string;
