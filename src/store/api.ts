@@ -14,6 +14,8 @@ import {
   AddGameScore,
   TopGameScoreByLevel,
   ScoreDetail,
+  FeedData,
+  Feed,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -1355,6 +1357,13 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
     }),
 
+    getFeedList: builder.query<Feed[], void>({
+      query: () => ({
+        url: '/feed',
+      }),
+      transformResponse: (response: FeedData) => response.data,
+    }),
+
     sendNotification: builder.mutation<string, SendNotificationArg>({
       query: body => ({
         url: '/admin/notifications',
@@ -1887,6 +1896,7 @@ export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
   useSwitchStudentLoginMutation,
+  useGetFeedListQuery,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
   useAddGameScoreMutation,

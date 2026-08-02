@@ -11,3 +11,5 @@ export { default as BottomLodeMore } from './BottomLodeMore';
 export { default as EmptyData } from './EmptyData';
 export { default as Avatar } from './Avatar';
 export { default as Loader } from './Loader';
+export { default as ImageFeed } from './ImageFeed';
+export { default as PostActionsBar } from './PostActionsBar';

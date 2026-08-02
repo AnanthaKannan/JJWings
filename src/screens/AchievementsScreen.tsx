@@ -27,12 +27,14 @@ import {
   LoadingOverlay,
   LoadingState,
   StudentHeader,
+  ImageFeed,
 } from '../component';
 import {
   Achievement,
   useDeleteAchievementMutation,
   useGetAchievementsQuery,
   useUploadAchievementMutation,
+  useGetFeedListQuery,
 } from '../store/api';
 import { IMAGE_UPLOAD_LIMITS } from '../config/imageUpload';
 import { RootState } from '../store/store';
@@ -52,10 +54,18 @@ export default function AchievementsScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const {
     data: achievements = [],
-    isLoading,
-    isFetching,
+    // isLoading,
+    // isFetching,
     refetch,
   } = useGetAchievementsQuery();
+
+  const {
+    data: feedList = [],
+    isLoading,
+    isFetching,
+    // refetch,
+  } = useGetFeedListQuery();
+
   const [uploadAchievement, uploadResult] = useUploadAchievementMutation();
   const [deleteAchievement, deleteResult] = useDeleteAchievementMutation();
   const [isPreparingImage, setIsPreparingImage] = useState(false);
@@ -125,7 +135,8 @@ export default function AchievementsScreen() {
       console.error('Failed to upload achievement image', error);
       Alert.alert(
         'Upload failed',
-        error instanceof Error && error.message === 'ACHIEVEMENT_IMAGE_TOO_LARGE'
+        error instanceof Error &&
+          error.message === 'ACHIEVEMENT_IMAGE_TOO_LARGE'
           ? `Please choose a smaller image. Achievement images must be under ${formatUploadLimit(
               IMAGE_UPLOAD_LIMITS.achievementMaxBytes,
             )}.`
@@ -187,7 +198,17 @@ export default function AchievementsScreen() {
           </View>
         )}
 
-        <View style={styles.carouselCard}>
+        <ImageFeed
+          images={feedList}
+          aspectRatio={1080 / 1350}
+          // onLoadMore={async () => {
+          //   // fetch next page from your API here
+          //   return [
+          //     { id: '4', url: 'https://picsum.photos/id/1020/1080/1350' },
+          //   ];
+          // }}
+        />
+        {/* <View style={styles.carouselCard}>
           {showLoader ? (
             <LoadingState label="Loading achievements..." />
           ) : (
@@ -273,7 +294,7 @@ export default function AchievementsScreen() {
               ))}
             </View>
           )}
-        </View>
+        </View> */}
       </View>
 
       <LoadingOverlay visible={isBusy} label="Updating achievements..." />

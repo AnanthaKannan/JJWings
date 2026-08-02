@@ -81,6 +81,22 @@ export type ScoreDetail = {
   };
 };
 
+export type Feed = {
+  _id: string;
+  content?: string;
+  type: string;
+  commentCount: number;
+  likeCount: number;
+  adminName: string;
+  adminPicPath: string;
+  filePath: string;
+  createdAt: string;
+};
+
+export type FeedData = GeneralResponse & {
+  data: Feed[];
+};
+
 export type GeneralResponse = {
   success: boolean;
   message: string;
