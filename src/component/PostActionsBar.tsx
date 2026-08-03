@@ -1,29 +1,40 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Easing,
+  ActivityIndicator,
+} from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export interface ReactionSummary {
-  /** Total number of likes/reactions shown next to the badges */
   count: number;
-  /**
-   * Which reaction badges to show, in stacking order (first item is on top).
-   * Extend this union as you add more reaction types.
-   */
   types: Array<'like' | 'love'>;
 }
 
 export interface PostActionsBarProps {
   likeCount: number;
   commentCount: number;
-  shareCount: number;
-  /** Top-right reaction summary (the small overlapping circles + count) */
   reactions?: ReactionSummary;
-  /** Whether the current user has already liked the post — tints the Like label/icon */
   liked?: boolean;
-  onLikePress?: () => void;
+  /** Resolve/reject (or return void) once the like/unlike call settles. Return `false` to roll back the optimistic change. */
+  onLikePress?: () => Promise<boolean | void> | boolean | void;
   onCommentPress?: () => void;
-  onSharePress?: () => void;
 }
+
+interface Particle {
+  id: number;
+  translateY: Animated.Value;
+  translateX: Animated.Value;
+  opacity: Animated.Value;
+  scale: Animated.Value;
+}
+
+const PARTICLE_COUNT = 6;
+const SLOW_REQUEST_THRESHOLD_MS = 250; // only show spinner if it takes longer than this
 
 const PostActionsBar: React.FC<PostActionsBarProps> = ({
   likeCount,
@@ -32,23 +43,170 @@ const PostActionsBar: React.FC<PostActionsBarProps> = ({
   onLikePress,
   onCommentPress,
 }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const particleIdRef = useRef(0);
+
+  // optimistic local state, so tap feedback is instant regardless of network speed
+  const [optimisticLiked, setOptimisticLiked] = useState(liked);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showSpinner, setShowSpinner] = useState(false);
+  const spinnerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // keep local state in sync if the prop changes from outside (e.g. list refresh)
+  useEffect(() => {
+    setOptimisticLiked(liked);
+  }, [liked]);
+
+  const runIconPop = () => {
+    scaleAnim.setValue(0.7);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 140,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const launchParticles = () => {
+    const newParticles: Particle[] = Array.from({ length: PARTICLE_COUNT }).map(
+      () => ({
+        id: particleIdRef.current++,
+        translateY: new Animated.Value(0),
+        translateX: new Animated.Value(0),
+        opacity: new Animated.Value(1),
+        scale: new Animated.Value(0.6),
+      }),
+    );
+
+    setParticles(prev => [...prev, ...newParticles]);
+
+    newParticles.forEach(particle => {
+      const angle = (Math.random() - 0.5) * 100;
+      const distance = 40 + Math.random() * 24;
+
+      Animated.parallel([
+        Animated.timing(particle.translateY, {
+          toValue: -distance,
+          duration: 700 + Math.random() * 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(particle.translateX, {
+          toValue: angle,
+          duration: 700 + Math.random() * 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(particle.scale, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(particle.scale, {
+            toValue: 0.8,
+            duration: 550,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(particle.opacity, {
+          toValue: 0,
+          duration: 700,
+          delay: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setParticles(prev => prev.filter(p => p.id !== particle.id));
+      });
+    });
+  };
+
+  const handleLikePress = async () => {
+    if (isSyncing) return; // avoid double-taps mid-request
+
+    const nextLiked = !optimisticLiked;
+
+    // 1. instant feedback — flip icon/color/pop right away
+    setOptimisticLiked(nextLiked);
+    runIconPop();
+    if (nextLiked) {
+      launchParticles();
+    }
+
+    // 2. only surface a spinner if the request is actually slow
+    setIsSyncing(true);
+    spinnerTimerRef.current = setTimeout(() => {
+      setShowSpinner(true);
+    }, SLOW_REQUEST_THRESHOLD_MS);
+
+    try {
+      const result = await onLikePress?.();
+      if (result === false) {
+        // server rejected it — roll back
+        setOptimisticLiked(!nextLiked);
+      }
+    } catch {
+      // network/error — roll back so UI reflects reality
+      setOptimisticLiked(!nextLiked);
+    } finally {
+      if (spinnerTimerRef.current) clearTimeout(spinnerTimerRef.current);
+      setIsSyncing(false);
+      setShowSpinner(false);
+    }
+  };
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={onLikePress}
-          hitSlop={8}
-        >
-          <MaterialIcons
-            name={liked ? 'thumb-up' : 'thumb-up-off-alt'}
-            size={20}
-            color={liked ? '#1877F2' : '#65676b'}
-          />
-          <Text style={[styles.actionText, liked && styles.actionTextActive]}>
-            {likeCount}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.likeButtonWrapper}>
+          {particles.map(particle => (
+            <Animated.View
+              key={particle.id}
+              pointerEvents="none"
+              style={[
+                styles.particle,
+                {
+                  opacity: particle.opacity,
+                  transform: [
+                    { translateY: particle.translateY },
+                    { translateX: particle.translateX },
+                    { scale: particle.scale },
+                  ],
+                },
+              ]}
+            >
+              <MaterialIcons name="thumb-up" size={14} color="#1877F2" />
+            </Animated.View>
+          ))}
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleLikePress}
+            hitSlop={8}
+            disabled={isSyncing && showSpinner}
+          >
+            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+              {showSpinner ? (
+                <ActivityIndicator size="small" color="#1877F2" />
+              ) : (
+                <MaterialIcons
+                  name={optimisticLiked ? 'thumb-up' : 'thumb-up-off-alt'}
+                  size={20}
+                  color={optimisticLiked ? '#1877F2' : '#65676b'}
+                />
+              )}
+            </Animated.View>
+            <Text
+              style={[
+                styles.actionText,
+                optimisticLiked && styles.actionTextActive,
+              ]}
+            >
+              {likeCount}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.actionButton}
@@ -69,44 +227,26 @@ const styles = StyleSheet.create({
     borderTopColor: '#f0f2f5',
     borderTopWidth: 1,
   },
-  reactionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f2f5',
-  },
-  badgeStack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reactionBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
-  reactionsCount: {
-    marginLeft: 6,
-    fontSize: 13,
-    color: '#65676b',
-  },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
+  likeButtonWrapper: {
+    position: 'relative',
+  },
+  particle: {
+    position: 'absolute',
+    left: 18,
+    top: 8,
+  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
+    minWidth: 60, // keeps layout stable when spinner swaps in for the icon
   },
   actionText: {
     marginLeft: 6,
@@ -116,9 +256,6 @@ const styles = StyleSheet.create({
   },
   actionTextActive: {
     color: '#1877F2',
-  },
-  shareIcon: {
-    transform: [{ scaleX: -1 }],
   },
 });
 

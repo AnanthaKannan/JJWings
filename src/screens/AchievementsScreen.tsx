@@ -67,7 +67,6 @@ export default function AchievementsScreen() {
             userName={adminName}
             userAvatarUri={adminProfilePic}
             onClose={() => setCreatingPost(false)}
-            // onPosted={() => setCreatingPost(false)}
           />
         </Modal>
 

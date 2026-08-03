@@ -19,7 +19,7 @@ import { getFileUrl } from '../util/fileUrl';
 import { formatFeedDate } from '../util/fn';
 import PostOptionsMenu from './PostOptionsMenu';
 import { RootState } from '../store/store';
-import { useDeleteFeedMutation } from '../store/api';
+import { useDeleteFeedMutation, useToggleLikeMutation } from '../store/api';
 
 export interface ImageFeedProps {
   images: Feed[];
@@ -38,6 +38,7 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
     (state: RootState) => state.common,
   );
   const [deleteFeed, { isLoading: isDeleting }] = useDeleteFeedMutation();
+  const [toggleLike] = useToggleLikeMutation();
 
   const handleDelete = async (feedId: string) => {
     try {
@@ -92,13 +93,15 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
       )}
 
       <PostActionsBar
-        likeCount={13}
-        commentCount={1}
-        shareCount={2}
+        likeCount={item.likeCount}
+        commentCount={item.commentCount}
         reactions={{ count: 13, types: ['like', 'love'] }}
-        onLikePress={() => {}}
+        onLikePress={async () => {
+          await toggleLike({ feedId: item._id }).unwrap();
+          return true;
+        }}
         onCommentPress={() => {}}
-        onSharePress={() => {}}
+        liked={item.isLikedByMe}
       />
     </View>
   );

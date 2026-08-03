@@ -93,6 +93,7 @@ export type Feed = {
   createdAt: string;
   createdBy: string;
   isPrivate: boolean;
+  isLikedByMe: boolean;
 };
 
 type FilePath = 'feed' | 'profile';
@@ -119,4 +120,28 @@ export type FeedData = GeneralResponse & {
 export type GeneralResponse = {
   success: boolean;
   message: string;
+};
+
+export type UserTypeSch = 'Student' | 'Admin';
+
+export type ParentComment = {
+  _id: string;
+  userDetail: {
+    _id: string;
+    name: string;
+    profilePicPath: string;
+  };
+  userType: UserTypeSch;
+  content: string;
+  isBlocked: boolean;
+  createdAt: string;
+};
+
+export type ParentCommentRes = GeneralResponse & {
+  data: ParentComment[];
+};
+
+export type CreateComment = {
+  feedId: string;
+  content: string;
 };

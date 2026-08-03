@@ -18,6 +18,9 @@ import {
   UploadFileArg,
   Feed,
   CreateContentArg,
+  ParentCommentRes,
+  ParentComment,
+  CreateComment,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -1757,6 +1760,33 @@ export const jjWingsApi = createApi({
       }),
     }),
 
+    getParentComment: builder.query<ParentComment[], { feedId: string }>({
+      query: ({ feedId }) => ({
+        url: `/comment/parent/${feedId}`,
+        method: 'GET',
+      }),
+      transformResponse: (res: ParentCommentRes) => res.data,
+    }),
+
+    createComment: builder.mutation<string, CreateComment>({
+      query: body => ({
+        url: '/comment',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+    }),
+
+    toggleLike: builder.mutation<string, { feedId: string }>({
+      query: body => ({
+        url: '/comment/like',
+        method: 'PUT',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
+    }),
+
     addGameScore: builder.mutation<GeneralResponse, AddGameScore>({
       query: body => ({
         url: '/game/score',
@@ -1974,4 +2004,7 @@ export const {
   useVerifyPrefixMutation,
   useCreateContentFeedMutation,
   useCreateOrgMutation,
+  useCreateCommentMutation,
+  useGetParentCommentQuery,
+  useToggleLikeMutation,
 } = jjWingsApi;
