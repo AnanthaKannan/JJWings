@@ -19,6 +19,7 @@ import { getFileUrl } from '../util/fileUrl';
 import { formatFeedDate } from '../util/fn';
 import PostOptionsMenu from './PostOptionsMenu';
 import { RootState } from '../store/store';
+import { CommentBottomSheet } from '../component';
 import { useDeleteFeedMutation, useToggleLikeMutation } from '../store/api';
 
 export interface ImageFeedProps {
@@ -29,10 +30,11 @@ export interface ImageFeedProps {
   onRefresh: () => void;
 }
 
-const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
-  item,
-  aspectRatio,
-}) => {
+const FeedImageItem: React.FC<{
+  item: Feed;
+  aspectRatio: number;
+  onCommentPress: () => void;
+}> = ({ item, aspectRatio, onCommentPress }) => {
   const [loaded, setLoaded] = useState(false);
   const { adminRoles, adminId } = useSelector(
     (state: RootState) => state.common,
@@ -100,7 +102,7 @@ const FeedImageItem: React.FC<{ item: Feed; aspectRatio: number }> = ({
           await toggleLike({ feedId: item._id }).unwrap();
           return true;
         }}
-        onCommentPress={() => {}}
+        onCommentPress={onCommentPress}
         liked={item.isLikedByMe}
       />
     </View>
@@ -117,6 +119,7 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
   const [data, setData] = useState<Feed[]>(images);
   const [loadingMore, setLoadingMore] = useState(false);
   const [exhausted, setExhausted] = useState(false);
+  const [commentSheetVisible, setCommentSheetVisible] = useState(false);
 
   useEffect(() => {
     setData(images);
@@ -140,41 +143,95 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<Feed>) => (
-      <FeedImageItem item={item} aspectRatio={aspectRatio} />
+      <FeedImageItem
+        item={item}
+        aspectRatio={aspectRatio}
+        onCommentPress={() => setCommentSheetVisible(true)}
+      />
     ),
     [aspectRatio],
   );
 
   return (
-    <FlatList
-      data={data}
-      keyExtractor={item => item._id}
-      renderItem={renderItem}
-      // Loads/renders items progressively rather than all at once
-      initialNumToRender={3}
-      maxToRenderPerBatch={3}
-      windowSize={5}
-      removeClippedSubviews
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.6}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor="#2563EB"
-          colors={['#2563EB']}
-          progressBackgroundColor="#EEF2FF"
-        />
-      }
-      ListFooterComponent={
-        loadingMore ? (
-          <View style={styles.footer}>
-            <ActivityIndicator size="small" color="#8a8d91" />
-          </View>
-        ) : null
-      }
-      contentContainerStyle={styles.listContent}
-    />
+    <View>
+      <FlatList
+        data={data}
+        keyExtractor={item => item._id}
+        renderItem={renderItem}
+        // Loads/renders items progressively rather than all at once
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={5}
+        removeClippedSubviews
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.6}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#2563EB"
+            colors={['#2563EB']}
+            progressBackgroundColor="#EEF2FF"
+          />
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.footer}>
+              <ActivityIndicator size="small" color="#8a8d91" />
+            </View>
+          ) : null
+        }
+        contentContainerStyle={styles.listContent}
+      />
+      <CommentBottomSheet
+        visible={commentSheetVisible}
+        comments={[
+          {
+            id: '1',
+            userName: 'Thiyagu Bhagawathi',
+            userAvatar: 'https://i.pravatar.cc/150?img=1',
+            content:
+              'தற்குறிகள் தரம் தாழ்ந்தவனுக இவனுக சங்கிபோல் தான் திருப்பி அடிக்கனும் அப்பத்தான் மூடுவாங்க',
+            createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5h ago
+          },
+          {
+            id: '2',
+            userName: 'Velu',
+            userAvatar: 'https://i.pravatar.cc/150?img=2',
+            content:
+              'Enakku 2000 varum eppovum\nIppo 13500 vanthirukku\n\nEnnatha solla',
+            createdAt: new Date(Date.now() - 19 * 60 * 60 * 1000).toISOString(), // 19h ago
+          },
+          {
+            id: '3',
+            userName: 'Tamil Arasan',
+            userAvatar: 'https://i.pravatar.cc/150?img=3',
+            content: 'Last ah ennoda current bill 1800 but ipo 1300 than',
+            createdAt: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(), // 14h ago
+          },
+          {
+            id: '4',
+            userName: 'Siva Venkat',
+            userAvatar: 'https://i.pravatar.cc/150?img=4',
+            content:
+              'Vj siddu நல்ல மனிதர் அவரை விமர்சனம் செய்வது நல்லது அல்ல......',
+            createdAt: new Date(
+              Date.now() - 1 * 24 * 60 * 60 * 1000,
+            ).toISOString(), // 1d ago
+          },
+          {
+            id: '5',
+            userName: 'Sheik Rasool',
+            userAvatar: 'https://i.pravatar.cc/150?img=5',
+            content: 'Already going on re execution pls wait next bill papom',
+            createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1h ago
+          },
+        ]} // CommentItem[] from your getParentComment API response
+        onClose={() => setCommentSheetVisible(false)}
+        onEndReached={() => {}}
+        loadingMore={false}
+      />
+    </View>
   );
 };
 
