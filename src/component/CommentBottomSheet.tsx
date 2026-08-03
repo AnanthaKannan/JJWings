@@ -28,6 +28,7 @@ const FULL_HEIGHT = SCREEN_HEIGHT * 0.92;
 const CLOSE_THRESHOLD = 100;
 const VELOCITY_THRESHOLD = 0.8;
 const EXPAND_THRESHOLD = 60;
+const MAX_COMMENT_LENGTH = 1000;
 
 export interface CommentItem {
   id: string;
@@ -43,7 +44,9 @@ export interface CommentBottomSheetProps {
   onClose: () => void;
   onEndReached?: () => void;
   loadingMore?: boolean;
+  /** Called with the typed text when the user taps send. Should resolve once the comment is posted. */
   onSubmitComment: (text: string) => Promise<void> | void;
+  /** Current user's avatar shown next to the input box */
   currentUserAvatar?: string;
 }
 
@@ -51,10 +54,12 @@ const formatRelativeTime = (isoDate: string): string => {
   const now = Date.now();
   const then = new Date(isoDate).getTime();
   const diffMs = Math.max(now - then, 0);
+
   const minutes = Math.floor(diffMs / (1000 * 60));
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const weeks = Math.floor(days / 7);
+
   if (minutes < 1) return 'now';
   if (minutes < 60) return `${minutes}m`;
   if (hours < 24) return `${hours}h`;
@@ -92,6 +97,8 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   const [sheetHeight, setSheetHeight] = useState(HALF_HEIGHT);
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isOverLimit = inputText.length > MAX_COMMENT_LENGTH;
 
   // tracks whether the FlatList is scrolled to the very top — only then
   // should a downward drag over the list be handed to the sheet instead of
@@ -182,9 +189,9 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   ).current;
 
   // secondary drag zone: the list area itself — only takes over from the
-  // list's native scrolling when the drag is clearly vertical AND
-  // (dragging up, to expand) OR (dragging down while already at the top
-  // of the list, to collapse/close) — otherwise the list scrolls normally
+  // list's native scrolling when dragging down while already at the top
+  // of the list (to collapse/close), or dragging up while at half height
+  // (to expand) — otherwise the list scrolls normally
   const listPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -208,14 +215,16 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
 
   const handleSend = async () => {
     const trimmed = inputText.trim();
-    if (!trimmed || isSubmitting) return;
+
+    if (!trimmed) return;
+    if (trimmed.length > MAX_COMMENT_LENGTH) return;
 
     setIsSubmitting(true);
     try {
       await onSubmitComment(trimmed);
       setInputText('');
     } catch (err) {
-      // keep the text so the user doesn't lose what they typed
+      // keep text so the user doesn't lose what they typed
     } finally {
       setIsSubmitting(false);
     }
@@ -267,12 +276,28 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
               data={comments}
               keyExtractor={item => item.id}
               renderItem={renderItem}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[
+                styles.listContent,
+                comments.length === 0 && styles.listContentEmpty,
+              ]}
               showsVerticalScrollIndicator={false}
               onScroll={handleScroll}
               scrollEventThrottle={16}
               onEndReachedThreshold={0.4}
               onEndReached={onEndReached}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <MaterialIcons
+                    name="chat-bubble-outline"
+                    size={40}
+                    color="#c4c7cc"
+                  />
+                  <Text style={styles.emptyStateText}>No comments yet</Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    Be the first to comment
+                  </Text>
+                </View>
+              }
               ListFooterComponent={
                 loadingMore ? (
                   <Text style={styles.loadingMoreText}>Loading more…</Text>
@@ -284,6 +309,11 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
+            {isOverLimit ? (
+              <Text style={styles.errorText}>
+                Comment is too long ({inputText.length}/{MAX_COMMENT_LENGTH})
+              </Text>
+            ) : null}
             <View style={styles.inputBar}>
               {currentUserAvatar ? (
                 <Image
@@ -291,7 +321,12 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
                   style={styles.inputAvatar}
                 />
               ) : null}
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isOverLimit && styles.inputWrapperError,
+                ]}
+              >
                 <TextInput
                   style={styles.textInput}
                   placeholder="Write a comment..."
@@ -299,19 +334,20 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
                   value={inputText}
                   onChangeText={setInputText}
                   multiline
-                  maxLength={1000}
                 />
               </View>
               <TouchableOpacity
                 onPress={handleSend}
-                disabled={!inputText.trim() || isSubmitting}
+                disabled={!inputText.trim() || isOverLimit || isSubmitting}
                 hitSlop={8}
                 style={styles.sendButton}
               >
                 <MaterialIcons
                   name="send"
                   size={22}
-                  color={inputText.trim() ? '#1877F2' : '#c4c7cc'}
+                  color={
+                    inputText.trim() && !isOverLimit ? '#1877F2' : '#c4c7cc'
+                  }
                 />
               </TouchableOpacity>
             </View>
@@ -366,6 +402,10 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     flexGrow: 1,
   },
+  listContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   commentRow: {
     flexDirection: 'row',
     marginBottom: 16,
@@ -402,6 +442,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingVertical: 12,
   },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#65676b',
+    marginTop: 10,
+  },
+  emptyStateSubtext: {
+    fontSize: 13,
+    color: '#8a8d91',
+    marginTop: 4,
+  },
+  errorText: {
+    color: '#e0245e',
+    fontSize: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 4,
+  },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -426,6 +488,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginRight: 8,
     maxHeight: 100,
+  },
+  inputWrapperError: {
+    borderWidth: 1,
+    borderColor: '#e0245e',
   },
   textInput: {
     fontSize: 14,
