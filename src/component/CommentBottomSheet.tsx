@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   PanResponder,
+  PanResponderGestureState,
   Dimensions,
   Modal,
   TouchableWithoutFeedback,
@@ -14,6 +15,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
   ListRenderItem,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -24,6 +27,7 @@ const HALF_HEIGHT = SCREEN_HEIGHT * 0.5;
 const FULL_HEIGHT = SCREEN_HEIGHT * 0.92;
 const CLOSE_THRESHOLD = 100;
 const VELOCITY_THRESHOLD = 0.8;
+const EXPAND_THRESHOLD = 60;
 
 export interface CommentItem {
   id: string;
@@ -39,9 +43,7 @@ export interface CommentBottomSheetProps {
   onClose: () => void;
   onEndReached?: () => void;
   loadingMore?: boolean;
-  /** Called with the typed text when the user taps send. Should return a Promise that resolves once the comment is posted. */
   onSubmitComment: (text: string) => Promise<void> | void;
-  /** Current user's avatar shown next to the input box */
   currentUserAvatar?: string;
 }
 
@@ -49,12 +51,10 @@ const formatRelativeTime = (isoDate: string): string => {
   const now = Date.now();
   const then = new Date(isoDate).getTime();
   const diffMs = Math.max(now - then, 0);
-
   const minutes = Math.floor(diffMs / (1000 * 60));
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const weeks = Math.floor(days / 7);
-
   if (minutes < 1) return 'now';
   if (minutes < 60) return `${minutes}m`;
   if (hours < 24) return `${hours}h`;
@@ -93,6 +93,11 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // tracks whether the FlatList is scrolled to the very top — only then
+  // should a downward drag over the list be handed to the sheet instead of
+  // being consumed as a normal scroll
+  const listScrollOffset = useRef(0);
+
   const openToHeight = (height: number) => {
     currentHeight.current = height;
     setSheetHeight(height);
@@ -120,56 +125,84 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     }
   }, [visible]);
 
-  const panResponder = useRef(
+  const handleGestureMove = (gesture: PanResponderGestureState) => {
+    if (gesture.dy > 0) {
+      translateY.setValue(gesture.dy);
+    } else if (currentHeight.current === HALF_HEIGHT) {
+      const drag = Math.max(gesture.dy, -(FULL_HEIGHT - HALF_HEIGHT));
+      translateY.setValue(drag);
+    }
+  };
+
+  const handleGestureRelease = (gesture: PanResponderGestureState) => {
+    const draggedDown = gesture.dy;
+    const draggedUp = -gesture.dy;
+    const fastFlickDown = gesture.vy > VELOCITY_THRESHOLD;
+    const fastFlickUp = gesture.vy < -VELOCITY_THRESHOLD;
+
+    if (draggedDown > CLOSE_THRESHOLD || fastFlickDown) {
+      closeSheet();
+      return;
+    }
+
+    if (
+      currentHeight.current === HALF_HEIGHT &&
+      (draggedUp > EXPAND_THRESHOLD || fastFlickUp)
+    ) {
+      openToHeight(FULL_HEIGHT);
+      return;
+    }
+
+    if (
+      currentHeight.current === FULL_HEIGHT &&
+      draggedDown > 40 &&
+      !fastFlickUp
+    ) {
+      openToHeight(HALF_HEIGHT);
+      return;
+    }
+
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
+  };
+
+  // primary drag zone: handle + header — claims the gesture immediately,
+  // no minimum movement required, so it feels responsive right away
+  const headerPanResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dy) > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gesture) => handleGestureMove(gesture),
+      onPanResponderRelease: (_, gesture) => handleGestureRelease(gesture),
+      onPanResponderTerminationRequest: () => false,
+    }),
+  ).current;
 
-      onPanResponderMove: (_, gesture) => {
-        if (gesture.dy > 0) {
-          translateY.setValue(gesture.dy);
-        } else {
-          if (currentHeight.current === HALF_HEIGHT) {
-            const drag = Math.max(gesture.dy, -(FULL_HEIGHT - HALF_HEIGHT));
-            translateY.setValue(drag);
-          }
-        }
+  // secondary drag zone: the list area itself — only takes over from the
+  // list's native scrolling when the drag is clearly vertical AND
+  // (dragging up, to expand) OR (dragging down while already at the top
+  // of the list, to collapse/close) — otherwise the list scrolls normally
+  const listPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponderCapture: (_, gesture) => {
+        const isVertical =
+          Math.abs(gesture.dy) > 10 &&
+          Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.5;
+        if (!isVertical) return false;
+
+        const draggingDown = gesture.dy > 0;
+        const draggingUp = gesture.dy < 0;
+
+        if (draggingDown && listScrollOffset.current <= 0) return true;
+        if (draggingUp && currentHeight.current === HALF_HEIGHT) return true;
+        return false;
       },
-
-      onPanResponderRelease: (_, gesture) => {
-        const draggedDown = gesture.dy;
-        const draggedUp = -gesture.dy;
-        const fastFlickDown = gesture.vy > VELOCITY_THRESHOLD;
-        const fastFlickUp = gesture.vy < -VELOCITY_THRESHOLD;
-
-        if (draggedDown > CLOSE_THRESHOLD || fastFlickDown) {
-          closeSheet();
-          return;
-        }
-
-        if (
-          currentHeight.current === HALF_HEIGHT &&
-          (draggedUp > 80 || fastFlickUp)
-        ) {
-          openToHeight(FULL_HEIGHT);
-          return;
-        }
-
-        if (
-          currentHeight.current === FULL_HEIGHT &&
-          draggedDown > 40 &&
-          !fastFlickUp
-        ) {
-          openToHeight(HALF_HEIGHT);
-          return;
-        }
-
-        Animated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          bounciness: 4,
-        }).start();
-      },
+      onPanResponderMove: (_, gesture) => handleGestureMove(gesture),
+      onPanResponderRelease: (_, gesture) => handleGestureRelease(gesture),
     }),
   ).current;
 
@@ -182,8 +215,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
       await onSubmitComment(trimmed);
       setInputText('');
     } catch (err) {
-      // let the caller decide how to surface the error (toast, etc.);
-      // we just avoid clearing the input so the user doesn't lose their text
+      // keep the text so the user doesn't lose what they typed
     } finally {
       setIsSubmitting(false);
     }
@@ -193,8 +225,10 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     <CommentRow item={item} />
   );
 
-  // don't mount anything at all when not visible — avoids any stray
-  // gesture/animation state lingering, and guarantees nothing shows
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    listScrollOffset.current = e.nativeEvent.contentOffset.y;
+  };
+
   if (!visible) return null;
 
   return (
@@ -219,7 +253,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
             },
           ]}
         >
-          <View {...panResponder.panHandlers}>
+          <View {...headerPanResponder.panHandlers}>
             <View style={styles.handleArea}>
               <View style={styles.handle} />
             </View>
@@ -228,24 +262,27 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
             </View>
           </View>
 
-          <FlatList
-            data={comments}
-            keyExtractor={item => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            onEndReachedThreshold={0.4}
-            onEndReached={onEndReached}
-            ListFooterComponent={
-              loadingMore ? (
-                <Text style={styles.loadingMoreText}>Loading more…</Text>
-              ) : null
-            }
-          />
+          <View style={styles.listWrapper} {...listPanResponder.panHandlers}>
+            <FlatList
+              data={comments}
+              keyExtractor={item => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              onEndReachedThreshold={0.4}
+              onEndReached={onEndReached}
+              ListFooterComponent={
+                loadingMore ? (
+                  <Text style={styles.loadingMoreText}>Loading more…</Text>
+                ) : null
+              }
+            />
+          </View>
 
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
           >
             <View style={styles.inputBar}>
               {currentUserAvatar ? (
@@ -299,18 +336,18 @@ const styles = StyleSheet.create({
   },
   handleArea: {
     alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: 44,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: '#d0d3d9',
   },
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f2f5',
   },
@@ -319,6 +356,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     color: '#050505',
+  },
+  listWrapper: {
+    flex: 1,
   },
   listContent: {
     paddingHorizontal: 12,
