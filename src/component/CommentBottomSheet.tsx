@@ -223,7 +223,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     try {
       await onSubmitComment(trimmed);
       setInputText('');
-    } catch (err) {
+    } catch {
       // keep text so the user doesn't lose what they typed
     } finally {
       setIsSubmitting(false);
