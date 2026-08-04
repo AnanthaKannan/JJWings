@@ -52,12 +52,7 @@ class OralTtsModule(private val reactContext: ReactApplicationContext) :
   override fun onInit(status: Int) {
     isReady = status == TextToSpeech.SUCCESS
     if (isReady) {
-      textToSpeech?.setAudioAttributes(
-        AudioAttributes.Builder()
-          .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-          .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
-          .build(),
-      )
+      applySpeechAudioAttributes()
       textToSpeech?.setSpeechRate(speechRate)
       val languageResult = textToSpeech?.setLanguage(Locale.getDefault())
       if (
@@ -85,11 +80,21 @@ class OralTtsModule(private val reactContext: ReactApplicationContext) :
 
   private fun speakNow(text: String) {
     pendingText = null
+    applySpeechAudioAttributes()
     textToSpeech?.setSpeechRate(speechRate)
     val params = Bundle().apply {
       putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
     }
     textToSpeech?.stop()
     textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, params, "oral-question")
+  }
+
+  private fun applySpeechAudioAttributes() {
+    textToSpeech?.setAudioAttributes(
+      AudioAttributes.Builder()
+        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .build(),
+    )
   }
 }
