@@ -24,6 +24,7 @@ import {
   useDeleteFeedMutation,
   useToggleLikeMutation,
   useLazyGetParentCommentQuery,
+  useCreateCommentMutation,
 } from '../store/api';
 
 export interface ImageFeedProps {
@@ -122,6 +123,7 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
   const [data, setData] = useState<Feed[]>(images);
   const [loadingMore, setLoadingMore] = useState(false);
   const [exhausted, setExhausted] = useState(false);
+  const [selectedFeedId, setSelectedFeedId] = useState<string>('');
   const [commentSheetVisible, setCommentSheetVisible] = useState(false);
   const [
     getComment,
@@ -131,6 +133,8 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
       isFetching: isCommentFetching,
     },
   ] = useLazyGetParentCommentQuery();
+  const [createComment, { isLoading: isCommentCreating }] =
+    useCreateCommentMutation();
   useEffect(() => {
     setData(images);
     setExhausted(false);
@@ -155,6 +159,7 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
     (feedId: string) => {
       setCommentSheetVisible(true);
       getComment({ feedId });
+      setSelectedFeedId(feedId);
     },
     [getComment],
   );
@@ -204,12 +209,19 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
 
       <CommentBottomSheet
         visible={commentSheetVisible}
-        onSubmitComment={() => {}}
+        onSubmitComment={async content => {
+          await createComment({
+            feedId: selectedFeedId,
+            content,
+          });
+        }}
         comments={comments}
         onClose={() => setCommentSheetVisible(false)}
         onEndReached={() => {}}
         loadingMore={false}
-        commentLoading={isCommentLoading || isCommentFetching}
+        commentLoading={
+          isCommentLoading || isCommentFetching || isCommentCreating
+        }
       />
     </View>
   );

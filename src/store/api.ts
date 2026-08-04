@@ -964,6 +964,7 @@ export const jjWingsApi = createApi({
     'FileUploads',
     'Teachers',
     'Game',
+    'Comment',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
@@ -1363,7 +1364,10 @@ export const jjWingsApi = createApi({
         url: '/feed',
       }),
       transformResponse: (response: FeedData) => response.data,
-      providesTags: [{ type: 'FileUploads', id: 'FEED' }],
+      providesTags: [
+        { type: 'FileUploads', id: 'FEED' },
+        { type: 'Comment', id: 'LIST' },
+      ],
     }),
 
     sendNotification: builder.mutation<string, SendNotificationArg>({
@@ -1766,6 +1770,7 @@ export const jjWingsApi = createApi({
         method: 'GET',
       }),
       transformResponse: (res: ParentCommentRes) => res.data,
+      providesTags: [{ type: 'Comment', id: 'LIST' }],
     }),
 
     createComment: builder.mutation<string, CreateComment>({
@@ -1775,6 +1780,7 @@ export const jjWingsApi = createApi({
         body,
       }),
       transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Comment', id: 'LIST' }],
     }),
 
     toggleLike: builder.mutation<string, { feedId: string }>({

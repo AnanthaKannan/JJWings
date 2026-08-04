@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   TouchableOpacity,
   TextInput,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   NativeSyntheticEvent,
@@ -227,7 +228,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
       await onSubmitComment(trimmed);
       setInputText('');
     } catch {
-      // keep text so the user doesn't lose what they typed
+      Alert.alert('Comment Failed', 'Fail to add comment. try later.');
     } finally {
       setIsSubmitting(false);
     }
