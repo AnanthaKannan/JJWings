@@ -33,3 +33,34 @@ export function generateDeviceId(): string {
 
   return `${timestamp}-${random1}-${random2}`;
 }
+
+const MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+export const formatFeedDate = (isoString: string): string => {
+  const date = new Date(isoString);
+
+  const day = date.getDate();
+  const month = MONTH_NAMES[date.getMonth()];
+
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const period = hours >= 12 ? 'PM' : 'AM';
+
+  hours = hours % 12;
+  hours = hours === 0 ? 12 : hours; // 0 -> 12 for 12-hour clock
+
+  return `${day} ${month} at ${hours}:${minutes}${period}`;
+};

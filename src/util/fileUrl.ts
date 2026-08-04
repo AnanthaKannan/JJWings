@@ -2,8 +2,8 @@ import Config from 'react-native-config';
 
 const FILE_URL = Config.FILE_URL?.replace(/\/$/, '') ?? '';
 
-export const getFileUrl = (path?: string | null) => {
-  if (!path) return null;
+export const getFileUrl = (path?: string | null): string => {
+  if (!path) return '';
   if (/^https?:\/\//i.test(path)) return path;
 
   const cleanPath = path.replace(/^\/+/, '');

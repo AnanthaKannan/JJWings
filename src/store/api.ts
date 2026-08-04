@@ -14,6 +14,13 @@ import {
   AddGameScore,
   TopGameScoreByLevel,
   ScoreDetail,
+  FeedData,
+  UploadFileArg,
+  Feed,
+  CreateContentArg,
+  ParentCommentRes,
+  Comment,
+  CreateComment,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -402,10 +409,6 @@ type UploadFile = {
 type UploadQuestionPaperArg = {
   file: UploadFile;
   name: string;
-};
-
-type UploadAchievementArg = {
-  file: UploadFile;
 };
 
 type UploadProfilePicArg = {
@@ -961,6 +964,7 @@ export const jjWingsApi = createApi({
     'FileUploads',
     'Teachers',
     'Game',
+    'Comment',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
@@ -1355,6 +1359,17 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
     }),
 
+    getFeedList: builder.query<Feed[], void>({
+      query: () => ({
+        url: '/feed',
+      }),
+      transformResponse: (response: FeedData) => response.data,
+      providesTags: [
+        { type: 'FileUploads', id: 'FEED' },
+        { type: 'Comment', id: 'LIST' },
+      ],
+    }),
+
     sendNotification: builder.mutation<string, SendNotificationArg>({
       query: body => ({
         url: '/admin/notifications',
@@ -1555,15 +1570,18 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'FileUploads', id: 'PRACTICE' }],
     }),
 
-    uploadAchievement: builder.mutation<string, UploadAchievementArg>({
-      query: ({ file }) => {
+    uploadFile: builder.mutation<string, UploadFileArg>({
+      query: ({ ...file }) => {
         const formData = new FormData();
-        formData.append('path', 'celebration');
-        formData.append('name', 'celebration');
+        formData.append('path', file.path);
+
+        if (file.content) formData.append('content', file.content);
+        if (file.type) formData.append('type', file.type);
+
         formData.append('file', {
           uri: file.uri,
-          type: file.type ?? 'image/jpeg',
-          name: file.name ?? 'celebration.jpg',
+          type: 'image/jpeg',
+          name: file.name ?? 'random.jpg',
         } as any);
 
         return {
@@ -1573,7 +1591,28 @@ export const jjWingsApi = createApi({
         };
       },
       transformResponse: () => 'success',
-      invalidatesTags: [{ type: 'FileUploads', id: 'CELEBRATION' }],
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
+    }),
+
+    createContentFeed: builder.mutation<string, CreateContentArg>({
+      query: body => {
+        return {
+          url: '/feed/admin/content',
+          method: 'POST',
+          body,
+        };
+      },
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
+    }),
+
+    deleteFeed: builder.mutation<string, { feedId: string }>({
+      query: ({ feedId }) => ({
+        url: `/feed/admin/${feedId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
     }),
 
     deleteQuestionPaper: builder.mutation<string, string>({
@@ -1723,6 +1762,35 @@ export const jjWingsApi = createApi({
         method: 'POST',
         body,
       }),
+    }),
+
+    getParentComment: builder.query<Comment[], { feedId: string }>({
+      query: ({ feedId }) => ({
+        url: `/comment/parent/${feedId}`,
+        method: 'GET',
+      }),
+      transformResponse: (res: ParentCommentRes) => res.data,
+      providesTags: [{ type: 'Comment', id: 'LIST' }],
+    }),
+
+    createComment: builder.mutation<string, CreateComment>({
+      query: body => ({
+        url: '/comment',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Comment', id: 'LIST' }],
+    }),
+
+    toggleLike: builder.mutation<string, { feedId: string }>({
+      query: body => ({
+        url: '/comment/like',
+        method: 'PUT',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'FileUploads', id: 'FEED' }],
     }),
 
     addGameScore: builder.mutation<GeneralResponse, AddGameScore>({
@@ -1887,6 +1955,7 @@ export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
   useSwitchStudentLoginMutation,
+  useGetFeedListQuery,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
   useAddGameScoreMutation,
@@ -1908,6 +1977,7 @@ export const {
   useResetPasswordMutation,
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
+  useUploadFileMutation,
   useRemoveStudentFcmTokenMutation,
   useUploadProfilePicMutation,
   useDeleteProfilePicMutation,
@@ -1933,10 +2003,15 @@ export const {
   useDeleteQuestionPaperMutation,
   useLazyGetQuestionPaperDownloadQuery,
   useGetAchievementsQuery,
-  useUploadAchievementMutation,
   useDeleteAchievementMutation,
   useGenerateOtpMutation,
+  useDeleteFeedMutation,
   useVerifyOtpMutation,
   useVerifyPrefixMutation,
+  useCreateContentFeedMutation,
   useCreateOrgMutation,
+  useCreateCommentMutation,
+  useLazyGetParentCommentQuery,
+  useGetParentCommentQuery,
+  useToggleLikeMutation,
 } = jjWingsApi;

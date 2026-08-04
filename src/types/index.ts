@@ -81,7 +81,67 @@ export type ScoreDetail = {
   };
 };
 
+export type Feed = {
+  _id: string;
+  content?: string;
+  type: string;
+  commentCount: number;
+  likeCount: number;
+  adminName: string;
+  adminPicPath: string;
+  filePath: string;
+  createdAt: string;
+  createdBy: string;
+  isPrivate: boolean;
+  isLikedByMe: boolean;
+};
+
+type FilePath = 'feed' | 'profile';
+
+type FileType = 'content' | 'file';
+
+export type UploadFileArg = {
+  uri: string;
+  type?: FileType;
+  content?: string;
+  path: FilePath;
+  name?: string;
+};
+
+export type CreateContentArg = {
+  type: FileType;
+  content: string;
+};
+
+export type FeedData = GeneralResponse & {
+  data: Feed[];
+};
+
 export type GeneralResponse = {
   success: boolean;
   message: string;
+};
+
+export type UserTypeSch = 'Student' | 'Admin';
+
+export type Comment = {
+  _id: string;
+  userDetail: {
+    _id: string;
+    name: string;
+    profilePicPath: string;
+  };
+  userType: UserTypeSch;
+  content: string;
+  isBlocked: boolean;
+  createdAt: string;
+};
+
+export type ParentCommentRes = GeneralResponse & {
+  data: Comment[];
+};
+
+export type CreateComment = {
+  feedId: string;
+  content: string;
 };

@@ -45,8 +45,8 @@ const adminNavItems: AdminNavItem[] = [
   //   routeName: 'AdminQuestionPapers',
   // },
   {
-    label: 'Achievements',
-    icon: 'emoji-events',
+    label: 'Feeds',
+    icon: 'view-agenda',
     routeName: 'AdminAchievements',
     requiresRole: 'superadmin',
   },
