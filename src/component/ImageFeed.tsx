@@ -20,7 +20,11 @@ import { formatFeedDate } from '../util/fn';
 import PostOptionsMenu from './PostOptionsMenu';
 import { RootState } from '../store/store';
 import { CommentBottomSheet } from '../component';
-import { useDeleteFeedMutation, useToggleLikeMutation } from '../store/api';
+import {
+  useDeleteFeedMutation,
+  useToggleLikeMutation,
+  useLazyGetParentCommentQuery,
+} from '../store/api';
 
 export interface ImageFeedProps {
   images: Feed[];
@@ -33,7 +37,7 @@ export interface ImageFeedProps {
 const FeedImageItem: React.FC<{
   item: Feed;
   aspectRatio: number;
-  onCommentPress: () => void;
+  onCommentPress: (feedId: string) => void;
 }> = ({ item, aspectRatio, onCommentPress }) => {
   const [loaded, setLoaded] = useState(false);
   const { adminRoles, adminId } = useSelector(
@@ -41,7 +45,6 @@ const FeedImageItem: React.FC<{
   );
   const [deleteFeed, { isLoading: isDeleting }] = useDeleteFeedMutation();
   const [toggleLike] = useToggleLikeMutation();
-
   const handleDelete = async (feedId: string) => {
     try {
       await deleteFeed({ feedId }).unwrap();
@@ -102,7 +105,7 @@ const FeedImageItem: React.FC<{
           await toggleLike({ feedId: item._id }).unwrap();
           return true;
         }}
-        onCommentPress={onCommentPress}
+        onCommentPress={() => onCommentPress(item._id)}
         liked={item.isLikedByMe}
       />
     </View>
@@ -120,7 +123,14 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
   const [loadingMore, setLoadingMore] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   const [commentSheetVisible, setCommentSheetVisible] = useState(false);
-
+  const [
+    getComment,
+    {
+      data: comments,
+      isLoading: isCommentLoading,
+      isFetching: isCommentFetching,
+    },
+  ] = useLazyGetParentCommentQuery();
   useEffect(() => {
     setData(images);
     setExhausted(false);
@@ -141,15 +151,23 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
     }
   }, [onLoadMore, loadingMore, exhausted]);
 
+  const onHandleComment = useCallback(
+    (feedId: string) => {
+      setCommentSheetVisible(true);
+      getComment({ feedId });
+    },
+    [getComment],
+  );
+
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<Feed>) => (
       <FeedImageItem
         item={item}
         aspectRatio={aspectRatio}
-        onCommentPress={() => setCommentSheetVisible(true)}
+        onCommentPress={(feedId: string) => onHandleComment(feedId)}
       />
     ),
-    [aspectRatio],
+    [aspectRatio, onHandleComment],
   );
 
   return (
@@ -183,53 +201,15 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
         }
         contentContainerStyle={styles.listContent}
       />
+
       <CommentBottomSheet
         visible={commentSheetVisible}
-        comments={[
-          {
-            id: '1',
-            userName: 'Thiyagu Bhagawathi',
-            userAvatar: 'https://i.pravatar.cc/150?img=1',
-            content:
-              'தற்குறிகள் தரம் தாழ்ந்தவனுக இவனுக சங்கிபோல் தான் திருப்பி அடிக்கனும் அப்பத்தான் மூடுவாங்க',
-            createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5h ago
-          },
-          {
-            id: '2',
-            userName: 'Velu',
-            userAvatar: 'https://i.pravatar.cc/150?img=2',
-            content:
-              'Enakku 2000 varum eppovum\nIppo 13500 vanthirukku\n\nEnnatha solla',
-            createdAt: new Date(Date.now() - 19 * 60 * 60 * 1000).toISOString(), // 19h ago
-          },
-          {
-            id: '3',
-            userName: 'Tamil Arasan',
-            userAvatar: 'https://i.pravatar.cc/150?img=3',
-            content: 'Last ah ennoda current bill 1800 but ipo 1300 than',
-            createdAt: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(), // 14h ago
-          },
-          {
-            id: '4',
-            userName: 'Siva Venkat',
-            userAvatar: 'https://i.pravatar.cc/150?img=4',
-            content:
-              'Vj siddu நல்ல மனிதர் அவரை விமர்சனம் செய்வது நல்லது அல்ல......',
-            createdAt: new Date(
-              Date.now() - 1 * 24 * 60 * 60 * 1000,
-            ).toISOString(), // 1d ago
-          },
-          {
-            id: '5',
-            userName: 'Sheik Rasool',
-            userAvatar: 'https://i.pravatar.cc/150?img=5',
-            content: 'Already going on re execution pls wait next bill papom',
-            createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1h ago
-          },
-        ]} // CommentItem[] from your getParentComment API response
+        onSubmitComment={() => {}}
+        comments={comments}
         onClose={() => setCommentSheetVisible(false)}
         onEndReached={() => {}}
         loadingMore={false}
+        commentLoading={isCommentLoading || isCommentFetching}
       />
     </View>
   );

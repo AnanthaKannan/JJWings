@@ -19,7 +19,7 @@ import {
   Feed,
   CreateContentArg,
   ParentCommentRes,
-  ParentComment,
+  Comment,
   CreateComment,
 } from '../types';
 
@@ -1760,7 +1760,7 @@ export const jjWingsApi = createApi({
       }),
     }),
 
-    getParentComment: builder.query<ParentComment[], { feedId: string }>({
+    getParentComment: builder.query<Comment[], { feedId: string }>({
       query: ({ feedId }) => ({
         url: `/comment/parent/${feedId}`,
         method: 'GET',
@@ -2005,6 +2005,7 @@ export const {
   useCreateContentFeedMutation,
   useCreateOrgMutation,
   useCreateCommentMutation,
+  useLazyGetParentCommentQuery,
   useGetParentCommentQuery,
   useToggleLikeMutation,
 } = jjWingsApi;

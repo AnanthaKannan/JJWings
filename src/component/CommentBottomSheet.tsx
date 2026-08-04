@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,9 @@ import {
   ListRenderItem,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { Comment } from '../types';
+import Avatar from './Avatar';
+import LoadingState from './LoadingState';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -30,17 +33,9 @@ const VELOCITY_THRESHOLD = 0.8;
 const EXPAND_THRESHOLD = 60;
 const MAX_COMMENT_LENGTH = 1000;
 
-export interface CommentItem {
-  id: string;
-  userName: string;
-  userAvatar: string;
-  content: string;
-  createdAt: string;
-}
-
 export interface CommentBottomSheetProps {
   visible: boolean;
-  comments: CommentItem[];
+  comments: Comment[] | undefined;
   onClose: () => void;
   onEndReached?: () => void;
   loadingMore?: boolean;
@@ -48,6 +43,7 @@ export interface CommentBottomSheetProps {
   onSubmitComment: (text: string) => Promise<void> | void;
   /** Current user's avatar shown next to the input box */
   currentUserAvatar?: string;
+  commentLoading: boolean;
 }
 
 const formatRelativeTime = (isoDate: string): string => {
@@ -67,12 +63,15 @@ const formatRelativeTime = (isoDate: string): string => {
   return `${weeks}w`;
 };
 
-const CommentRow: React.FC<{ item: CommentItem }> = ({ item }) => (
+const CommentRow: React.FC<{ item: Comment }> = ({ item }) => (
   <View style={styles.commentRow}>
-    <Image source={{ uri: item.userAvatar }} style={styles.avatar} />
+    <Avatar
+      name={item.userDetail.name}
+      profilePic={item.userDetail.profilePicPath}
+    />
     <View style={styles.commentBody}>
       <Text style={styles.userName}>
-        {item.userName}
+        {item.userDetail.name}
         <Text style={styles.timeText}>
           {' '}
           · {formatRelativeTime(item.createdAt)}
@@ -91,6 +90,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   loadingMore = false,
   onSubmitComment,
   currentUserAvatar,
+  commentLoading,
 }) => {
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const currentHeight = useRef(HALF_HEIGHT);
@@ -105,15 +105,18 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   // being consumed as a normal scroll
   const listScrollOffset = useRef(0);
 
-  const openToHeight = (height: number) => {
-    currentHeight.current = height;
-    setSheetHeight(height);
-    Animated.spring(translateY, {
-      toValue: 0,
-      useNativeDriver: true,
-      bounciness: 4,
-    }).start();
-  };
+  const openToHeight = useCallback(
+    (height: number) => {
+      currentHeight.current = height;
+      setSheetHeight(height);
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 4,
+      }).start();
+    },
+    [translateY],
+  );
 
   const closeSheet = () => {
     Animated.timing(translateY, {
@@ -130,7 +133,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
       translateY.setValue(SCREEN_HEIGHT);
       openToHeight(HALF_HEIGHT);
     }
-  }, [visible]);
+  }, [visible, openToHeight, translateY]);
 
   const handleGestureMove = (gesture: PanResponderGestureState) => {
     if (gesture.dy > 0) {
@@ -230,7 +233,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     }
   };
 
-  const renderItem: ListRenderItem<CommentItem> = ({ item }) => (
+  const renderItem: ListRenderItem<Comment> = ({ item }) => (
     <CommentRow item={item} />
   );
 
@@ -274,11 +277,11 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
           <View style={styles.listWrapper} {...listPanResponder.panHandlers}>
             <FlatList
               data={comments}
-              keyExtractor={item => item.id}
+              keyExtractor={item => item._id}
               renderItem={renderItem}
               contentContainerStyle={[
                 styles.listContent,
-                comments.length === 0 && styles.listContentEmpty,
+                comments?.length === 0 && styles.listContentEmpty,
               ]}
               showsVerticalScrollIndicator={false}
               onScroll={handleScroll}
@@ -286,17 +289,21 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
               onEndReachedThreshold={0.4}
               onEndReached={onEndReached}
               ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <MaterialIcons
-                    name="chat-bubble-outline"
-                    size={40}
-                    color="#c4c7cc"
-                  />
-                  <Text style={styles.emptyStateText}>No comments yet</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Be the first to comment
-                  </Text>
-                </View>
+                commentLoading ? (
+                  <LoadingState label="Loading comment..." />
+                ) : (
+                  <View style={styles.emptyState}>
+                    <MaterialIcons
+                      name="chat-bubble-outline"
+                      size={40}
+                      color="#c4c7cc"
+                    />
+                    <Text style={styles.emptyStateText}>No comments yet</Text>
+                    <Text style={styles.emptyStateSubtext}>
+                      Be the first to comment
+                    </Text>
+                  </View>
+                )
               }
               ListFooterComponent={
                 loadingMore ? (
@@ -350,6 +357,12 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
                   }
                 />
               </TouchableOpacity>
+            </View>
+            <View>
+              <Text style={styles.commentVisibleText}>
+                Your comment will be published once it is approved by the
+                teacher.
+              </Text>
             </View>
           </KeyboardAvoidingView>
         </Animated.View>
@@ -410,15 +423,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 16,
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
-    backgroundColor: '#e4e6eb',
-  },
   commentBody: {
     flex: 1,
+    marginLeft: 10,
   },
   userName: {
     fontSize: 13,
@@ -463,6 +470,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingHorizontal: 14,
     paddingBottom: 4,
+  },
+  commentVisibleText: {
+    fontSize: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 4,
+    color: '#8a8d91',
   },
   inputBar: {
     flexDirection: 'row',

@@ -124,7 +124,7 @@ export type GeneralResponse = {
 
 export type UserTypeSch = 'Student' | 'Admin';
 
-export type ParentComment = {
+export type Comment = {
   _id: string;
   userDetail: {
     _id: string;
@@ -138,7 +138,7 @@ export type ParentComment = {
 };
 
 export type ParentCommentRes = GeneralResponse & {
-  data: ParentComment[];
+  data: Comment[];
 };
 
 export type CreateComment = {
