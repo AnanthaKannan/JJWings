@@ -21,13 +21,16 @@ import {
   ListRenderItem,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 
 import { Comment } from '../types';
 import Avatar from './Avatar';
 import LoadingState from './LoadingState';
 import PostOptionsMenu from './PostOptionsMenu';
 import { RootState } from '../store/store';
+import { setModal, resetModal } from '../store/slices';
+import { useDeleteCommentMutation } from '../store/api';
+import LoadingOverlay from './LoadingOverlay';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -68,10 +71,11 @@ const formatRelativeTime = (isoDate: string): string => {
   return `${weeks}w`;
 };
 
-const CommentRow: React.FC<{ item: Comment; userId: string }> = ({
-  item,
-  userId,
-}) => (
+const CommentRow: React.FC<{
+  item: Comment;
+  userId: string;
+  onDelete: (commentId: string, content: string) => void;
+}> = ({ item, userId, onDelete }) => (
   <View style={styles.commentRow}>
     <Avatar
       name={item.userDetail.name}
@@ -86,7 +90,10 @@ const CommentRow: React.FC<{ item: Comment; userId: string }> = ({
           </Text>
         </Text>
         {item.userDetail._id === userId && (
-          <PostOptionsMenu icon="more-horiz" onDelete={() => {}} />
+          <PostOptionsMenu
+            icon="more-horiz"
+            onDelete={() => onDelete(item._id, item.content)}
+          />
         )}
       </View>
 
@@ -120,6 +127,8 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   );
 
   const isOverLimit = inputText.length > MAX_COMMENT_LENGTH;
+  const [deleteComment, { isLoading: isDeleting }] = useDeleteCommentMutation();
+  const dispatch = useDispatch();
 
   // tracks whether the FlatList is scrolled to the very top — only then
   // should a downward drag over the list be handed to the sheet instead of
@@ -165,7 +174,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     }
   };
 
-  const handleGestureRelease = (gesture: PanResponderGestureState) => {
+  const HandleGestureRelease = (gesture: PanResponderGestureState) => {
     const draggedDown = gesture.dy;
     const draggedUp = -gesture.dy;
     const fastFlickDown = gesture.vy > VELOCITY_THRESHOLD;
@@ -207,7 +216,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => handleGestureMove(gesture),
-      onPanResponderRelease: (_, gesture) => handleGestureRelease(gesture),
+      onPanResponderRelease: (_, gesture) => HandleGestureRelease(gesture),
       onPanResponderTerminationRequest: () => false,
     }),
   ).current;
@@ -233,7 +242,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
         return false;
       },
       onPanResponderMove: (_, gesture) => handleGestureMove(gesture),
-      onPanResponderRelease: (_, gesture) => handleGestureRelease(gesture),
+      onPanResponderRelease: (_, gesture) => HandleGestureRelease(gesture),
     }),
   ).current;
 
@@ -254,8 +263,55 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     }
   };
 
+  const handleDeleteComment = (commentId: string, content: string) => {
+    dispatch(
+      setModal({
+        state: 'confirm',
+        visible: true,
+        title: 'Are you sure?',
+        description: `Do you want to delete this comment? \n *${content}*`,
+        onCancel: () => {
+          dispatch(resetModal());
+        },
+        onConfirm: async () => {
+          try {
+            await deleteComment({ commentId }).unwrap();
+            dispatch(
+              setModal({
+                state: 'success',
+                visible: true,
+                title: 'Comment Deleted',
+                description: 'Comment has been deleted successfully.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          } catch {
+            dispatch(
+              setModal({
+                state: 'failure',
+                visible: true,
+                title: 'Failed to Delete Comment',
+                description:
+                  'Something went wrong while deleting the comment. Please try again later.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          }
+        },
+      }),
+    );
+  };
+
   const renderItem: ListRenderItem<Comment> = ({ item }) => (
-    <CommentRow item={item} userId={studentId || adminId} />
+    <CommentRow
+      item={item}
+      userId={studentId || adminId}
+      onDelete={handleDeleteComment}
+    />
   );
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -334,6 +390,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
             />
           </View>
 
+          <LoadingOverlay visible={isDeleting} />
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >

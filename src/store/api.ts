@@ -1783,6 +1783,15 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'Comment', id: 'LIST' }],
     }),
 
+    deleteComment: builder.mutation<string, { commentId: string }>({
+      query: ({ commentId }) => ({
+        url: `/comment/parent/${commentId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Comment', id: 'LIST' }],
+    }),
+
     toggleLike: builder.mutation<string, { feedId: string }>({
       query: body => ({
         url: '/comment/like',
@@ -2013,5 +2022,6 @@ export const {
   useCreateCommentMutation,
   useLazyGetParentCommentQuery,
   useGetParentCommentQuery,
+  useDeleteCommentMutation,
   useToggleLikeMutation,
 } = jjWingsApi;

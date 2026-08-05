@@ -46,6 +46,7 @@ const FeedImageItem: React.FC<{
   );
   const [deleteFeed, { isLoading: isDeleting }] = useDeleteFeedMutation();
   const [toggleLike] = useToggleLikeMutation();
+
   const handleDelete = async (feedId: string) => {
     try {
       await deleteFeed({ feedId }).unwrap();
