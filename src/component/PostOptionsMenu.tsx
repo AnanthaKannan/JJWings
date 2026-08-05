@@ -18,12 +18,14 @@ export interface PostOptionsMenuProps {
   /** Current privacy state of the post, so the label can flip appropriately */
   // isPrivate: boolean;
   onDelete: () => void;
+  icon?: string;
   // onTogglePrivate: () => void;
 }
 
 const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
   // isPrivate,
   onDelete,
+  icon = 'more-vert',
   // onTogglePrivate,
 }) => {
   const anchorRef = useRef<View>(null);
@@ -59,11 +61,6 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
     }, 150);
   }, [closeMenu, onDelete]);
 
-  // const handleTogglePrivate = useCallback(() => {
-  //   closeMenu();
-  //   onTogglePrivate();
-  // }, [closeMenu, onTogglePrivate]);
-
   return (
     <>
       <TouchableOpacity
@@ -72,7 +69,7 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
         hitSlop={10}
         style={styles.trigger}
       >
-        <MaterialIcons name="more-vert" size={22} color="#65676b" />
+        <MaterialIcons name={icon} size={22} color="#65676b" />
       </TouchableOpacity>
 
       <Modal
@@ -130,7 +127,7 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
 
 const styles = StyleSheet.create({
   trigger: {
-    padding: 6,
+    // padding: 6,
   },
   overlay: {
     flex: 1,

@@ -135,6 +135,7 @@ export type Comment = {
   content: string;
   isBlocked: boolean;
   createdAt: string;
+  approved: boolean;
 };
 
 export type ParentCommentRes = GeneralResponse & {

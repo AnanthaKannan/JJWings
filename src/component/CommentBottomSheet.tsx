@@ -21,9 +21,13 @@ import {
   ListRenderItem,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSelector } from 'react-redux';
+
 import { Comment } from '../types';
 import Avatar from './Avatar';
 import LoadingState from './LoadingState';
+import PostOptionsMenu from './PostOptionsMenu';
+import { RootState } from '../store/store';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -64,21 +68,34 @@ const formatRelativeTime = (isoDate: string): string => {
   return `${weeks}w`;
 };
 
-const CommentRow: React.FC<{ item: Comment }> = ({ item }) => (
+const CommentRow: React.FC<{ item: Comment; userId: string }> = ({
+  item,
+  userId,
+}) => (
   <View style={styles.commentRow}>
     <Avatar
       name={item.userDetail.name}
       profilePic={item.userDetail.profilePicPath}
     />
     <View style={styles.commentBody}>
-      <Text style={styles.userName}>
-        {item.userDetail.name}
-        <Text style={styles.timeText}>
-          {' '}
-          · {formatRelativeTime(item.createdAt)}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={styles.userName}>
+          {item.userDetail.name}
+          <Text style={styles.timeText}>
+            · {formatRelativeTime(item.createdAt)}
+          </Text>
         </Text>
-      </Text>
+        {item.userDetail._id === userId && (
+          <PostOptionsMenu icon="more-horiz" onDelete={() => {}} />
+        )}
+      </View>
+
       <Text style={styles.commentText}>{item.content}</Text>
+      {!item.approved && (
+        <Text style={[styles.timeText, { marginTop: 5 }]}>
+          Once approved by admin, it will be visible to everyone.
+        </Text>
+      )}
     </View>
   </View>
 );
@@ -98,6 +115,9 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   const [sheetHeight, setSheetHeight] = useState(HALF_HEIGHT);
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { studentId, adminId } = useSelector(
+    (state: RootState) => state.common,
+  );
 
   const isOverLimit = inputText.length > MAX_COMMENT_LENGTH;
 
@@ -235,7 +255,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   };
 
   const renderItem: ListRenderItem<Comment> = ({ item }) => (
-    <CommentRow item={item} />
+    <CommentRow item={item} userId={studentId || adminId} />
   );
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -361,8 +381,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
             </View>
             <View>
               <Text style={styles.commentVisibleText}>
-                Your comment will be published once it is approved by the
-                teacher.
+                Your comment will be published once it is approved by the admin.
               </Text>
             </View>
           </KeyboardAvoidingView>

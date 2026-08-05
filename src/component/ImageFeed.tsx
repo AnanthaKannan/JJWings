@@ -72,11 +72,7 @@ const FeedImageItem: React.FC<{
           </View>
         </View>
         {(adminRoles.includes('superadmin') || adminId === item.createdBy) && (
-          <PostOptionsMenu
-            // isPrivate={item.isPrivate}
-            onDelete={() => handleDelete(item._id)}
-            // onTogglePrivate={() => {}}
-          />
+          <PostOptionsMenu onDelete={() => handleDelete(item._id)} />
         )}
       </View>
 
