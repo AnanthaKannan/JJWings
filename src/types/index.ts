@@ -142,6 +142,22 @@ export type ParentCommentRes = GeneralResponse & {
   data: Comment[];
 };
 
+export type NonApprovedComment = {
+  _id: string;
+  content: string;
+  createdAt: string;
+  approved: boolean;
+  userDetail: {
+    _id: string;
+    name: string;
+    profilePicPath: string;
+  };
+};
+
+export type NonApprovedCommentRes = GeneralResponse & {
+  data: NonApprovedComment[];
+};
+
 export type CreateComment = {
   feedId: string;
   content: string;

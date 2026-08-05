@@ -21,6 +21,8 @@ import {
   ParentCommentRes,
   Comment,
   CreateComment,
+  NonApprovedComment,
+  NonApprovedCommentRes,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -1773,6 +1775,15 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Comment', id: 'LIST' }],
     }),
 
+    getNonApprovedComment: builder.query<NonApprovedComment[], void>({
+      query: () => ({
+        url: `/comment/admin/non-approve-comment`,
+        method: 'GET',
+      }),
+      transformResponse: (res: NonApprovedCommentRes) => res.data,
+      providesTags: [{ type: 'Comment', id: 'NON_APPROVED' }],
+    }),
+
     createComment: builder.mutation<string, CreateComment>({
       query: body => ({
         url: '/comment',
@@ -2024,4 +2035,5 @@ export const {
   useGetParentCommentQuery,
   useDeleteCommentMutation,
   useToggleLikeMutation,
+  useGetNonApprovedCommentQuery,
 } = jjWingsApi;
