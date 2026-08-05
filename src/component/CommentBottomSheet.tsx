@@ -14,7 +14,8 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
+  Keyboard,
+  KeyboardEvent,
   Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -22,6 +23,7 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Comment } from '../types';
 import Avatar from './Avatar';
@@ -122,6 +124,8 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   const [sheetHeight, setSheetHeight] = useState(HALF_HEIGHT);
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const insets = useSafeAreaInsets();
   const { studentId, adminId } = useSelector(
     (state: RootState) => state.common,
   );
@@ -162,8 +166,35 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     if (visible) {
       translateY.setValue(SCREEN_HEIGHT);
       openToHeight(HALF_HEIGHT);
+    } else {
+      setKeyboardHeight(0);
     }
   }, [visible, openToHeight, translateY]);
+
+  // Modal renders in its own native window on Android, so KeyboardAvoidingView
+  // alone won't shrink/shift the sheet reliably. Track the keyboard manually
+  // and push the sheet up ourselves on both platforms.
+  useEffect(() => {
+    const showEvt =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: KeyboardEvent) => {
+      setKeyboardHeight(e.endCoordinates.height + 42);
+    };
+    const onHide = () => {
+      setKeyboardHeight(0);
+    };
+
+    const showSub = Keyboard.addListener(showEvt, onShow);
+    const hideSub = Keyboard.addListener(hideEvt, onHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleGestureMove = (gesture: PanResponderGestureState) => {
     if (gesture.dy > 0) {
@@ -338,7 +369,10 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
             styles.sheet,
             {
               height: sheetHeight,
-              transform: [{ translateY }],
+              transform: [
+                { translateY },
+                { translateY: keyboardHeight > 0 ? -keyboardHeight : 0 },
+              ],
             },
           ]}
         >
@@ -391,57 +425,59 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
           </View>
 
           <LoadingOverlay visible={isDeleting} />
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            {isOverLimit ? (
-              <Text style={styles.errorText}>
-                Comment is too long ({inputText.length}/{MAX_COMMENT_LENGTH})
-              </Text>
+
+          {isOverLimit ? (
+            <Text style={styles.errorText}>
+              Comment is too long ({inputText.length}/{MAX_COMMENT_LENGTH})
+            </Text>
+          ) : null}
+          <View style={styles.inputBar}>
+            {currentUserAvatar ? (
+              <Image
+                source={{ uri: currentUserAvatar }}
+                style={styles.inputAvatar}
+              />
             ) : null}
-            <View style={styles.inputBar}>
-              {currentUserAvatar ? (
-                <Image
-                  source={{ uri: currentUserAvatar }}
-                  style={styles.inputAvatar}
-                />
-              ) : null}
-              <View
-                style={[
-                  styles.inputWrapper,
-                  isOverLimit && styles.inputWrapperError,
-                ]}
-              >
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Write a comment..."
-                  placeholderTextColor="#8a8d91"
-                  value={inputText}
-                  onChangeText={setInputText}
-                  multiline
-                />
-              </View>
-              <TouchableOpacity
-                onPress={handleSend}
-                disabled={!inputText.trim() || isOverLimit || isSubmitting}
-                hitSlop={8}
-                style={styles.sendButton}
-              >
-                <MaterialIcons
-                  name="send"
-                  size={22}
-                  color={
-                    inputText.trim() && !isOverLimit ? '#1877F2' : '#c4c7cc'
-                  }
-                />
-              </TouchableOpacity>
+            <View
+              style={[
+                styles.inputWrapper,
+                isOverLimit && styles.inputWrapperError,
+              ]}
+            >
+              <TextInput
+                style={styles.textInput}
+                placeholder="Write a comment..."
+                placeholderTextColor="#8a8d91"
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+              />
             </View>
-            <View>
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={!inputText.trim() || isOverLimit || isSubmitting}
+              hitSlop={8}
+              style={styles.sendButton}
+            >
+              <MaterialIcons
+                name="send"
+                size={22}
+                color={inputText.trim() && !isOverLimit ? '#1877F2' : '#c4c7cc'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View
+            style={{
+              paddingBottom: keyboardHeight > 0 ? 4 : insets.bottom || 8,
+            }}
+          >
+            {!adminId && (
               <Text style={styles.commentVisibleText}>
                 Your comment will be published once it is approved by the admin.
               </Text>
-            </View>
-          </KeyboardAvoidingView>
+            )}
+          </View>
         </Animated.View>
       </View>
     </Modal>

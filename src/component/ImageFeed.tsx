@@ -7,10 +7,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Text,
-  Alert,
   ListRenderItemInfo,
 } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 
 import Avatar from './Avatar';
 import PostActionsBar from './PostActionsBar';
@@ -19,7 +18,8 @@ import { getFileUrl } from '../util/fileUrl';
 import { formatFeedDate } from '../util/fn';
 import PostOptionsMenu from './PostOptionsMenu';
 import { RootState } from '../store/store';
-import { CommentBottomSheet } from '../component';
+import { CommentBottomSheet, LoadingOverlay } from '../component';
+import { setModal, resetModal } from '../store/slices';
 import {
   useDeleteFeedMutation,
   useToggleLikeMutation,
@@ -38,23 +38,13 @@ export interface ImageFeedProps {
 const FeedImageItem: React.FC<{
   item: Feed;
   aspectRatio: number;
+  onDelete: (feedId: string) => void;
   onCommentPress: (feedId: string) => void;
-}> = ({ item, aspectRatio, onCommentPress }) => {
+}> = ({ item, aspectRatio, onCommentPress, onDelete }) => {
   const [loaded, setLoaded] = useState(false);
-  const { adminRoles, adminId } = useSelector(
-    (state: RootState) => state.common,
-  );
-  const [deleteFeed, { isLoading: isDeleting }] = useDeleteFeedMutation();
-  const [toggleLike] = useToggleLikeMutation();
+  const { adminId } = useSelector((state: RootState) => state.common);
 
-  const handleDelete = async (feedId: string) => {
-    try {
-      await deleteFeed({ feedId }).unwrap();
-    } catch (error) {
-      console.error('Failed to delete feed', error);
-      Alert.alert('Delete failed', 'Please try deleting the feed again.');
-    }
-  };
+  const [toggleLike] = useToggleLikeMutation();
 
   return (
     <View style={styles.card}>
@@ -72,15 +62,15 @@ const FeedImageItem: React.FC<{
             </Text>
           </View>
         </View>
-        {(adminRoles.includes('superadmin') || adminId === item.createdBy) && (
-          <PostOptionsMenu onDelete={() => handleDelete(item._id)} />
+        {adminId === item.createdBy && (
+          <PostOptionsMenu onDelete={() => onDelete(item._id)} />
         )}
       </View>
 
       {!!item.content && <Text style={styles.content}>{item.content}</Text>}
       {item.filePath && (
         <View style={[styles.imageBox, { aspectRatio }]}>
-          {(!loaded || isDeleting) && (
+          {!loaded && (
             <View style={styles.placeholder}>
               <ActivityIndicator size="small" color="#8a8d91" />
             </View>
@@ -161,15 +151,60 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
     [getComment],
   );
 
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Feed>) => (
-      <FeedImageItem
-        item={item}
-        aspectRatio={aspectRatio}
-        onCommentPress={(feedId: string) => onHandleComment(feedId)}
-      />
-    ),
-    [aspectRatio, onHandleComment],
+  const [deleteFeed, { isLoading: isDeleting }] = useDeleteFeedMutation();
+  const dispatch = useDispatch();
+
+  const handleDelete = (feedId: string) => {
+    dispatch(
+      setModal({
+        state: 'confirm',
+        visible: true,
+        title: 'Are you sure?',
+        description:
+          'Do you want to delete this feed? This action cannot be undone.',
+        onCancel: () => {
+          dispatch(resetModal());
+        },
+        onConfirm: async () => {
+          try {
+            await deleteFeed({ feedId }).unwrap();
+            dispatch(
+              setModal({
+                state: 'success',
+                visible: true,
+                title: 'Feed Deleted',
+                description: 'Feed has been deleted successfully.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          } catch {
+            dispatch(
+              setModal({
+                state: 'failure',
+                visible: true,
+                title: 'Failed to Delete Feed',
+                description:
+                  'Something went wrong while deleting the feed. Please try again later.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          }
+        },
+      }),
+    );
+  };
+
+  const renderItem = ({ item }: ListRenderItemInfo<Feed>) => (
+    <FeedImageItem
+      item={item}
+      aspectRatio={aspectRatio}
+      onDelete={handleDelete}
+      onCommentPress={(feedId: string) => onHandleComment(feedId)}
+    />
   );
 
   return (
@@ -220,6 +255,8 @@ const ImageFeed: React.FC<ImageFeedProps> = ({
           isCommentLoading || isCommentFetching || isCommentCreating
         }
       />
+
+      <LoadingOverlay visible={isDeleting} />
     </View>
   );
 };
