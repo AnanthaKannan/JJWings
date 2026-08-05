@@ -1,7 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   Animated,
   Easing,
+  LayoutChangeEvent,
+  PanResponder,
   View,
   Text,
   StyleSheet,
@@ -84,11 +92,21 @@ const formatHorizontalQuestion = (question = '') => {
   return parts.join(' ');
 };
 
-const getOralSpeechDuration = (question = '') => {
+const getOralSpeechDurationForRate = (
+  question = '',
+  rate = ORAL_SPEECH_RATE,
+) => {
   const wordCount = formatQuestionForSpeech(question)
     .split(/\s+/)
     .filter(Boolean).length;
-  return Math.min(Math.max((wordCount * 430) / ORAL_SPEECH_RATE, 1800), 4200);
+  return Math.min(Math.max((wordCount * 430) / rate, 1800), 5200);
+};
+
+const MIN_ORAL_SPEECH_RATE = 0.45;
+const MAX_ORAL_SPEECH_RATE = 1.25;
+
+const clampSpeechRate = (rate: number) => {
+  return Math.min(Math.max(rate, MIN_ORAL_SPEECH_RATE), MAX_ORAL_SPEECH_RATE);
 };
 
 export default function QuizScreen({
@@ -120,6 +138,9 @@ export default function QuizScreen({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const speakerPulse = useRef(new Animated.Value(0)).current;
   const speechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const oralSpeechRateRef = useRef(ORAL_SPEECH_RATE);
+  const voiceSliderRef = useRef<View>(null);
+  const voiceSliderPageXRef = useRef(0);
 
   useEffect(() => {
     setData(prev => ({
@@ -132,6 +153,8 @@ export default function QuizScreen({
   }, [selQuestions, selResult, selAnswer, selMarks]);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [oralSpeechRate, setOralSpeechRate] = useState(ORAL_SPEECH_RATE);
+  const [voiceSliderWidth, setVoiceSliderWidth] = useState(0);
 
   const navigation = useNavigation<NavigationProp>();
   const { questions, marks, answer, result } = data;
@@ -140,6 +163,13 @@ export default function QuizScreen({
   const shouldShowMarks = typeof currentMarks === 'number' && currentMarks > 0;
   const verticalQuestionParts = getVerticalQuestionParts(currentQuestion);
   const horizontalQuestion = formatHorizontalQuestion(currentQuestion);
+  const voiceSpeedProgress =
+    (oralSpeechRate - MIN_ORAL_SPEECH_RATE) /
+    (MAX_ORAL_SPEECH_RATE - MIN_ORAL_SPEECH_RATE);
+
+  useEffect(() => {
+    oralSpeechRateRef.current = oralSpeechRate;
+  }, [oralSpeechRate]);
 
   const stopSpeakerAnimation = useCallback(() => {
     if (speechTimerRef.current) {
@@ -151,13 +181,14 @@ export default function QuizScreen({
 
   const playOralQuestion = useCallback(
     (question: string) => {
-      if (!speakOralQuestion(question)) return;
+      const speechRate = oralSpeechRateRef.current;
+      if (!speakOralQuestion(question, speechRate)) return;
 
       stopSpeakerAnimation();
       setIsSpeaking(true);
       speechTimerRef.current = setTimeout(
         stopSpeakerAnimation,
-        getOralSpeechDuration(question),
+        getOralSpeechDurationForRate(question, speechRate),
       );
     },
     [stopSpeakerAnimation],
@@ -254,6 +285,59 @@ export default function QuizScreen({
     playOralQuestion(currentQuestion);
   };
 
+  const updateVoiceSpeedFromPosition = useCallback(
+    (positionX: number) => {
+      if (voiceSliderWidth <= 0) return;
+
+      const boundedPosition = Math.min(Math.max(positionX, 0), voiceSliderWidth);
+      const nextRate =
+        MIN_ORAL_SPEECH_RATE +
+        (boundedPosition / voiceSliderWidth) *
+          (MAX_ORAL_SPEECH_RATE - MIN_ORAL_SPEECH_RATE);
+
+      setOralSpeechRate(clampSpeechRate(nextRate));
+    },
+    [voiceSliderWidth],
+  );
+
+  const measureVoiceSlider = useCallback(
+    (onMeasured?: () => void) => {
+      voiceSliderRef.current?.measureInWindow(x => {
+        voiceSliderPageXRef.current = x;
+        onMeasured?.();
+      });
+    },
+    [],
+  );
+
+  const updateVoiceSpeedFromPageX = useCallback(
+    (pageX: number) => {
+      updateVoiceSpeedFromPosition(pageX - voiceSliderPageXRef.current);
+    },
+    [updateVoiceSpeedFromPosition],
+  );
+
+  const handleVoiceSliderLayout = (event: LayoutChangeEvent) => {
+    setVoiceSliderWidth(event.nativeEvent.layout.width);
+    measureVoiceSlider();
+  };
+
+  const voiceSliderResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: event => {
+          const pageX = event.nativeEvent.pageX;
+          measureVoiceSlider(() => updateVoiceSpeedFromPageX(pageX));
+        },
+        onPanResponderMove: event => {
+          updateVoiceSpeedFromPageX(event.nativeEvent.pageX);
+        },
+      }),
+    [measureVoiceSlider, updateVoiceSpeedFromPageX],
+  );
+
   const speakerScale = speakerPulse.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.12],
@@ -330,6 +414,38 @@ export default function QuizScreen({
                   />
                 </Animated.View>
                 <Text style={styles.oralTitle}>Listen and answer</Text>
+                <View style={styles.voiceSpeedPanel}>
+                  <Text style={styles.voiceSpeedLabel}>Voice speed</Text>
+                  <View
+                    ref={voiceSliderRef}
+                    style={styles.voiceSlider}
+                    onLayout={handleVoiceSliderLayout}
+                    {...voiceSliderResponder.panHandlers}
+                  >
+                    <View style={styles.voiceSliderTrack} />
+                    <View
+                      style={[
+                        styles.voiceSliderFill,
+                        { width: `${voiceSpeedProgress * 100}%` },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.voiceSliderThumb,
+                        { left: `${voiceSpeedProgress * 100}%` },
+                      ]}
+                    >
+                      <MaterialIcons name="graphic-eq" size={18} color="#2563EB" />
+                    </View>
+                  </View>
+                  <View style={styles.voiceSpeedScale}>
+                    <Text style={styles.voiceSpeedHint}>Slow</Text>
+                    <Text style={styles.voiceSpeedValue}>
+                      {oralSpeechRate.toFixed(2)}x
+                    </Text>
+                    <Text style={styles.voiceSpeedHint}>Fast</Text>
+                  </View>
+                </View>
                 <TouchableOpacity
                   style={styles.repeatIconButton}
                   onPress={handleRepeatQuestion}
@@ -507,6 +623,67 @@ const styles = StyleSheet.create({
   oralTitle: {
     color: '#1A2259',
     fontSize: 20,
+    fontWeight: '900',
+  },
+  voiceSpeedPanel: {
+    alignItems: 'center',
+    gap: 7,
+    width: 220,
+  },
+  voiceSpeedLabel: {
+    color: '#5A6AA8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  voiceSlider: {
+    width: '100%',
+    height: 34,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  voiceSliderTrack: {
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: '#D8E2F7',
+  },
+  voiceSliderFill: {
+    position: 'absolute',
+    left: 0,
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: '#2563EB',
+  },
+  voiceSliderThumb: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+    marginLeft: -17,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1D4ED8',
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  voiceSpeedScale: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voiceSpeedHint: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  voiceSpeedValue: {
+    color: '#1E3A8A',
+    fontSize: 12,
     fontWeight: '900',
   },
   repeatIconButton: {
