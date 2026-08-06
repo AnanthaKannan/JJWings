@@ -21,6 +21,7 @@ import {
 } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
+import useDebounce from '../hooks/useDebounce';
 import {
   AdminHeader,
   BottomLodeMore,
@@ -137,14 +138,16 @@ export default function AssignHomeworkScreen() {
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const debouncedSearchTerm = useDebounce(search.trim(), 800);
   const {
     data: tasksData,
     isLoading,
     isFetching,
   } = useGetAvailableQuestionsQuery(
     {
-      studentId: studentId ?? '',
+      studentId: studentId,
       type: typeFilter,
+      search: debouncedSearchTerm,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
       page,
     },
@@ -157,7 +160,7 @@ export default function AssignHomeworkScreen() {
   const showLoader = isFocused && isLoading;
   const selectedTypeLabel = getAssignmentTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getAssignmentTypeLabel(typeFilter);
-  const tasks = tasksData?.questions ?? [];
+  const filtered = tasksData?.questions ?? [];
   const hasMorePages = tasksData?.meta.hasNextPage === true;
   const isLoadingMore = isFetching && !isLoading && page > 1;
 
@@ -170,18 +173,8 @@ export default function AssignHomeworkScreen() {
 
   useEffect(() => {
     setPage(1);
-  }, [typeFilter, selectedLevel]);
+  }, [typeFilter, selectedLevel, debouncedSearchTerm]);
 
-  const filtered = tasks.filter(task => {
-    return (
-      task.id.toLowerCase().includes(search.toLowerCase()) ||
-      task.questionId?.toLowerCase().includes(search.toLowerCase()) ||
-      task.question.some(question =>
-        question.toLowerCase().includes(search.toLowerCase()),
-      )
-    );
-  });
-  // .sort((a, b) => a.id.localeCompare(b.id));
   const hasAvailableTasks = filtered.length > 0;
   const allAvailableSelected =
     hasAvailableTasks && filtered.every(task => selectedIds.has(task.id));
@@ -220,7 +213,7 @@ export default function AssignHomeworkScreen() {
     }
 
     const questionIds = Array.from(selectedIds);
-    const selectedHomeworkNames = tasks
+    const selectedHomeworkNames = filtered
       .filter(task => selectedIds.has(task.id))
       .map(task => task.questionId ?? task.id);
     const names = selectedHomeworkNames.join(', ');

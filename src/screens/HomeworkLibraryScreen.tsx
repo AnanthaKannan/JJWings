@@ -226,10 +226,8 @@ export default function HomeworkLibraryScreen() {
   } = useGetQuestionsQuery(
     {
       type: typeFilter,
+      search: debouncedSearchTerm,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
-      ...(debouncedSearchTerm.length > 0
-        ? {}
-        : { search: debouncedSearchTerm }),
       page,
     },
     {

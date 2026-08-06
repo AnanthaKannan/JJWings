@@ -116,9 +116,7 @@ export default function AssignByLevelScreen() {
   } = useGetQuestionsQuery(
     {
       type: typeFilter,
-      ...(debouncedSearchTerm.length > 0
-        ? { search: debouncedSearchTerm }
-        : {}),
+      search: debouncedSearchTerm,
       page,
     },
     {
