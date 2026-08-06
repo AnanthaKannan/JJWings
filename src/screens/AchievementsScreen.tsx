@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Modal, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useIsFocused } from '@react-navigation/native';
 
 import {
   AdminHeader,
@@ -14,13 +15,18 @@ import { useGetFeedListQuery } from '../store/api';
 import { RootState } from '../store/store';
 
 export default function AchievementsScreen() {
+  const isFocused = useIsFocused();
   const { isAdmin, adminName, adminProfilePic } = useSelector(
     (state: RootState) => state.common,
   );
   const [creatingPost, setCreatingPost] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: feedList = [], isLoading, refetch } = useGetFeedListQuery();
+  const {
+    data: feedList = [],
+    isLoading,
+    refetch,
+  } = useGetFeedListQuery(undefined, { skip: !isFocused });
 
   const isBusy = isLoading;
 

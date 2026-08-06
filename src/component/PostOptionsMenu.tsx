@@ -6,7 +6,6 @@ import {
   TouchableWithoutFeedback,
   Modal,
   StyleSheet,
-  Alert,
   Dimensions,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -15,16 +14,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MENU_WIDTH = 200;
 
 export interface PostOptionsMenuProps {
-  /** Current privacy state of the post, so the label can flip appropriately */
-  // isPrivate: boolean;
   onDelete: () => void;
-  // onTogglePrivate: () => void;
+  icon?: string;
 }
 
 const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
-  // isPrivate,
   onDelete,
-  // onTogglePrivate,
+  icon = 'more-vert',
 }) => {
   const anchorRef = useRef<View>(null);
   const [visible, setVisible] = useState(false);
@@ -43,26 +39,10 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
 
   const closeMenu = useCallback(() => setVisible(false), []);
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     closeMenu();
-    // Slight delay so the menu modal fully dismisses before the alert opens
-    setTimeout(() => {
-      Alert.alert(
-        'Delete post?',
-        "This can't be undone.",
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: onDelete },
-        ],
-        { cancelable: true },
-      );
-    }, 150);
-  }, [closeMenu, onDelete]);
-
-  // const handleTogglePrivate = useCallback(() => {
-  //   closeMenu();
-  //   onTogglePrivate();
-  // }, [closeMenu, onTogglePrivate]);
+    onDelete();
+  };
 
   return (
     <>
@@ -72,7 +52,7 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
         hitSlop={10}
         style={styles.trigger}
       >
-        <MaterialIcons name="more-vert" size={22} color="#65676b" />
+        <MaterialIcons name={icon} size={22} color="#65676b" />
       </TouchableOpacity>
 
       <Modal
@@ -90,20 +70,6 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
                   { top: position.top, left: position.left },
                 ]}
               >
-                {/* <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={handleTogglePrivate}
-                >
-                  <MaterialIcons
-                    name={isPrivate ? 'public' : 'lock-outline'}
-                    size={20}
-                    color="#050505"
-                  />
-                  <Text style={styles.menuItemText}>
-                    {isPrivate ? 'Make public' : 'Make private'}
-                  </Text>
-                </TouchableOpacity> */}
-
                 <View style={styles.divider} />
 
                 <TouchableOpacity
@@ -116,7 +82,7 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
                     color="#e41e3f"
                   />
                   <Text style={[styles.menuItemText, styles.deleteText]}>
-                    Delete post
+                    Delete
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -130,7 +96,7 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
 
 const styles = StyleSheet.create({
   trigger: {
-    padding: 6,
+    // padding: 6,
   },
   overlay: {
     flex: 1,

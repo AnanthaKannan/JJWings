@@ -54,7 +54,7 @@ const studentNavItems: StudentNavItem[] = [
   //   icon: 'description',
   //   routeName: 'QuestionPapers',
   // },
-  { label: 'Achievements', icon: 'emoji-events', routeName: 'Achievements' },
+  { label: 'Feeds', icon: 'view-agenda', routeName: 'Achievements' },
   { label: 'Game', icon: 'sports-esports', routeName: 'Game' },
   {
     label: 'Update Password',

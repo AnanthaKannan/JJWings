@@ -65,6 +65,7 @@ import {
   AchievementsScreen,
   BillingRevenueScreen,
   CreateAcademyScreen,
+  CommentApprovalScreen,
 } from './screens';
 import ReuseModal from './component/ReuseModal';
 
@@ -707,6 +708,17 @@ const AdminTabs = createBottomTabNavigator({
     },
     AdminAchievements: {
       screen: AchievementsScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarLabel: 'Achievements',
+        tabBarIcon: ({ color, size }) => (
+          <MaterialIcons name="emoji-events" color={color} size={size} />
+        ),
+      },
+    },
+    CommentApproval: {
+      screen: CommentApprovalScreen,
       options: {
         tabBarButton: () => null,
         tabBarItemStyle: { display: 'none' },
