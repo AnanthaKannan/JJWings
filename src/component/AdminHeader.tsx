@@ -64,7 +64,7 @@ const adminNavItems: AdminNavItem[] = [
   },
   {
     label: 'Comment Approval',
-    icon: 'campaign',
+    icon: 'pending-actions',
     routeName: 'CommentApproval',
   },
   {

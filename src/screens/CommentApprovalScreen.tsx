@@ -1,32 +1,134 @@
 import React from 'react';
-
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useIsFocused } from '@react-navigation/native';
+import { useDispatch } from 'react-redux';
 
-import { useGetNonApprovedCommentQuery } from '../store/api';
-import { Avatar, LoadingOverlay } from '../component';
+import {
+  useGetNonApprovedCommentQuery,
+  useApproveCommentMutation,
+  useDeleteCommentMutation,
+} from '../store/api';
+import { Avatar, LoadingOverlay, AdminHeader, EmptyData } from '../component';
+import { setModal, resetModal } from '../store/slices';
+
+interface CommentItem {
+  _id: string;
+  content: string;
+  createdAt: string;
+  userDetail: {
+    name: string;
+    profilePicPath?: string;
+  };
+}
 
 const CommentApprovalScreen: React.FC = () => {
+  const isFocused = useIsFocused();
+  const dispatch = useDispatch();
   const {
     data: pendingComments = [],
     isLoading: loadingPendingComment,
     isFetching: fetchingPendingComment,
-  } = useGetNonApprovedCommentQuery();
+  } = useGetNonApprovedCommentQuery(undefined, { skip: !isFocused });
+
+  const [rejectComment, { isLoading: isRejecting }] =
+    useDeleteCommentMutation();
+  const [approveComment, { isLoading: isApproving }] =
+    useApproveCommentMutation();
 
   const handleApprove = (commentId: string) => {
-    // TODO: wire up approve mutation
-    console.log('approve', commentId);
+    dispatch(
+      setModal({
+        state: 'confirm',
+        visible: true,
+        title: 'Are you sure?',
+        description:
+          'Do you want to *Approve* this comment? This action cannot be undone.',
+        onCancel: () => {
+          dispatch(resetModal());
+        },
+        onConfirm: async () => {
+          try {
+            await approveComment({ commentId }).unwrap();
+            dispatch(
+              setModal({
+                state: 'success',
+                visible: true,
+                title: 'Comment Approved',
+                description: 'The comment has been *Approved* by you.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          } catch {
+            dispatch(
+              setModal({
+                state: 'failure',
+                visible: true,
+                title: 'Failed to Approve the comment',
+                description:
+                  'Something went wrong while approve the comment. Please try again later.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          }
+        },
+      }),
+    );
   };
 
   const handleReject = (commentId: string) => {
-    // TODO: wire up reject mutation
-    console.log('reject', commentId);
+    dispatch(
+      setModal({
+        state: 'confirm',
+        visible: true,
+        title: 'Are you sure?',
+        description:
+          'Do you want to *Reject* the comment? This action cannot be undone.',
+        onCancel: () => {
+          dispatch(resetModal());
+        },
+        onConfirm: async () => {
+          try {
+            await rejectComment({ commentId }).unwrap();
+            dispatch(
+              setModal({
+                state: 'success',
+                visible: true,
+                title: 'Rejected',
+                description: 'The comment successfully *Rejected*',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          } catch {
+            dispatch(
+              setModal({
+                state: 'failure',
+                visible: true,
+                title: 'Failed to Reject the comment',
+                description:
+                  'Something went wrong while rejecting the comment. Please try again later.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          }
+        },
+      }),
+    );
   };
 
   const formatCommentDate = (isoDate: string): string => {
@@ -43,68 +145,73 @@ const CommentApprovalScreen: React.FC = () => {
     return `${datePart}, ${timePart}`;
   };
 
-  return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.listContent}
-    >
-      {pendingComments?.map((item, index) => (
-        <View key={item._id}>
-          <View style={styles.row}>
-            <Avatar
-              name={item.userDetail.name}
-              profilePic={item.userDetail.profilePicPath}
-            />
-
-            <View style={styles.content}>
-              <Text style={styles.name}>{item.userDetail.name}</Text>
-              <Text style={styles.dateText}>
-                {formatCommentDate(item.createdAt)}
-              </Text>
-
-              <Text style={styles.messageText}>
-                &ldquo;{item.content}&rdquo;
-              </Text>
-
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={styles.approveButton}
-                  onPress={() => handleApprove(item._id)}
-                  hitSlop={8}
-                >
-                  <MaterialIcons
-                    name="check-circle"
-                    size={15}
-                    color="#3b6ef6"
-                  />
-                  <Text style={styles.approveText}>Approve</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.rejectButton}
-                  onPress={() => handleReject(item._id)}
-                  hitSlop={8}
-                >
-                  <MaterialIcons name="cancel" size={15} color="#e0245e" />
-                  <Text style={styles.rejectText}>Reject</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {index < pendingComments?.length - 1 && (
-            <View style={styles.divider} />
-          )}
-        </View>
-      ))}
-      <LoadingOverlay
-        visible={loadingPendingComment || fetchingPendingComment}
+  const renderItem = ({ item }: { item: CommentItem }) => (
+    <View style={styles.row}>
+      <Avatar
+        name={item.userDetail.name}
+        profilePic={item.userDetail.profilePicPath}
       />
-    </ScrollView>
+
+      <View style={styles.content}>
+        <Text style={styles.name}>{item.userDetail.name}</Text>
+        <Text style={styles.dateText}>{formatCommentDate(item.createdAt)}</Text>
+
+        <Text style={styles.messageText}>&ldquo;{item.content}&rdquo;</Text>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.approveButton}
+            onPress={() => handleApprove(item._id)}
+            hitSlop={8}
+          >
+            <MaterialIcons name="check-circle" size={15} color="#3b6ef6" />
+            <Text style={styles.approveText}>Approve</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.rejectButton}
+            onPress={() => handleReject(item._id)}
+            hitSlop={8}
+          >
+            <MaterialIcons name="cancel" size={15} color="#e0245e" />
+            <Text style={styles.rejectText}>Reject</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <AdminHeader header="Comment Approvals" />
+      <FlatList
+        style={styles.screen}
+        contentContainerStyle={styles.listContent}
+        data={pendingComments}
+        keyExtractor={item => item._id}
+        renderItem={renderItem}
+        ItemSeparatorComponent={() => <View style={styles.divider} />}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyData
+            showLoader={loadingPendingComment || fetchingPendingComment}
+            loadingMessage="Loading notifications..."
+            emptyTitle="No Approval Request"
+            emptyText=""
+            icon="pending-actions"
+          />
+        }
+      />
+      <LoadingOverlay visible={isRejecting || isApproving} />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#EEF2FF',
+  },
   screen: {
     flex: 1,
     backgroundColor: '#fff',

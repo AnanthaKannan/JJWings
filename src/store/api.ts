@@ -1775,6 +1775,15 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Comment', id: 'LIST' }],
     }),
 
+    approveComment: builder.mutation<string, { commentId: string }>({
+      query: ({ commentId }) => ({
+        url: `/comment/${commentId}/approve`,
+        method: 'PUT',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Comment', id: 'NON_APPROVED' }],
+    }),
+
     getNonApprovedComment: builder.query<NonApprovedComment[], void>({
       query: () => ({
         url: `/comment/admin/non-approve-comment`,
@@ -1800,7 +1809,10 @@ export const jjWingsApi = createApi({
         method: 'DELETE',
       }),
       transformResponse: () => 'success',
-      invalidatesTags: [{ type: 'Comment', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Comment', id: 'LIST' },
+        { type: 'Comment', id: 'NON_APPROVED' },
+      ],
     }),
 
     toggleLike: builder.mutation<string, { feedId: string }>({
@@ -2036,4 +2048,5 @@ export const {
   useDeleteCommentMutation,
   useToggleLikeMutation,
   useGetNonApprovedCommentQuery,
+  useApproveCommentMutation,
 } = jjWingsApi;
