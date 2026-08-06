@@ -10,36 +10,13 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { useGetNonApprovedCommentQuery } from '../store/api';
-import { Avatar } from '../component';
-
-const PENDING_COMMENTS = [
-  {
-    _id: '1',
-    name: 'Arjun Kumar',
-    initials: 'AK',
-    avatarColor: '#f9c88f',
-    date: 'Oct 24',
-    time: '10:30 AM',
-    content:
-      'This abacus challenge was really fun! Can we have more addition tasks?',
-  },
-  {
-    _id: '2',
-    name: 'Sarah Miller',
-    initials: 'SM',
-    avatarColor: '#f6d94a',
-    date: 'Oct 24',
-    time: '09:15 AM',
-    content:
-      "I don't understand how to carry over the beads for this one. It's too hard!",
-  },
-];
+import { Avatar, LoadingOverlay } from '../component';
 
 const CommentApprovalScreen: React.FC = () => {
   const {
     data: pendingComments = [],
     isLoading: loadingPendingComment,
-    isFetching: fetchingPeningComment,
+    isFetching: fetchingPendingComment,
   } = useGetNonApprovedCommentQuery();
 
   const handleApprove = (commentId: string) => {
@@ -71,7 +48,7 @@ const CommentApprovalScreen: React.FC = () => {
       style={styles.screen}
       contentContainerStyle={styles.listContent}
     >
-      {pendingComments.map((item, index) => (
+      {pendingComments?.map((item, index) => (
         <View key={item._id}>
           <View style={styles.row}>
             <Avatar
@@ -115,11 +92,14 @@ const CommentApprovalScreen: React.FC = () => {
             </View>
           </View>
 
-          {index < PENDING_COMMENTS.length - 1 && (
+          {index < pendingComments?.length - 1 && (
             <View style={styles.divider} />
           )}
         </View>
       ))}
+      <LoadingOverlay
+        visible={loadingPendingComment || fetchingPendingComment}
+      />
     </ScrollView>
   );
 };

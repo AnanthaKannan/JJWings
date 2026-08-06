@@ -84,7 +84,7 @@ const CommentRow: React.FC<{
       profilePic={item.userDetail.profilePicPath}
     />
     <View style={styles.commentBody}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <View style={styles.insideContainer}>
         <Text style={styles.userName}>
           {item.userDetail.name}
           <Text style={styles.timeText}>
@@ -629,6 +629,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     paddingHorizontal: 4,
   },
+  insideContainer: { flexDirection: 'row', justifyContent: 'space-between' },
 });
 
 export default CommentBottomSheet;
