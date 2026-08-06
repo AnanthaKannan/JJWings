@@ -215,7 +215,7 @@ export default function HomeworkLibraryScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
   const [page, setPage] = useState(1);
-  const debouncedSearchTerm = useDebounce(searchTerm, 1000);
+  const debouncedSearchTerm = useDebounce(searchTerm.trim(), 800);
 
   const {
     data: questionsData,
@@ -227,7 +227,9 @@ export default function HomeworkLibraryScreen() {
     {
       type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
-      ...(debouncedSearchTerm === '' ? {} : { search: debouncedSearchTerm }),
+      ...(debouncedSearchTerm.length > 0
+        ? {}
+        : { search: debouncedSearchTerm }),
       page,
     },
     {
