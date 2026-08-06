@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
+
+import useDebounce from '../hooks/useDebounce';
 import {
   AdminHeader,
   BottomLodeMore,
@@ -210,8 +212,11 @@ export default function HomeworkLibraryScreen() {
   const flatListRef = useRef<FlatList<any>>(null);
   const navigation = useNavigation<any>();
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>('homework');
   const [page, setPage] = useState(1);
+  const debouncedSearchTerm = useDebounce(searchTerm, 1000);
+
   const {
     data: questionsData,
     currentData,
@@ -222,6 +227,7 @@ export default function HomeworkLibraryScreen() {
     {
       type: typeFilter,
       ...(selectedLevel === null ? {} : { level: selectedLevel }),
+      ...(debouncedSearchTerm === '' ? {} : { search: debouncedSearchTerm }),
       page,
     },
     {
@@ -235,7 +241,6 @@ export default function HomeworkLibraryScreen() {
 
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [editModule, setEditModule] = useState<Module | null>(null);
   const [editQuestionId, setEditQuestionId] = useState('');
   const [editLevel, setEditLevel] = useState(0);
@@ -244,14 +249,14 @@ export default function HomeworkLibraryScreen() {
 
   useEffect(() => {
     setPage(1);
-  }, [typeFilter, selectedLevel]);
+  }, [typeFilter, selectedLevel, debouncedSearchTerm]);
 
   const activeQuestions = useMemo(
     () => questionsData?.questions ?? currentData?.questions ?? [],
     [currentData?.questions, questionsData?.questions],
   );
 
-  const modules = useMemo(() => {
+  const filteredModules = useMemo(() => {
     if (activeQuestions.length === 0) return [];
 
     return activeQuestions.map((q, index) => ({
@@ -265,18 +270,18 @@ export default function HomeworkLibraryScreen() {
     }));
   }, [activeQuestions]);
 
-  const filteredModules = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return modules;
+  // const filteredModules = useMemo(() => {
+  //   // const query = searchTerm.trim().toLowerCase();
+  //   if (!query) return modules;
 
-    return modules.filter(module => {
-      const questionText = module.questions.join(' ').toLowerCase();
-      return (
-        module.title.toLowerCase().includes(query) ||
-        questionText.includes(query)
-      );
-    });
-  }, [modules, searchTerm]);
+  //   // return modules.filter(module => {
+  //   //   const questionText = module.questions.join(' ').toLowerCase();
+  //   //   return (
+  //   //     module.title.toLowerCase().includes(query) ||
+  //   //     questionText.includes(query)
+  //   //   );
+  //   // });
+  // }, [modules, searchTerm]);
   const selectedTypeLabel = getTaskTypeLabel(typeFilter).toLowerCase();
   const selectedTypeDisplayLabel = getTaskTypeLabel(typeFilter);
   const showLoader = isFocused && isFetching && page === 1;
