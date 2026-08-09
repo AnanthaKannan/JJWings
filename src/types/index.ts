@@ -96,6 +96,17 @@ export type Feed = {
   isLikedByMe: boolean;
 };
 
+export type Group = {
+  _id: string;
+  groupName: string;
+  studentCount: number;
+};
+
+export type SendGroupMessage = {
+  message: string;
+  groupId: string;
+};
+
 type FilePath = 'feed' | 'profile';
 
 type FileType = 'content' | 'file';
@@ -115,6 +126,11 @@ export type CreateContentArg = {
 
 export type FeedData = GeneralResponse & {
   data: Feed[];
+};
+
+export type GroupResponse = GeneralResponse & {
+  data?: Group[];
+  result?: Group[];
 };
 
 export type GeneralResponse = {

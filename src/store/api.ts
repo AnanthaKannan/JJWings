@@ -21,6 +21,9 @@ import {
   ParentCommentRes,
   Comment,
   CreateComment,
+  Group,
+  GroupResponse,
+  SendGroupMessage,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -729,7 +732,7 @@ type SendMessageArg = {
 };
 
 type ReadMessagesArg = {
-  studentId: string;
+  studentId?: string;
 };
 
 const mapStudent = (student: ApiStudent): Student => ({
@@ -1370,6 +1373,23 @@ export const jjWingsApi = createApi({
       ],
     }),
 
+    getMessageGroup: builder.query<Group[], void>({
+      query: () => ({
+        url: '/group',
+      }),
+      transformResponse: (response: GroupResponse) =>
+        response.result ?? response.data ?? [],
+    }),
+
+    sendGroupMessage: builder.mutation<string, SendGroupMessage>({
+      query: ({ message, groupId }) => ({
+        url: `/group/${groupId}/send-message`,
+        method: 'POST',
+        body: { message },
+      }),
+      transformResponse: () => 'success',
+    }),
+
     sendNotification: builder.mutation<string, SendNotificationArg>({
       query: body => ({
         url: '/admin/notifications',
@@ -1955,11 +1975,13 @@ export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
   useSwitchStudentLoginMutation,
+  useGetMessageGroupQuery,
   useGetFeedListQuery,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
   useAddGameScoreMutation,
   useGetTopGameScoreByLevelQuery,
+  useSendGroupMessageMutation,
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
   useGetScoreDetailsQuery,

@@ -34,6 +34,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AdminHeader,
   Filter,
+  FloatingAddButton,
   LoadingOverlay,
   LoadingState,
 } from '../component';
@@ -42,12 +43,15 @@ import {
   MessageStudent,
   MessageParticipant,
   useGetMessageStudentsQuery,
+  useGetMessageGroupQuery,
   useGetMessagesQuery,
   useReadMessagesMutation,
   useSendMessageMutation,
+  useSendGroupMessageMutation,
 } from '../store/api';
 import { RootState } from '../store/store';
 import { getFileUrl } from '../util/fileUrl';
+import { Group } from '../types';
 
 type Conversation = {
   participant: MessageParticipant;
@@ -112,6 +116,25 @@ const ParticipantAvatar = ({
   );
 };
 
+const GroupAvatar = ({ size = 42 }: { size?: number }) => (
+  <View
+    style={[
+      styles.avatar,
+      {
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+      },
+    ]}
+  >
+    <MaterialIcons
+      name="groups"
+      size={Math.round(size * 0.52)}
+      color="#2563EB"
+    />
+  </View>
+);
+
 const sortByCreatedAt = (items: ChatMessage[]) =>
   [...items].sort((a, b) => {
     const aTime = new Date(a.createdAt ?? 0).getTime();
@@ -155,6 +178,32 @@ const StudentRow = ({
   </TouchableOpacity>
 );
 
+const GroupRow = ({
+  group,
+  onPress,
+}: {
+  group: Group;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity
+    style={styles.studentRow}
+    onPress={onPress}
+    activeOpacity={0.78}
+  >
+    <GroupAvatar />
+    <View style={styles.conversationBody}>
+      <View style={styles.conversationTop}>
+        <Text style={styles.conversationName} numberOfLines={1}>
+          {group.groupName}
+        </Text>
+      </View>
+      <Text style={styles.conversationPreview} numberOfLines={1}>
+        {group.studentCount} {group.studentCount === 1 ? 'student' : 'students'}
+      </Text>
+    </View>
+  </TouchableOpacity>
+);
+
 const MessageBubble = ({
   item,
   currentUserId,
@@ -184,7 +233,6 @@ type MessageType = 'group' | 'individual';
 
 const FILTERS: { label: string; value: MessageType }[] = [
   { label: 'Students', value: 'individual' },
-
   { label: 'Group', value: 'group' },
 ];
 
@@ -204,6 +252,7 @@ export default function AdminMessageScreen() {
   const [activeRecipientId, setActiveRecipientId] = useState<string | null>(
     route.params?.studentId ?? null,
   );
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] =
@@ -214,6 +263,8 @@ export default function AdminMessageScreen() {
   const composerRef = useRef<View>(null);
   const keyboardTopRef = useRef<number | null>(null);
   const composerKeyboardOffsetRef = useRef(0);
+
+  const isChatOpen = Boolean(activeRecipientId || activeGroupId);
 
   const {
     data: messages = [],
@@ -230,8 +281,19 @@ export default function AdminMessageScreen() {
   } = useGetMessageStudentsQuery(undefined, {
     skip: !isFocused || !isAdmin,
   });
+  const {
+    data: messageGroups = [],
+    isLoading: isGroupListLoading,
+    refetch: refetchMessageGroups,
+  } = useGetMessageGroupQuery(undefined, {
+    skip: !isFocused || !isAdmin,
+  });
+
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
+  const [sendGroupMessage, { isLoading: isSendingGroup }] =
+    useSendGroupMessageMutation();
   const [readMessages] = useReadMessagesMutation();
+  const isSendingAny = isSending || isSendingGroup;
   const composerBottomPadding = keyboardVisible
     ? 10
     : Math.max(10, insets.bottom);
@@ -271,6 +333,11 @@ export default function AdminMessageScreen() {
     [activeRecipientId, messageStudents],
   );
 
+  const selectedMessageGroup = useMemo(
+    () => messageGroups.find(group => group._id === activeGroupId),
+    [activeGroupId, messageGroups],
+  );
+
   const studentAdminParticipant = useMemo(
     () =>
       sortedMessages
@@ -280,6 +347,23 @@ export default function AdminMessageScreen() {
   );
 
   const activeConversation = useMemo(() => {
+    if (isAdmin && activeGroupId) {
+      if (!selectedMessageGroup) return undefined;
+
+      return {
+        participant: {
+          id: selectedMessageGroup._id,
+          name: selectedMessageGroup.groupName,
+          code: `${selectedMessageGroup.studentCount} students`,
+          model: 'Group' as const,
+          profilePicPath: undefined,
+        },
+        // Group broadcasts are send-only here - replies come back to the
+        // admin as individual student conversations, not into this thread.
+        messages: [],
+      };
+    }
+
     if (isAdmin) {
       const existingConversation = conversations.find(
         item => item.participant.id === activeRecipientId,
@@ -294,7 +378,7 @@ export default function AdminMessageScreen() {
           id: selectedMessageStudent.id,
           name: selectedMessageStudent.name,
           code: selectedMessageStudent.studentId,
-          model: 'Student',
+          model: 'Student' as const,
           profilePicPath: selectedMessageStudent.profilePicPath,
         },
         messages: [],
@@ -314,8 +398,10 @@ export default function AdminMessageScreen() {
     };
   }, [
     activeRecipientId,
+    activeGroupId,
     conversations,
     isAdmin,
+    selectedMessageGroup,
     selectedMessageStudent,
     sortedMessages,
     studentAdminParticipant,
@@ -327,6 +413,7 @@ export default function AdminMessageScreen() {
     [chatMessages],
   );
   const activeParticipant = activeConversation?.participant;
+  const isGroupChat = activeParticipant?.model === 'Group';
   const activeParticipantCode =
     activeParticipant?.model === 'Admin' ? undefined : activeParticipant?.code;
   const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
@@ -369,7 +456,7 @@ export default function AdminMessageScreen() {
     if (!isAdmin) return undefined;
 
     navigation.setOptions({
-      tabBarStyle: activeRecipientId
+      tabBarStyle: isChatOpen
         ? { display: 'none' }
         : {
             backgroundColor: '#FFFFFF',
@@ -385,7 +472,7 @@ export default function AdminMessageScreen() {
         },
       });
     };
-  }, [activeRecipientId, isAdmin, navigation]);
+  }, [isChatOpen, isAdmin, navigation]);
 
   useEffect(() => {
     if (chatMessages.length === 0) return;
@@ -398,7 +485,12 @@ export default function AdminMessageScreen() {
       clearTimeout(firstTimer);
       clearTimeout(secondTimer);
     };
-  }, [activeRecipientId, chatMessages.length, scrollToChatBottom]);
+  }, [
+    activeRecipientId,
+    activeGroupId,
+    chatMessages.length,
+    scrollToChatBottom,
+  ]);
 
   useEffect(() => {
     const keyboardShowSubscription = Keyboard.addListener(
@@ -440,6 +532,7 @@ export default function AdminMessageScreen() {
 
   useEffect(() => {
     if (!isFocused) return undefined;
+    if (isAdmin && activeGroupId) return undefined; // group threads are send-only, nothing to mark read
 
     const readStudentId = isAdmin ? activeRecipientId : studentId;
     if (!readStudentId) return undefined;
@@ -450,32 +543,58 @@ export default function AdminMessageScreen() {
         .unwrap()
         .catch(() => undefined);
     };
-  }, [activeRecipientId, isAdmin, isFocused, readMessages, studentId]);
+  }, [
+    activeRecipientId,
+    activeGroupId,
+    isAdmin,
+    isFocused,
+    readMessages,
+    studentId,
+  ]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      if (isAdmin && !activeRecipientId) {
-        await refetchMessageStudents();
+      if (isAdmin && !isChatOpen) {
+        if (selectedFilter === 'group') {
+          await refetchMessageGroups();
+        } else {
+          await refetchMessageStudents();
+        }
       } else {
         await refetchMessages();
       }
     } finally {
       setRefreshing(false);
     }
-  }, [activeRecipientId, isAdmin, refetchMessageStudents, refetchMessages]);
+  }, [
+    isAdmin,
+    isChatOpen,
+    selectedFilter,
+    refetchMessageGroups,
+    refetchMessageStudents,
+    refetchMessages,
+  ]);
 
   const handleSend = async () => {
     const message = draft.trim();
-    if (!message || !activeParticipant?.id || isSending) return;
+    if (!message || !activeParticipant?.id || isSendingAny) return;
 
     try {
       setDraft('');
-      await sendMessage({
-        message,
-        receivedTo: activeParticipant.id,
-      }).unwrap();
-      await refetchMessages();
+
+      if (isGroupChat) {
+        await sendGroupMessage({
+          message,
+          groupId: activeParticipant.id,
+        }).unwrap();
+      } else {
+        await sendMessage({
+          message,
+          receivedTo: activeParticipant.id,
+        }).unwrap();
+        await refetchMessages();
+      }
     } catch {
       setDraft(message);
       Alert.alert('Message not sent', 'Please try again.');
@@ -484,6 +603,7 @@ export default function AdminMessageScreen() {
 
   const handleSelectStudent = useCallback(
     (student: MessageStudent) => {
+      setActiveGroupId(null);
       setActiveRecipientId(student.id);
 
       if (student.unreadMessageCount <= 0) return;
@@ -495,9 +615,15 @@ export default function AdminMessageScreen() {
     [readMessages],
   );
 
+  const handleSelectGroup = useCallback((group: Group) => {
+    setActiveRecipientId(null);
+    setActiveGroupId(group._id);
+  }, []);
+
   const handleChatBack = useCallback(() => {
     if (isAdmin) {
       setActiveRecipientId(null);
+      setActiveGroupId(null);
       return;
     }
 
@@ -517,50 +643,92 @@ export default function AdminMessageScreen() {
     setSelectedFilter(value);
   };
 
-  const renderAdminStudentList = () => (
+  const creteNewGroup = () => {
+    navigation.navigate('CreateMessageGroup');
+  };
+
+  const renderAdminList = () => (
     <View style={styles.studentListPane}>
       <Filter
         filters={FILTERS}
         onSelect={handleFilterSelect}
         selected={selectedFilter}
       />
-      <FlatList
-        data={messageStudents}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.studentList}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#4F46E5"
-            colors={['#4F46E5']}
-          />
-        }
-        renderItem={({ item }) => (
-          <StudentRow
-            student={item}
-            onPress={() => handleSelectStudent(item)}
-          />
-        )}
-        ListEmptyComponent={
-          isStudentListLoading ? (
-            <LoadingState label="Loading students..." />
-          ) : (
-            <View style={styles.emptyChat}>
-              <MaterialIcons name="people-outline" size={42} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No students found</Text>
-            </View>
-          )
-        }
-      />
+      <FloatingAddButton onPress={creteNewGroup} />
+      {selectedFilter === 'individual' ? (
+        <FlatList
+          data={messageStudents}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.studentList}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#4F46E5"
+              colors={['#4F46E5']}
+            />
+          }
+          renderItem={({ item }) => (
+            <StudentRow
+              student={item}
+              onPress={() => handleSelectStudent(item)}
+            />
+          )}
+          ListEmptyComponent={
+            isStudentListLoading ? (
+              <LoadingState label="Loading students..." />
+            ) : (
+              <View style={styles.emptyChat}>
+                <MaterialIcons
+                  name="people-outline"
+                  size={42}
+                  color="#94A3B8"
+                />
+                <Text style={styles.emptyTitle}>No students found</Text>
+              </View>
+            )
+          }
+        />
+      ) : (
+        <FlatList
+          data={messageGroups}
+          keyExtractor={item => item._id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.studentList}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#4F46E5"
+              colors={['#4F46E5']}
+            />
+          }
+          renderItem={({ item }) => (
+            <GroupRow group={item} onPress={() => handleSelectGroup(item)} />
+          )}
+          ListEmptyComponent={
+            isGroupListLoading ? (
+              <LoadingState label="Loading groups..." />
+            ) : (
+              <View style={styles.emptyChat}>
+                <MaterialIcons name="groups" size={42} color="#94A3B8" />
+                <Text style={styles.emptyTitle}>No groups yet</Text>
+                <Text style={styles.emptyText}>
+                  Tap the + button to create a group.
+                </Text>
+              </View>
+            )
+          }
+        />
+      )}
     </View>
   );
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
-      {isAdmin && !activeRecipientId ? (
+      {isAdmin && !isChatOpen ? (
         <AdminHeader header="Messages" headerBackgroundColor="#F8F9FB" />
       ) : null}
 
@@ -568,8 +736,8 @@ export default function AdminMessageScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {isAdmin && !activeRecipientId ? (
-          renderAdminStudentList()
+        {isAdmin && !isChatOpen ? (
+          renderAdminList()
         ) : (
           <View style={styles.content}>
             <View style={styles.chatPane}>
@@ -595,11 +763,15 @@ export default function AdminMessageScreen() {
                     />
                   </TouchableOpacity>
                 ) : null}
-                <ParticipantAvatar
-                  participant={activeParticipant}
-                  fallbackName={isAdmin ? 'Student' : 'Admin'}
-                  size={38}
-                />
+                {isGroupChat ? (
+                  <GroupAvatar size={38} />
+                ) : (
+                  <ParticipantAvatar
+                    participant={activeParticipant}
+                    fallbackName={isAdmin ? 'Student' : 'Admin'}
+                    size={38}
+                  />
+                )}
                 <View style={styles.chatHeaderText}>
                   <Text style={styles.chatName} numberOfLines={1}>
                     {activeParticipant?.name ??
@@ -633,18 +805,24 @@ export default function AdminMessageScreen() {
                   />
                 }
                 ListEmptyComponent={
-                  isLoading ? (
+                  isLoading && !isGroupChat ? (
                     <LoadingState label="...." />
                   ) : (
                     <View style={styles.emptyChat}>
                       <MaterialIcons
-                        name="chat-bubble-outline"
+                        name={isGroupChat ? 'campaign' : 'chat-bubble-outline'}
                         size={42}
                         color="#94A3B8"
                       />
-                      <Text style={styles.emptyTitle}>No messages yet</Text>
+                      <Text style={styles.emptyTitle}>
+                        {isGroupChat
+                          ? 'Send a group message'
+                          : 'No messages yet'}
+                      </Text>
                       <Text style={styles.emptyText}>
-                        {activeParticipant?.id
+                        {isGroupChat
+                          ? 'Every student in this group will receive it individually.'
+                          : activeParticipant?.id
                           ? 'Send the first message to start this chat.'
                           : 'Select a student to start chatting.'}
                       </Text>
@@ -676,7 +854,9 @@ export default function AdminMessageScreen() {
                   style={styles.composerInput}
                   placeholder={
                     activeParticipant?.id
-                      ? 'Type a message'
+                      ? isGroupChat
+                        ? 'Message the whole group'
+                        : 'Type a message'
                       : 'Choose a chat first'
                   }
                   placeholderTextColor="#94A3B8"
@@ -690,15 +870,15 @@ export default function AdminMessageScreen() {
                   onBlur={resetKeyboardCorrection}
                   multiline
                   blurOnSubmit={false}
-                  editable={Boolean(activeParticipant?.id) && !isSending}
+                  editable={Boolean(activeParticipant?.id) && !isSendingAny}
                 />
                 <TouchableOpacity
                   style={[
                     styles.sendButton,
-                    (!canSend || isSending) && styles.sendButtonDisabled,
+                    (!canSend || isSendingAny) && styles.sendButtonDisabled,
                   ]}
                   onPress={handleSend}
-                  disabled={!canSend || isSending}
+                  disabled={!canSend || isSendingAny}
                   activeOpacity={0.82}
                 >
                   <MaterialIcons name="send" size={20} color="#FFFFFF" />
@@ -708,7 +888,10 @@ export default function AdminMessageScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-      <LoadingOverlay visible={isSending} label="Sending message..." />
+      <LoadingOverlay
+        visible={isSendingAny}
+        label={isGroupChat ? 'Sending to group...' : 'Sending message...'}
+      />
     </SafeAreaView>
   );
 }
