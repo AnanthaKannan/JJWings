@@ -31,7 +31,12 @@ import { useSelector } from 'react-redux';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
+import {
+  AdminHeader,
+  Filter,
+  LoadingOverlay,
+  LoadingState,
+} from '../component';
 import {
   ChatMessage,
   MessageStudent,
@@ -175,6 +180,14 @@ const MessageBubble = ({
   );
 };
 
+type MessageType = 'group' | 'individual';
+
+const FILTERS: { label: string; value: MessageType }[] = [
+  { label: 'Students', value: 'individual' },
+
+  { label: 'Group', value: 'group' },
+];
+
 export default function AdminMessageScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
@@ -193,6 +206,8 @@ export default function AdminMessageScreen() {
   );
   const [draft, setDraft] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedFilter, setSelectedFilter] =
+    useState<MessageType>('individual');
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [composerKeyboardOffset, setComposerKeyboardOffset] = useState(0);
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -498,8 +513,17 @@ export default function AdminMessageScreen() {
     );
   }, [isAdmin, navigation]);
 
+  const handleFilterSelect = (value: MessageType) => {
+    setSelectedFilter(value);
+  };
+
   const renderAdminStudentList = () => (
     <View style={styles.studentListPane}>
+      <Filter
+        filters={FILTERS}
+        onSelect={handleFilterSelect}
+        selected={selectedFilter}
+      />
       <FlatList
         data={messageStudents}
         keyExtractor={item => item.id}

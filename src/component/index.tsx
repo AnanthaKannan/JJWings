@@ -16,3 +16,4 @@ export { default as PostActionsBar } from './PostActionsBar';
 export { default as CreatePostScreen } from './CreatePostScreen';
 export { default as PostOptionsMenu } from './PostOptionsMenu';
 export { default as CommentBottomSheet } from './CommentBottomSheet';
+export { default as Filter } from './Filter';
