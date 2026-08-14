@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -22,6 +22,7 @@ import {
   useUpdateMessageGroupMutation,
 } from '../store/api';
 import { Group } from '../types';
+import { useAndroidBackHandler } from '../hooks/useAndroidBackHandler';
 
 type StudentRowProps = {
   student: Student;
@@ -96,6 +97,12 @@ export default function CreateMessageGroupScreen() {
   const selectedCount = selectedStudentIds.length;
   const canSubmit = groupName.trim().length > 0 && selectedCount > 1;
 
+  const navigateToMessages = useCallback(() => {
+    navigation.navigate('AdminMessages', { filter: 'group' });
+  }, [navigation]);
+
+  useAndroidBackHandler(navigateToMessages);
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -131,7 +138,7 @@ export default function CreateMessageGroupScreen() {
         }).unwrap();
       }
 
-      navigation.goBack();
+      navigateToMessages();
     } catch (error) {
       console.error('Failed to save group:', error);
       Alert.alert(
@@ -147,6 +154,7 @@ export default function CreateMessageGroupScreen() {
       <AdminHeader
         header={isEditMode ? 'Update Group' : 'Create Group'}
         showBackButton
+        onBackPress={navigateToMessages}
       />
 
       <View style={styles.content}>

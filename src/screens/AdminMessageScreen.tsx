@@ -78,6 +78,9 @@ const getOtherParticipant = (message: ChatMessage, currentUserId: string) =>
 
 type MessageType = 'group' | 'individual';
 
+const getInitialMessageFilter = (filter?: string): MessageType =>
+  filter === 'group' ? 'group' : 'individual';
+
 const FILTERS: { label: string; value: MessageType }[] = [
   { label: 'Students', value: 'individual' },
   { label: 'Group', value: 'group' },
@@ -110,7 +113,7 @@ export default function AdminMessageScreen() {
   const [draft, setDraft] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] =
-    useState<MessageType>('individual');
+    useState<MessageType>(() => getInitialMessageFilter(route.params?.filter));
   const [modal, setModal] = useState<ReuseModalProps>(MODAL_INITIAL);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [composerKeyboardOffset, setComposerKeyboardOffset] = useState(0);
@@ -120,6 +123,10 @@ export default function AdminMessageScreen() {
   const composerKeyboardOffsetRef = useRef(0);
 
   const isChatOpen = Boolean(activeRecipientId || activeGroupId);
+
+  useEffect(() => {
+    setSelectedFilter(getInitialMessageFilter(route.params?.filter));
+  }, [route.params?.filter]);
 
   const {
     data: messages = [],
