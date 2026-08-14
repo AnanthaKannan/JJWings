@@ -18,6 +18,7 @@ export { default as AssignByLevelScreen } from './AssignByLevelScreen';
 export { default as ProgressDashboard } from './ProgressDashboard';
 export { default as NotificationsScreen } from './Notificationsscreen';
 export { default as AdminMessageScreen } from './AdminMessageScreen';
+export { default as CreateMessageGroupScreen } from './CreateMessageGroupScreen';
 export { default as AdminNotificationSendScreen } from './AdminNotificationSendScreen';
 export { default as TopExplorerScreen } from './TopExplorerScreen';
 export { default as AdminProfileScreen } from './AdminProfileScreen';

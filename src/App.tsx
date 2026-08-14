@@ -58,6 +58,7 @@ import {
   ProgressDashboard,
   NotificationsScreen,
   AdminMessageScreen,
+  CreateMessageGroupScreen,
   AdminNotificationSendScreen,
   TopExplorerScreen,
   AdminProfileScreen,
@@ -638,6 +639,15 @@ const AdminTabs = createBottomTabNavigator({
         tabBarIcon: ({ color, size }) => (
           <MessageTabIcon color={color} size={size} />
         ),
+      },
+    },
+    CreateMessageGroup: {
+      screen: CreateMessageGroupScreen,
+      options: {
+        tabBarButton: () => null,
+        tabBarItemStyle: { display: 'none' },
+        tabBarStyle: { display: 'none' },
+        tabBarLabel: 'Group',
       },
     },
     AdminNotificationSend: {

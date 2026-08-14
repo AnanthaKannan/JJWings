@@ -23,6 +23,7 @@ import {
   CreateComment,
   Group,
   GroupResponse,
+  SaveGroupReq,
   SendGroupMessage,
 } from '../types';
 
@@ -968,6 +969,7 @@ export const jjWingsApi = createApi({
     'Teachers',
     'Game',
     'Comment',
+    'MessageGroups',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
@@ -1379,6 +1381,39 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: (response: GroupResponse) =>
         response.result ?? response.data ?? [],
+      providesTags: [{ type: 'MessageGroups', id: 'LIST' }],
+    }),
+
+    createMessageGroup: builder.mutation<string, SaveGroupReq>({
+      query: body => ({
+        url: '/group',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST' }],
+    }),
+
+    updateMessageGroup: builder.mutation<
+      string,
+      SaveGroupReq & { groupId: string }
+    >({
+      query: ({ groupId, groupName, studentIds }) => ({
+        url: `/group/${groupId}`,
+        method: 'PATCH',
+        body: { groupName, studentIds },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST' }],
+    }),
+
+    deleteMessageGroup: builder.mutation<string, string>({
+      query: groupId => ({
+        url: `/group/${groupId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST' }],
     }),
 
     sendGroupMessage: builder.mutation<string, SendGroupMessage>({
@@ -1975,7 +2010,10 @@ export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
   useSwitchStudentLoginMutation,
+  useCreateMessageGroupMutation,
+  useDeleteMessageGroupMutation,
   useGetMessageGroupQuery,
+  useUpdateMessageGroupMutation,
   useGetFeedListQuery,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,

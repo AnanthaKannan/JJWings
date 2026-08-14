@@ -46,12 +46,14 @@ import {
   useGetMessageGroupQuery,
   useGetMessagesQuery,
   useReadMessagesMutation,
+  useDeleteMessageGroupMutation,
   useSendMessageMutation,
   useSendGroupMessageMutation,
 } from '../store/api';
 import { RootState } from '../store/store';
 import { getFileUrl } from '../util/fileUrl';
 import { Group } from '../types';
+import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
 
 type Conversation = {
   participant: MessageParticipant;
@@ -181,9 +183,13 @@ const StudentRow = ({
 const GroupRow = ({
   group,
   onPress,
+  onEdit,
+  onDelete,
 }: {
   group: Group;
   onPress: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) => (
   <TouchableOpacity
     style={styles.studentRow}
@@ -200,6 +206,22 @@ const GroupRow = ({
       <Text style={styles.conversationPreview} numberOfLines={1}>
         {group.studentCount} {group.studentCount === 1 ? 'student' : 'students'}
       </Text>
+    </View>
+    <View style={styles.groupActions}>
+      <TouchableOpacity
+        style={styles.groupActionButton}
+        onPress={onEdit}
+        activeOpacity={0.82}
+      >
+        <MaterialIcons name="edit" size={18} color="#4F46E5" />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.groupActionButton, styles.groupDeleteButton]}
+        onPress={onDelete}
+        activeOpacity={0.82}
+      >
+        <MaterialIcons name="delete-outline" size={18} color="#DC2626" />
+      </TouchableOpacity>
     </View>
   </TouchableOpacity>
 );
@@ -236,6 +258,13 @@ const FILTERS: { label: string; value: MessageType }[] = [
   { label: 'Group', value: 'group' },
 ];
 
+const MODAL_INITIAL: ReuseModalProps = {
+  state: 'confirm',
+  visible: false,
+  title: '',
+  description: '',
+};
+
 export default function AdminMessageScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
@@ -257,6 +286,7 @@ export default function AdminMessageScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] =
     useState<MessageType>('individual');
+  const [modal, setModal] = useState<ReuseModalProps>(MODAL_INITIAL);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [composerKeyboardOffset, setComposerKeyboardOffset] = useState(0);
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -292,8 +322,11 @@ export default function AdminMessageScreen() {
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [sendGroupMessage, { isLoading: isSendingGroup }] =
     useSendGroupMessageMutation();
+  const [deleteMessageGroup, { isLoading: isDeletingGroup }] =
+    useDeleteMessageGroupMutation();
   const [readMessages] = useReadMessagesMutation();
   const isSendingAny = isSending || isSendingGroup;
+  const isGroupActionLoading = isDeletingGroup;
   const composerBottomPadding = keyboardVisible
     ? 10
     : Math.max(10, insets.bottom);
@@ -647,6 +680,44 @@ export default function AdminMessageScreen() {
     navigation.navigate('CreateMessageGroup');
   };
 
+  const handleEditGroup = (group: Group) => {
+    navigation.navigate('CreateMessageGroup', { group });
+  };
+
+  const deleteGroup = async (group: Group) => {
+    try {
+      await deleteMessageGroup(group._id).unwrap();
+      setModal({
+        visible: true,
+        state: 'success',
+        title: 'Group Deleted',
+        description: `*${group.groupName}* has been deleted.`,
+        onCancel: () => setModal(MODAL_INITIAL),
+      });
+    } catch (error) {
+      console.error('Failed to delete group:', error);
+      setModal({
+        visible: true,
+        state: 'failure',
+        title: 'Group Not Deleted',
+        description: 'Please try again.',
+        onCancel: () => setModal(MODAL_INITIAL),
+      });
+    }
+  };
+
+  const confirmDeleteGroup = (group: Group) => {
+    setModal({
+      visible: true,
+      state: 'confirm',
+      title: 'Delete Group',
+      description: `Do you want to delete *${group.groupName}*?`,
+      confirmLabel: 'Delete',
+      onConfirm: () => deleteGroup(group),
+      onCancel: () => setModal(MODAL_INITIAL),
+    });
+  };
+
   const renderAdminList = () => (
     <View style={styles.studentListPane}>
       <Filter
@@ -705,7 +776,12 @@ export default function AdminMessageScreen() {
             />
           }
           renderItem={({ item }) => (
-            <GroupRow group={item} onPress={() => handleSelectGroup(item)} />
+            <GroupRow
+              group={item}
+              onPress={() => handleSelectGroup(item)}
+              onEdit={() => handleEditGroup(item)}
+              onDelete={() => confirmDeleteGroup(item)}
+            />
           )}
           ListEmptyComponent={
             isGroupListLoading ? (
@@ -889,8 +965,24 @@ export default function AdminMessageScreen() {
         )}
       </KeyboardAvoidingView>
       <LoadingOverlay
-        visible={isSendingAny}
-        label={isGroupChat ? 'Sending to group...' : 'Sending message...'}
+        visible={isSendingAny || isGroupActionLoading}
+        label={
+          isGroupActionLoading
+            ? 'Deleting group...'
+            : isGroupChat
+            ? 'Sending to group...'
+            : 'Sending message...'
+        }
+      />
+      <ReuseModal
+        visible={modal.visible}
+        state={modal.state}
+        title={modal.title}
+        description={modal.description}
+        confirmLabel={modal.confirmLabel}
+        cancelLabel={modal.cancelLabel}
+        onConfirm={modal.onConfirm}
+        onCancel={modal.onCancel ?? (() => setModal(MODAL_INITIAL))}
       />
     </SafeAreaView>
   );
@@ -1004,6 +1096,23 @@ const styles = StyleSheet.create({
     lineHeight: 11,
     fontWeight: '900',
     textAlign: 'center',
+  },
+  groupActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 8,
+  },
+  groupActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupDeleteButton: {
+    backgroundColor: '#FEF2F2',
   },
   chatPane: {
     flex: 1,

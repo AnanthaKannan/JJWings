@@ -100,11 +100,18 @@ export type Group = {
   _id: string;
   groupName: string;
   studentCount: number;
+  studentIds?: string[];
+  students?: Array<string | { _id?: string; id?: string }>;
 };
 
 export type SendGroupMessage = {
   message: string;
   groupId: string;
+};
+
+export type SaveGroupReq = {
+  groupName: string;
+  studentIds: string[];
 };
 
 type FilePath = 'feed' | 'profile';
