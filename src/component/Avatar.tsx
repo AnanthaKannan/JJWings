@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { getFileUrl } from '../util/fileUrl';
 
@@ -7,10 +8,14 @@ export const Avatar = ({
   color = '#8db4e8',
   name,
   profilePic,
+  icon,
+  size = 42,
 }: {
   color?: string;
   name: string;
+  icon?: string;
   profilePic?: string | null;
+  size?: number;
 }) => {
   const initials = name
     .split(' ')
@@ -20,7 +25,13 @@ export const Avatar = ({
 
   return (
     <View style={[styles.avatar, { backgroundColor: color }]}>
-      {profilePicUrl ? (
+      {icon ? (
+        <MaterialIcons
+          name="groups"
+          size={Math.round(size * 0.52)}
+          color="#2563EB"
+        />
+      ) : profilePicUrl ? (
         <Image source={{ uri: profilePicUrl }} style={styles.avatarImage} />
       ) : (
         <Text style={styles.avatarText}>{initials}</Text>

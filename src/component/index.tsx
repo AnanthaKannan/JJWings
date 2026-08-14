@@ -17,3 +17,5 @@ export { default as CreatePostScreen } from './CreatePostScreen';
 export { default as PostOptionsMenu } from './PostOptionsMenu';
 export { default as CommentBottomSheet } from './CommentBottomSheet';
 export { default as Filter } from './Filter';
+export { default as GroupRow } from './message/GroupRow';
+export { default as StudentRow } from './message/StudentRow';

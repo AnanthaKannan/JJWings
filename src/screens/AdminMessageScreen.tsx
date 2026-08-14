@@ -8,7 +8,6 @@ import React, {
 import {
   Alert,
   FlatList,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -37,6 +36,9 @@ import {
   FloatingAddButton,
   LoadingOverlay,
   LoadingState,
+  GroupRow,
+  Avatar,
+  StudentRow,
 } from '../component';
 import {
   ChatMessage,
@@ -51,9 +53,9 @@ import {
   useSendGroupMessageMutation,
 } from '../store/api';
 import { RootState } from '../store/store';
-import { getFileUrl } from '../util/fileUrl';
 import { Group } from '../types';
 import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
+import MessageBubble from '../component/message/MessageBubble';
 
 type Conversation = {
   participant: MessageParticipant;
@@ -64,79 +66,6 @@ type Conversation = {
 const EMPTY_CHAT_MESSAGES: ChatMessage[] = [];
 const KEYBOARD_COMPOSER_GAP = 32;
 
-const formatMessageTime = (dateValue?: string) => {
-  if (!dateValue) return '';
-
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-};
-
-const getInitials = (name: string) =>
-  (name || 'User')
-    .split(' ')
-    .map(part => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
-const ParticipantAvatar = ({
-  participant,
-  fallbackName,
-  size = 42,
-}: {
-  participant?: Pick<MessageParticipant, 'name' | 'profilePicPath'>;
-  fallbackName: string;
-  size?: number;
-}) => {
-  const name = participant?.name || fallbackName;
-  const imageUrl = getFileUrl(participant?.profilePicPath);
-
-  return (
-    <View
-      style={[
-        styles.avatar,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-        },
-      ]}
-    >
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.avatarImage} />
-      ) : (
-        <Text style={styles.avatarText}>{getInitials(name)}</Text>
-      )}
-    </View>
-  );
-};
-
-const GroupAvatar = ({ size = 42 }: { size?: number }) => (
-  <View
-    style={[
-      styles.avatar,
-      {
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-      },
-    ]}
-  >
-    <MaterialIcons
-      name="groups"
-      size={Math.round(size * 0.52)}
-      color="#2563EB"
-    />
-  </View>
-);
-
 const sortByCreatedAt = (items: ChatMessage[]) =>
   [...items].sort((a, b) => {
     const aTime = new Date(a.createdAt ?? 0).getTime();
@@ -146,110 +75,6 @@ const sortByCreatedAt = (items: ChatMessage[]) =>
 
 const getOtherParticipant = (message: ChatMessage, currentUserId: string) =>
   message.sendBy.id === currentUserId ? message.receivedTo : message.sendBy;
-
-const StudentRow = ({
-  student,
-  onPress,
-}: {
-  student: MessageStudent;
-  onPress: () => void;
-}) => (
-  <TouchableOpacity
-    style={styles.studentRow}
-    onPress={onPress}
-    activeOpacity={0.78}
-  >
-    <ParticipantAvatar participant={student} fallbackName="Student" />
-    <View style={styles.conversationBody}>
-      <View style={styles.conversationTop}>
-        <Text style={styles.conversationName} numberOfLines={1}>
-          {student.name}
-        </Text>
-      </View>
-      <Text style={styles.conversationPreview} numberOfLines={1}>
-        {student.studentId ?? `Level ${student.level ?? '-'}`}
-      </Text>
-    </View>
-    {student.unreadMessageCount > 0 ? (
-      <View style={styles.unreadBadge}>
-        <Text style={styles.unreadBadgeText}>
-          {student.unreadMessageCount > 99 ? '99+' : student.unreadMessageCount}
-        </Text>
-      </View>
-    ) : null}
-  </TouchableOpacity>
-);
-
-const GroupRow = ({
-  group,
-  onPress,
-  onEdit,
-  onDelete,
-}: {
-  group: Group;
-  onPress: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) => (
-  <TouchableOpacity
-    style={styles.studentRow}
-    onPress={onPress}
-    activeOpacity={0.78}
-  >
-    <GroupAvatar />
-    <View style={styles.conversationBody}>
-      <View style={styles.conversationTop}>
-        <Text style={styles.conversationName} numberOfLines={1}>
-          {group.groupName}
-        </Text>
-      </View>
-      <Text style={styles.conversationPreview} numberOfLines={1}>
-        {group.studentCount} {group.studentCount === 1 ? 'student' : 'students'}
-      </Text>
-    </View>
-    <View style={styles.groupActions}>
-      <TouchableOpacity
-        style={styles.groupActionButton}
-        onPress={onEdit}
-        activeOpacity={0.82}
-      >
-        <MaterialIcons name="edit" size={18} color="#4F46E5" />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.groupActionButton, styles.groupDeleteButton]}
-        onPress={onDelete}
-        activeOpacity={0.82}
-      >
-        <MaterialIcons name="delete-outline" size={18} color="#DC2626" />
-      </TouchableOpacity>
-    </View>
-  </TouchableOpacity>
-);
-
-const MessageBubble = ({
-  item,
-  currentUserId,
-}: {
-  item: ChatMessage;
-  currentUserId: string;
-}) => {
-  const isMine = item.sendBy.id === currentUserId;
-
-  return (
-    <View style={[styles.messageRow, isMine && styles.messageRowMine]}>
-      <View
-        style={[styles.bubble, isMine ? styles.myBubble : styles.theirBubble]}
-      >
-        <Text style={[styles.messageText, isMine && styles.myMessageText]}>
-          {item.message}
-        </Text>
-        <Text style={[styles.messageTime, isMine && styles.myMessageTime]}>
-          {formatMessageTime(item.createdAt)}
-        </Text>
-      </View>
-    </View>
-  );
-};
 
 type MessageType = 'group' | 'individual';
 
@@ -840,12 +665,11 @@ export default function AdminMessageScreen() {
                   </TouchableOpacity>
                 ) : null}
                 {isGroupChat ? (
-                  <GroupAvatar size={38} />
+                  <Avatar name="" icon="groups" />
                 ) : (
-                  <ParticipantAvatar
-                    participant={activeParticipant}
-                    fallbackName={isAdmin ? 'Student' : 'Admin'}
-                    size={38}
+                  <Avatar
+                    name={activeParticipant?.name || ''}
+                    profilePic={activeParticipant?.profilePicPath}
                   />
                 )}
                 <View style={styles.chatHeaderText}>
