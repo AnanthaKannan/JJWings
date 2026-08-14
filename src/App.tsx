@@ -541,6 +541,14 @@ const AdminStudentsStack = createNativeStackNavigator({
   },
 });
 
+const AdminMessagesStack = createNativeStackNavigator({
+  screenOptions: { headerShown: false },
+  screens: {
+    AdminMessagesList: { screen: AdminMessageScreen },
+    CreateMessageGroup: { screen: CreateMessageGroupScreen },
+  },
+});
+
 const AdminTabs = createBottomTabNavigator({
   screenOptions: {
     headerShown: false,
@@ -632,22 +640,24 @@ const AdminTabs = createBottomTabNavigator({
       },
     },
     AdminMessages: {
-      screen: AdminMessageScreen,
-      options: {
-        tabBarLabel: 'Message',
-        unmountOnBlur: true,
-        tabBarIcon: ({ color, size }) => (
-          <MessageTabIcon color={color} size={size} />
-        ),
-      },
-    },
-    CreateMessageGroup: {
-      screen: CreateMessageGroupScreen,
-      options: {
-        tabBarButton: () => null,
-        tabBarItemStyle: { display: 'none' },
-        tabBarStyle: { display: 'none' },
-        tabBarLabel: 'Group',
+      screen: AdminMessagesStack,
+      options: ({ route }) => {
+        const routeName = getFocusedRouteNameFromRoute(route);
+
+        const shouldHideTabBar = routeName === 'CreateMessageGroup';
+
+        return {
+          tabBarLabel: 'Message',
+          tabBarStyle: shouldHideTabBar
+            ? { display: 'none' }
+            : {
+                backgroundColor: '#FFFFFF',
+                borderTopColor: '#E5E7EB',
+              },
+          tabBarIcon: ({ color, size }) => (
+            <MessageTabIcon color={color} size={size} />
+          ),
+        };
       },
     },
     AdminNotificationSend: {

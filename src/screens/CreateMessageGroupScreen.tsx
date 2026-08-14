@@ -98,7 +98,8 @@ export default function CreateMessageGroupScreen() {
   const canSubmit = groupName.trim().length > 0 && selectedCount > 1;
 
   const navigateToMessages = useCallback(() => {
-    navigation.navigate('AdminMessages', { filter: 'group' });
+    // navigation.navigate('AdminMessages', { filter: 'group' });
+    navigation.goBack();
   }, [navigation]);
 
   useAndroidBackHandler(navigateToMessages);
@@ -159,7 +160,7 @@ export default function CreateMessageGroupScreen() {
 
       <View style={styles.content}>
         <View style={styles.formBand}>
-          <Text style={styles.label}>Group Name {groupName} eee</Text>
+          <Text style={styles.label}>Group Name</Text>
           <TextInput
             style={[styles.input, groupName.length > 0 && styles.inputFilled]}
             placeholder="Enter group name"
