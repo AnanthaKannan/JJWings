@@ -1400,7 +1400,7 @@ export const jjWingsApi = createApi({
     >({
       query: ({ groupId, groupName, studentIds }) => ({
         url: `/group/${groupId}`,
-        method: 'PATCH',
+        method: 'PUT',
         body: { groupName, studentIds },
       }),
       transformResponse: () => 'success',

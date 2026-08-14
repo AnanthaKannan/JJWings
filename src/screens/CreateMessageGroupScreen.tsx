@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -22,20 +22,6 @@ import {
   useUpdateMessageGroupMutation,
 } from '../store/api';
 import { Group } from '../types';
-
-const getGroupStudentIds = (group?: Group) => {
-  if (!group) return [];
-  if (group.studentIds?.length) return group.studentIds;
-
-  return (
-    group.students
-      ?.map(student => {
-        if (typeof student === 'string') return student;
-        return student._id ?? student.id;
-      })
-      .filter((id): id is string => Boolean(id)) ?? []
-  );
-};
 
 type StudentRowProps = {
   student: Student;
@@ -73,12 +59,17 @@ export default function CreateMessageGroupScreen() {
   const editingGroup = route.params?.group as Group | undefined;
   const isEditMode = Boolean(editingGroup?._id);
 
-  const [groupName, setGroupName] = useState(editingGroup?.groupName ?? '');
+  const [groupName, setGroupName] = useState('');
   const [searchText, setSearchText] = useState('');
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>(
-    getGroupStudentIds(editingGroup),
-  );
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    const editingGroupDetail = route.params?.group as Group | undefined;
+
+    setGroupName(editingGroupDetail?.groupName || '');
+    setSelectedStudentIds(editingGroupDetail?.studentIds || []);
+  }, [route.params?.group]);
 
   const {
     data: { students = [] } = {},
@@ -160,7 +151,7 @@ export default function CreateMessageGroupScreen() {
 
       <View style={styles.content}>
         <View style={styles.formBand}>
-          <Text style={styles.label}>Group Name</Text>
+          <Text style={styles.label}>Group Name {groupName} eee</Text>
           <TextInput
             style={[styles.input, groupName.length > 0 && styles.inputFilled]}
             placeholder="Enter group name"
@@ -221,7 +212,11 @@ export default function CreateMessageGroupScreen() {
               <LoadingState label="Loading students..." />
             ) : (
               <View style={styles.emptyState}>
-                <MaterialIcons name="people-outline" size={38} color="#94A3B8" />
+                <MaterialIcons
+                  name="people-outline"
+                  size={38}
+                  color="#94A3B8"
+                />
                 <Text style={styles.emptyTitle}>No students found</Text>
               </View>
             )
