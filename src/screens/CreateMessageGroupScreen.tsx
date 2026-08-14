@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdminHeader, LoadingOverlay, LoadingState } from '../component';
 import {
@@ -56,6 +57,7 @@ function StudentRow({ student, selected, onToggle }: StudentRowProps) {
 
 export default function CreateMessageGroupScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const editingGroup = route.params?.group as Group | undefined;
   const isEditMode = Boolean(editingGroup?._id);
@@ -103,6 +105,21 @@ export default function CreateMessageGroupScreen() {
   }, [navigation]);
 
   useAndroidBackHandler(navigateToMessages);
+
+  useEffect(() => {
+    const parent = navigation.getParent(); // Tab navigator
+
+    parent?.setOptions({ tabBarStyle: { display: 'none' } });
+
+    return () => {
+      parent?.setOptions({
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E5E7EB',
+        },
+      });
+    };
+  }, [navigation]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -200,7 +217,10 @@ export default function CreateMessageGroupScreen() {
         <FlatList
           data={filteredStudents}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.studentList}
+          contentContainerStyle={[
+            styles.studentList,
+            { paddingBottom: 100 + insets.bottom },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -233,7 +253,7 @@ export default function CreateMessageGroupScreen() {
           showsVerticalScrollIndicator={false}
         />
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}>
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -412,7 +432,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingTop: 12,
   },
   submitButton: {
     minHeight: 48,

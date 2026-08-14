@@ -112,8 +112,9 @@ export default function AdminMessageScreen() {
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] =
-    useState<MessageType>(() => getInitialMessageFilter(route.params?.filter));
+  const [selectedFilter, setSelectedFilter] = useState<MessageType>(() =>
+    getInitialMessageFilter(route.params?.filter),
+  );
   const [modal, setModal] = useState<ReuseModalProps>(MODAL_INITIAL);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [composerKeyboardOffset, setComposerKeyboardOffset] = useState(0);
@@ -318,9 +319,11 @@ export default function AdminMessageScreen() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return undefined;
+    if (!isAdmin) return;
 
-    navigation.setOptions({
+    const parent = navigation.getParent(); // Tab navigator
+
+    parent?.setOptions({
       tabBarStyle: isChatOpen
         ? { display: 'none' }
         : {
@@ -330,7 +333,7 @@ export default function AdminMessageScreen() {
     });
 
     return () => {
-      navigation.setOptions({
+      parent?.setOptions({
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
           borderTopColor: '#E5E7EB',
