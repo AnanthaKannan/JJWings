@@ -365,7 +365,7 @@ export default function TeacherDirectoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       </View>
-      <FloatingAddButton onPress={openCreateModal} />
+      <FloatingAddButton onPress={openCreateModal} hasBottomBar={false} />
 
       <ReuseModal
         visible={modal.visible}

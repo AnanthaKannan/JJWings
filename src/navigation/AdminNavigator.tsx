@@ -180,12 +180,8 @@ const AdminTabs = createBottomTabNavigator({
     AdminTeachers: {
       screen: TeacherDirectoryScreen,
       options: {
-        tabBarButton: () => null,
         tabBarItemStyle: { display: 'none' },
-        tabBarLabel: 'Teachers',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="school" color={color} size={size} />
-        ),
+        tabBarStyle: { display: 'none' },
       },
     },
     AdminNotifications: {
@@ -200,12 +196,8 @@ const AdminTabs = createBottomTabNavigator({
     AdminRanking: {
       screen: TopExplorerScreen,
       options: {
-        tabBarButton: () => null,
         tabBarItemStyle: { display: 'none' },
-        tabBarLabel: 'Rank',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="leaderboard" color={color} size={size} />
-        ),
+        tabBarStyle: { display: 'none' },
       },
     },
     AdminProfile: {
