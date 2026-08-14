@@ -233,12 +233,8 @@ const AdminTabs = createBottomTabNavigator({
     AdminAchievements: {
       screen: AchievementsScreen,
       options: {
-        tabBarButton: () => null,
         tabBarItemStyle: { display: 'none' },
-        tabBarLabel: 'Achievements',
-        tabBarIcon: ({ color, size }) => (
-          <MaterialIcons name="emoji-events" color={color} size={size} />
-        ),
+        tabBarStyle: { display: 'none' },
       },
     },
     UpdatePassword: {
