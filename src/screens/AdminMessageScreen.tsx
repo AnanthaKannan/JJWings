@@ -53,6 +53,7 @@ import {
   useSendGroupMessageMutation,
 } from '../store/api';
 import { RootState } from '../store/store';
+import { useAndroidBackHandler } from '../hooks/useAndroidBackHandler';
 import { Group } from '../types';
 import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
 import MessageBubble from '../component/message/MessageBubble';
@@ -102,9 +103,9 @@ export default function AdminMessageScreen() {
   const isStudent = useSelector((state: RootState) => state.common.isStudent);
   const adminId = useSelector((state: RootState) => state.common.adminId);
   const studentId = useSelector((state: RootState) => state.common.studentId);
-  const studentName = useSelector(
-    (state: RootState) => state.common.studentName,
-  );
+  // const studentName = useSelector(
+  //   (state: RootState) => state.common.studentName,
+  // );
   const currentUserId = isAdmin ? adminId : studentId ?? '';
   const [activeRecipientId, setActiveRecipientId] = useState<string | null>(
     route.params?.studentId ?? null,
@@ -280,8 +281,8 @@ export default function AdminMessageScreen() {
   );
   const activeParticipant = activeConversation?.participant;
   const isGroupChat = activeParticipant?.model === 'Group';
-  const activeParticipantCode =
-    activeParticipant?.model === 'Admin' ? undefined : activeParticipant?.code;
+  // const activeParticipantCode =
+  //   activeParticipant?.model === 'Admin' ? undefined : activeParticipant?.code;
   const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
   const scrollToChatBottom = useCallback((animated = false) => {
     requestAnimationFrame(() => {
@@ -553,6 +554,8 @@ export default function AdminMessageScreen() {
     });
   };
 
+  useAndroidBackHandler(handleChatBack);
+
   const renderAdminList = () => (
     <View style={styles.studentListPane}>
       <Filter
@@ -687,10 +690,10 @@ export default function AdminMessageScreen() {
                     {activeParticipant?.name ??
                       (isAdmin ? 'Select a student' : 'Admin')}
                   </Text>
-                  <Text style={styles.chatSubText} numberOfLines={1}>
+                  {/* <Text style={styles.chatSubText} numberOfLines={1}>
                     {activeParticipantCode ??
                       (isStudent ? studentName || 'Student' : 'Conversation')}
-                  </Text>
+                  </Text> */}
                 </View>
               </View>
 
@@ -839,8 +842,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
   },
   studentList: {
-    padding: 14,
-    gap: 10,
+    paddingHorizontal: 14,
+    gap: 5,
   },
   studentRow: {
     minHeight: 68,
