@@ -11,13 +11,9 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  RefreshControl,
   SafeAreaView,
   StatusBar,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import {
@@ -27,19 +23,14 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AdminHeader,
-  Filter,
-  FloatingAddButton,
+  AdminMessageList,
   LoadingOverlay,
-  LoadingState,
-  GroupRow,
-  Avatar,
-  StudentRow,
-  ListModal,
+  MessageChatPane,
+  MessageType,
 } from '../component';
 import {
   ChatMessage,
@@ -57,8 +48,6 @@ import { RootState } from '../store/store';
 import { useAndroidBackHandler } from '../hooks/useAndroidBackHandler';
 import { Group } from '../types';
 import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
-import MessageBubble from '../component/message/MessageBubble';
-import { List } from '../component/ListModal';
 
 type Conversation = {
   participant: MessageParticipant;
@@ -69,37 +58,17 @@ type Conversation = {
 const EMPTY_CHAT_MESSAGES: ChatMessage[] = [];
 const KEYBOARD_COMPOSER_GAP = 32;
 
-const sortByCreatedAt = (items: ChatMessage[]) =>
-  [...items].sort((a, b) => {
-    const aTime = new Date(a.createdAt ?? 0).getTime();
-    const bTime = new Date(b.createdAt ?? 0).getTime();
-    return aTime - bTime;
-  });
-
 const getOtherParticipant = (message: ChatMessage, currentUserId: string) =>
   message.sendBy.id === currentUserId ? message.receivedTo : message.sendBy;
 
-type MessageType = 'group' | 'individual';
-
 const getInitialMessageFilter = (filter?: string): MessageType =>
   filter === 'group' ? 'group' : 'individual';
-
-const FILTERS: { label: string; value: MessageType }[] = [
-  { label: 'Students', value: 'individual' },
-  { label: 'Group', value: 'group' },
-];
 
 const MODAL_INITIAL: ReuseModalProps = {
   state: 'confirm',
   visible: false,
   title: '',
   description: '',
-};
-
-type ListModal = {
-  open: boolean;
-  students: List[];
-  title: string;
 };
 
 export default function AdminMessageScreen() {
@@ -111,9 +80,6 @@ export default function AdminMessageScreen() {
   const isStudent = useSelector((state: RootState) => state.common.isStudent);
   const adminId = useSelector((state: RootState) => state.common.adminId);
   const studentId = useSelector((state: RootState) => state.common.studentId);
-  // const studentName = useSelector(
-  //   (state: RootState) => state.common.studentName,
-  // );
   const currentUserId = isAdmin ? adminId : studentId ?? '';
   const [activeRecipientId, setActiveRecipientId] = useState<string | null>(
     route.params?.studentId ?? null,
@@ -131,11 +97,6 @@ export default function AdminMessageScreen() {
   const composerRef = useRef<View>(null);
   const keyboardTopRef = useRef<number | null>(null);
   const composerKeyboardOffsetRef = useRef(0);
-  const [listModel, setListModel] = useState<ListModal>({
-    students: [],
-    title: '',
-    open: false,
-  });
 
   const isChatOpen = Boolean(activeRecipientId || activeGroupId);
 
@@ -145,15 +106,16 @@ export default function AdminMessageScreen() {
 
   const {
     data: messages = [],
-    isLoading,
+    isLoading: isLoadingMessage,
+    isFetching: isFetchingMessage,
     refetch: refetchMessages,
   } = useGetMessagesQuery(
     { studentId: activeRecipientId || '' },
     {
       skip: !isFocused || !currentUserId || (isAdmin && !activeRecipientId),
-      // pollingInterval: 20000,
     },
   );
+
   const {
     data: messageStudents = [],
     isLoading: isStudentListLoading,
@@ -162,9 +124,9 @@ export default function AdminMessageScreen() {
     skip: !isFocused || !isAdmin,
   });
   const {
-    data: messageGroups = [],
+    data: groupList = [],
     isLoading: isGroupListLoading,
-    refetch: refetchMessageGroups,
+    refetch: refetchGroupList,
   } = useGetMessageGroupQuery(undefined, {
     skip: !isFocused || !isAdmin || !(selectedFilter === 'group'),
   });
@@ -181,14 +143,14 @@ export default function AdminMessageScreen() {
     ? 10
     : Math.max(10, insets.bottom);
 
-  const sortedMessages = useMemo(() => sortByCreatedAt(messages), [messages]);
+  // const sortedMessages = useMemo(() => sortByCreatedAt(messages), [messages]);
 
   const conversations = useMemo<Conversation[]>(() => {
     if (!currentUserId) return [];
 
     const map = new Map<string, Conversation>();
 
-    sortedMessages.forEach(message => {
+    messages.forEach(message => {
       const participant = getOtherParticipant(message, currentUserId);
       const existing = map.get(participant.id);
 
@@ -209,7 +171,7 @@ export default function AdminMessageScreen() {
       const bTime = new Date(b.lastMessage?.createdAt ?? 0).getTime();
       return bTime - aTime;
     });
-  }, [currentUserId, sortedMessages]);
+  }, [currentUserId, messages]);
 
   const selectedMessageStudent = useMemo(
     () => messageStudents.find(student => student.id === activeRecipientId),
@@ -217,16 +179,16 @@ export default function AdminMessageScreen() {
   );
 
   const selectedMessageGroup = useMemo(
-    () => messageGroups.find(group => group._id === activeGroupId),
-    [activeGroupId, messageGroups],
+    () => groupList.find(group => group._id === activeGroupId),
+    [activeGroupId, groupList],
   );
 
   const studentAdminParticipant = useMemo(
     () =>
-      sortedMessages
+      messages
         .flatMap(message => [message.sendBy, message.receivedTo])
         .find(participant => participant.model === 'Admin'),
-    [sortedMessages],
+    [messages],
   );
 
   const activeConversation = useMemo(() => {
@@ -272,12 +234,12 @@ export default function AdminMessageScreen() {
 
     return {
       participant: studentAdminParticipant,
-      messages: sortedMessages.filter(
+      messages: messages.filter(
         message =>
           message.sendBy.id === studentAdminParticipant.id ||
           message.receivedTo.id === studentAdminParticipant.id,
       ),
-      lastMessage: sortedMessages[sortedMessages.length - 1],
+      lastMessage: messages[messages.length - 1],
     };
   }, [
     activeRecipientId,
@@ -286,15 +248,11 @@ export default function AdminMessageScreen() {
     isAdmin,
     selectedMessageGroup,
     selectedMessageStudent,
-    sortedMessages,
+    messages,
     studentAdminParticipant,
   ]);
 
   const chatMessages = activeConversation?.messages ?? EMPTY_CHAT_MESSAGES;
-  const invertedChatMessages = useMemo(
-    () => [...chatMessages].reverse(),
-    [chatMessages],
-  );
   const activeParticipant = activeConversation?.participant;
   const isGroupChat = activeParticipant?.model === 'Group';
   // const activeParticipantCode =
@@ -442,7 +400,7 @@ export default function AdminMessageScreen() {
     try {
       if (isAdmin && !isChatOpen) {
         if (selectedFilter === 'group') {
-          await refetchMessageGroups();
+          await refetchGroupList();
         } else {
           await refetchMessageStudents();
         }
@@ -456,7 +414,7 @@ export default function AdminMessageScreen() {
     isAdmin,
     isChatOpen,
     selectedFilter,
-    refetchMessageGroups,
+    refetchGroupList,
     refetchMessageStudents,
     refetchMessages,
   ]);
@@ -536,17 +494,6 @@ export default function AdminMessageScreen() {
     navigation.navigate('CreateMessageGroup', { group });
   };
 
-  const handleShowStudent = (group: Group) => {
-    setListModel({
-      title: group.groupName,
-      students: group.studentIds?.map(student => ({
-        key: student._id,
-        value: student.name,
-      })),
-      open: true,
-    });
-  };
-
   const deleteGroup = async (group: Group) => {
     try {
       await deleteMessageGroup(group._id).unwrap();
@@ -583,96 +530,6 @@ export default function AdminMessageScreen() {
 
   useAndroidBackHandler(handleChatBack);
 
-  const renderAdminList = () => (
-    <View style={styles.studentListPane}>
-      <Filter
-        filters={FILTERS}
-        onSelect={handleFilterSelect}
-        selected={selectedFilter}
-      />
-      <ListModal
-        visible={listModel.open}
-        onClose={() => setListModel({ open: false, students: [], title: '' })}
-        title={listModel.title}
-        list={listModel.students}
-      />
-      <FloatingAddButton onPress={creteNewGroup} />
-      {selectedFilter === 'individual' ? (
-        <FlatList
-          data={messageStudents}
-          keyExtractor={item => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.studentList}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#4F46E5"
-              colors={['#4F46E5']}
-            />
-          }
-          renderItem={({ item }) => (
-            <StudentRow
-              student={item}
-              onPress={() => handleSelectStudent(item)}
-            />
-          )}
-          ListEmptyComponent={
-            isStudentListLoading ? (
-              <LoadingState label="Loading students..." />
-            ) : (
-              <View style={styles.emptyChat}>
-                <MaterialIcons
-                  name="people-outline"
-                  size={42}
-                  color="#94A3B8"
-                />
-                <Text style={styles.emptyTitle}>No students found</Text>
-              </View>
-            )
-          }
-        />
-      ) : (
-        <FlatList
-          data={messageGroups}
-          keyExtractor={item => item._id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.studentList}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#4F46E5"
-              colors={['#4F46E5']}
-            />
-          }
-          renderItem={({ item }) => (
-            <GroupRow
-              group={item}
-              onPress={() => handleSelectGroup(item)}
-              onEdit={() => handleEditGroup(item)}
-              showStudents={() => handleShowStudent(item)}
-              onDelete={() => confirmDeleteGroup(item)}
-            />
-          )}
-          ListEmptyComponent={
-            isGroupListLoading ? (
-              <LoadingState label="Loading groups..." />
-            ) : (
-              <View style={styles.emptyChat}>
-                <MaterialIcons name="groups" size={42} color="#94A3B8" />
-                <Text style={styles.emptyTitle}>No groups yet</Text>
-                <Text style={styles.emptyText}>
-                  Tap the + button to create a group.
-                </Text>
-              </View>
-            )
-          }
-        />
-      )}
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
@@ -685,150 +542,50 @@ export default function AdminMessageScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {isAdmin && !isChatOpen ? (
-          renderAdminList()
+          <AdminMessageList
+            selectedFilter={selectedFilter}
+            students={messageStudents}
+            groups={groupList}
+            refreshing={refreshing}
+            isStudentListLoading={isStudentListLoading}
+            isGroupListLoading={isGroupListLoading}
+            onRefresh={onRefresh}
+            onFilterSelect={handleFilterSelect}
+            onCreateGroup={creteNewGroup}
+            onSelectStudent={handleSelectStudent}
+            onSelectGroup={handleSelectGroup}
+            onEditGroup={handleEditGroup}
+            onDeleteGroup={confirmDeleteGroup}
+          />
         ) : (
-          <View style={styles.content}>
-            <View style={styles.chatPane}>
-              <View
-                style={[
-                  styles.chatHeader,
-                  Platform.OS === 'android' && {
-                    paddingTop: insets.top,
-                    minHeight: 62 + insets.top,
-                  },
-                ]}
-              >
-                {isAdmin || isStudent ? (
-                  <TouchableOpacity
-                    style={styles.chatBackButton}
-                    onPress={handleChatBack}
-                    activeOpacity={0.78}
-                  >
-                    <MaterialIcons
-                      name="arrow-back"
-                      size={22}
-                      color="#1E293B"
-                    />
-                  </TouchableOpacity>
-                ) : null}
-                {isGroupChat ? (
-                  <Avatar name="" icon="groups" />
-                ) : (
-                  <Avatar
-                    name={activeParticipant?.name || ''}
-                    profilePic={activeParticipant?.profilePicPath}
-                  />
-                )}
-                <View style={styles.chatHeaderText}>
-                  <Text style={styles.chatName} numberOfLines={1}>
-                    {activeParticipant?.name ??
-                      (isAdmin ? 'Select a student' : 'Admin')}
-                  </Text>
-                </View>
-              </View>
-
-              <FlatList
-                ref={listRef}
-                data={invertedChatMessages}
-                inverted
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <MessageBubble item={item} currentUserId={currentUserId} />
-                )}
-                contentContainerStyle={styles.messageList}
-                keyboardShouldPersistTaps="handled"
-                onContentSizeChange={() => scrollToChatBottom(false)}
-                onLayout={() => scrollToChatBottom(false)}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    tintColor="#4F46E5"
-                    colors={['#4F46E5']}
-                  />
-                }
-                ListEmptyComponent={
-                  isLoading && !isGroupChat ? (
-                    <LoadingState label="...." />
-                  ) : (
-                    <View style={styles.emptyChat}>
-                      <MaterialIcons
-                        name={isGroupChat ? 'campaign' : 'chat-bubble-outline'}
-                        size={42}
-                        color="#94A3B8"
-                      />
-                      <Text style={styles.emptyTitle}>
-                        {isGroupChat
-                          ? 'Send a group message'
-                          : 'No messages yet'}
-                      </Text>
-                      <Text style={styles.emptyText}>
-                        {isGroupChat
-                          ? 'Every student in this group will receive it individually.'
-                          : activeParticipant?.id
-                          ? 'Send the first message to start this chat.'
-                          : 'Select a student to start chatting.'}
-                      </Text>
-                    </View>
-                  )
-                }
-              />
-
-              <View
-                ref={composerRef}
-                onLayout={() => {
-                  if (
-                    Platform.OS === 'android' &&
-                    keyboardVisible &&
-                    keyboardTopRef.current
-                  ) {
-                    updateComposerKeyboardOffset(keyboardTopRef.current);
-                  }
-                }}
-                style={[
-                  styles.composer,
-                  { paddingBottom: composerBottomPadding },
-                  Platform.OS === 'android' && composerKeyboardOffset > 0
-                    ? { marginBottom: composerKeyboardOffset }
-                    : null,
-                ]}
-              >
-                <TextInput
-                  style={styles.composerInput}
-                  placeholder={
-                    activeParticipant?.id
-                      ? isGroupChat
-                        ? 'Message the whole group'
-                        : 'Type a message'
-                      : 'Choose a chat first'
-                  }
-                  placeholderTextColor="#94A3B8"
-                  value={draft}
-                  onChangeText={setDraft}
-                  onFocus={() => {
-                    composerKeyboardOffsetRef.current = 0;
-                    setComposerKeyboardOffset(0);
-                    setTimeout(() => scrollToChatBottom(true), 300);
-                  }}
-                  onBlur={resetKeyboardCorrection}
-                  multiline
-                  blurOnSubmit={false}
-                  editable={Boolean(activeParticipant?.id) && !isSendingAny}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.sendButton,
-                    (!canSend || isSendingAny) && styles.sendButtonDisabled,
-                  ]}
-                  onPress={handleSend}
-                  disabled={!canSend || isSendingAny}
-                  activeOpacity={0.82}
-                >
-                  <MaterialIcons name="send" size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          <MessageChatPane
+            listRef={listRef}
+            composerRef={composerRef}
+            messages={chatMessages}
+            currentUserId={currentUserId}
+            activeParticipant={activeParticipant}
+            isAdmin={isAdmin}
+            isStudent={isStudent}
+            isGroupChat={isGroupChat}
+            isLoadingMessage={isLoadingMessage}
+            isFetchingMessage={isFetchingMessage}
+            refreshing={refreshing}
+            draft={draft}
+            canSend={canSend}
+            isSending={isSendingAny}
+            composerBottomPadding={composerBottomPadding}
+            composerKeyboardOffset={composerKeyboardOffset}
+            keyboardVisible={keyboardVisible}
+            keyboardTopRef={keyboardTopRef}
+            setDraft={setDraft}
+            onBack={handleChatBack}
+            onSend={handleSend}
+            onRefresh={onRefresh}
+            onScrollToBottom={scrollToChatBottom}
+            onResetKeyboardCorrection={resetKeyboardCorrection}
+            onUpdateComposerKeyboardOffset={updateComposerKeyboardOffset}
+            topInset={insets.top}
+          />
         )}
       </KeyboardAvoidingView>
       <LoadingOverlay
@@ -862,283 +619,5 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: '#EEF2FF',
-  },
-  studentListPane: {
-    flex: 1,
-    backgroundColor: '#EEF2FF',
-  },
-  studentList: {
-    paddingHorizontal: 14,
-    gap: 5,
-  },
-  studentRow: {
-    minHeight: 68,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  threadPane: {
-    maxHeight: 230,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingTop: 12,
-  },
-  threadTitle: {
-    color: '#1E293B',
-    fontSize: 16,
-    fontWeight: '900',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  threadList: {
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    gap: 8,
-  },
-  conversationRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  conversationRowActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#818CF8',
-  },
-  conversationBody: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  conversationTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  conversationName: {
-    flex: 1,
-    color: '#1E293B',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  conversationTime: {
-    color: '#94A3B8',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  conversationPreview: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  unreadBadge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#475569',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-    alignSelf: 'center',
-    marginLeft: 10,
-  },
-  unreadBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    lineHeight: 11,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  groupActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginLeft: 8,
-  },
-  groupActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupDeleteButton: {
-    backgroundColor: '#FEF2F2',
-  },
-  chatPane: {
-    flex: 1,
-  },
-  chatHeader: {
-    minHeight: 62,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  chatBackButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 4,
-  },
-  chatHeaderText: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  chatName: {
-    color: '#1E293B',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  chatSubText: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  messageList: {
-    flexGrow: 1,
-    padding: 14,
-    gap: 8,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  messageRowMine: {
-    justifyContent: 'flex-end',
-  },
-  bubble: {
-    maxWidth: '82%',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  myBubble: {
-    backgroundColor: '#4F46E5',
-    borderBottomRightRadius: 3,
-  },
-  theirBubble: {
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 3,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  messageText: {
-    color: '#1E293B',
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
-  },
-  myMessageText: {
-    color: '#FFFFFF',
-  },
-  messageTime: {
-    alignSelf: 'flex-end',
-    color: '#94A3B8',
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  myMessageTime: {
-    color: '#C7D2FE',
-  },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    zIndex: 2,
-    elevation: 8,
-  },
-  composerInput: {
-    flex: 1,
-    maxHeight: 110,
-    minHeight: 44,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    color: '#1E293B',
-    fontSize: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    textAlignVertical: 'top',
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#CBD5E1',
-  },
-  avatar: {
-    backgroundColor: '#DBEAFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarText: {
-    color: '#2563EB',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  emptyChat: {
-    flex: 1,
-    minHeight: 260,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  emptyTitle: {
-    color: '#1E293B',
-    fontSize: 16,
-    fontWeight: '900',
-    marginTop: 10,
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  emptySmall: {
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  emptySmallText: {
-    color: '#64748B',
-    fontWeight: '700',
   },
 });
