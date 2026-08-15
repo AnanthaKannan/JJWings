@@ -30,6 +30,7 @@ import {
   TeacherDirectoryScreen,
   TopExplorerScreen,
   UpdatePasswordScreen,
+  MessageChatPaneScreen,
 } from '../screens';
 import { MessageTabIcon, NotificationTabIcon } from './TabIcons';
 
@@ -54,6 +55,7 @@ const AdminMessagesStack = createNativeStackNavigator({
   screens: {
     AdminMessagesList: { screen: AdminMessageScreen },
     CreateMessageGroup: { screen: CreateMessageGroupScreen },
+    MessageChatPane: { screen: MessageChatPaneScreen },
   },
 });
 
@@ -149,8 +151,12 @@ const AdminTabs = createBottomTabNavigator({
       screen: AdminMessagesStack,
       options: ({ route }) => {
         const routeName = getFocusedRouteNameFromRoute(route);
-        const shouldHideTabBar = routeName === 'CreateMessageGroup';
+        const shouldHideTabBar = ['CreateMessageGroup', 'MessageChatPane'].some(
+          route_ => route_ === routeName,
+        );
 
+        console.log('shouldHideTabBar', shouldHideTabBar);
+        console.log('routeName', routeName);
         return {
           tabBarLabel: 'Message',
           tabBarStyle: shouldHideTabBar

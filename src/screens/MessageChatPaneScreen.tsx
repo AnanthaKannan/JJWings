@@ -12,7 +12,11 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
-import { useIsFocused } from '@react-navigation/native';
+import {
+  useIsFocused,
+  useRoute,
+  useNavigation,
+} from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -21,12 +25,12 @@ import {
   useGetMessagesQuery,
   useSendGroupMessageMutation,
   useSendMessageMutation,
-} from '../../store/api';
-import Avatar from '../Avatar';
-import LoadingState from '../LoadingState';
-import MessageBubble from './MessageBubble';
-import { RootState } from '../../store/store';
-import { Group } from '../../types';
+} from '../store/api';
+import Avatar from '../component/Avatar';
+import LoadingState from '../component/LoadingState';
+import MessageBubble from '../component/message/MessageBubble';
+import { RootState } from '../store/store';
+import { Group } from '../types';
 // import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
 
 type MessageChatPaneProps = {
@@ -35,11 +39,14 @@ type MessageChatPaneProps = {
   selectedGroupDetail: Group | null;
 };
 
-export default function MessageChatPane({
-  selectedStudentDetail,
-  selectedGroupDetail,
-  onBack,
-}: MessageChatPaneProps) {
+export type ActiveParticipantType = {
+  id: string;
+  name: string;
+  profilePicPath: string;
+  model: string;
+};
+
+export default function MessageChatPane({}: MessageChatPaneProps) {
   const insets = useSafeAreaInsets();
   const [activeParticipant, setActiveParticipant] = useState<{
     id: string;
@@ -54,6 +61,8 @@ export default function MessageChatPane({
   const currentUserId = isAdmin ? adminId : studentId ?? '';
   const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState('');
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
 
   const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
@@ -63,13 +72,16 @@ export default function MessageChatPane({
   const isGroupChat = activeParticipant?.model === 'group';
 
   useEffect(() => {
+    const ap = route.params?.activeParticipant as ActiveParticipantType | null;
+    if (!ap) return;
+
     setActiveParticipant({
-      id: selectedGroupDetail?._id || selectedStudentDetail?.id || '',
-      name: selectedGroupDetail?.groupName || selectedStudentDetail?.name || '',
-      profilePicPath: selectedStudentDetail?.profilePicPath || '',
-      model: selectedGroupDetail?._id ? 'group' : 'individual',
+      id: ap.id,
+      name: ap.name,
+      profilePicPath: ap.profilePicPath,
+      model: ap.model,
     });
-  }, [selectedStudentDetail, selectedGroupDetail]);
+  }, [route.params?.activeParticipant]);
 
   const isSendingAny = isSending || isSendingGroup;
 
@@ -125,6 +137,10 @@ export default function MessageChatPane({
     });
   }, []);
 
+  const navigateToMessages = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
   return (
     <View style={styles.content}>
       <View style={styles.chatPane}>
@@ -140,7 +156,7 @@ export default function MessageChatPane({
           {isAdmin || isStudent ? (
             <TouchableOpacity
               style={styles.chatBackButton}
-              onPress={onBack}
+              onPress={navigateToMessages}
               activeOpacity={0.78}
             >
               <MaterialIcons name="arrow-back" size={22} color="#1E293B" />

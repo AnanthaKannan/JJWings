@@ -1,11 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-} from 'react-native';
+import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
 import {
   CommonActions,
   useIsFocused,
@@ -18,7 +12,6 @@ import {
   AdminHeader,
   AdminMessageList,
   LoadingOverlay,
-  MessageChatPane,
   MessageType,
 } from '../component';
 import {
@@ -54,14 +47,6 @@ export default function AdminMessageScreen() {
   );
   const [modal, setModal] = useState<ReuseModalProps>(MODAL_INITIAL);
 
-  const [selectedStudentDetail, setSelectedStudentDetail] =
-    useState<MessageStudent | null>(null);
-  const [selectedGroupDetail, setSelectedGroupDetail] = useState<Group | null>(
-    null,
-  );
-
-  const isChatOpen = Boolean(selectedStudentDetail || selectedGroupDetail);
-
   useEffect(() => {
     setSelectedFilter(getInitialMessageFilter(route.params?.filter));
   }, [route.params?.filter]);
@@ -86,34 +71,10 @@ export default function AdminMessageScreen() {
   const [readMessages] = useReadMessagesMutation();
   const isGroupActionLoading = isDeletingGroup;
 
-  useEffect(() => {
-    if (!isAdmin) return;
-
-    const parent = navigation.getParent(); // Tab navigator
-
-    parent?.setOptions({
-      tabBarStyle: isChatOpen
-        ? { display: 'none' }
-        : {
-            backgroundColor: '#FFFFFF',
-            borderTopColor: '#E5E7EB',
-          },
-    });
-
-    return () => {
-      parent?.setOptions({
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E5E7EB',
-        },
-      });
-    };
-  }, [isChatOpen, isAdmin, navigation]);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      if (isAdmin && !isChatOpen) {
+      if (isAdmin) {
         if (selectedFilter === 'group') {
           await refetchGroupList();
         } else {
@@ -123,40 +84,43 @@ export default function AdminMessageScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [
-    isAdmin,
-    isChatOpen,
-    selectedFilter,
-    refetchGroupList,
-    refetchMessageStudents,
-  ]);
+  }, [isAdmin, selectedFilter, refetchGroupList, refetchMessageStudents]);
 
   const handleSelectStudent = useCallback(
     (student: MessageStudent) => {
-      setSelectedStudentDetail(student);
-      setSelectedGroupDetail(null);
+      if (student.unreadMessageCount > 0) {
+        readMessages({ studentId: student.id })
+          .unwrap()
+          .catch(() => undefined);
+      }
 
-      if (student.unreadMessageCount <= 0) return;
-
-      readMessages({ studentId: student.id })
-        .unwrap()
-        .catch(() => undefined);
+      navigation.navigate('MessageChatPane', {
+        activeParticipant: {
+          id: student.id,
+          name: student.name,
+          profilePicPath: student.profilePicPath,
+          model: 'individual',
+        },
+      });
     },
-    [readMessages],
+    [readMessages, navigation],
   );
 
-  const handleSelectGroup = useCallback((group: Group) => {
-    setSelectedStudentDetail(null);
-    setSelectedGroupDetail(group);
-  }, []);
+  const handleSelectGroup = useCallback(
+    (group: Group) => {
+      navigation.navigate('MessageChatPane', {
+        activeParticipant: {
+          id: group._id,
+          name: group.groupName,
+          profilePicPath: '',
+          model: 'group',
+        },
+      });
+    },
+    [navigation],
+  );
 
   const handleChatBack = useCallback(() => {
-    if (isAdmin) {
-      setSelectedStudentDetail(null);
-      setSelectedGroupDetail(null);
-      return;
-    }
-
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
@@ -167,7 +131,7 @@ export default function AdminMessageScreen() {
         name: 'Progress',
       }),
     );
-  }, [isAdmin, navigation]);
+  }, [navigation]);
 
   const handleFilterSelect = (value: MessageType) => {
     setSelectedFilter(value);
@@ -220,38 +184,22 @@ export default function AdminMessageScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
-      {isAdmin && !isChatOpen ? (
-        <AdminHeader header="Messages" headerBackgroundColor="#F8F9FB" />
-      ) : null}
-
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {isAdmin && !isChatOpen ? (
-          <AdminMessageList
-            selectedFilter={selectedFilter}
-            students={messageStudents}
-            groups={groupList}
-            refreshing={refreshing}
-            isStudentListLoading={isStudentListLoading}
-            isGroupListLoading={isGroupListLoading}
-            onRefresh={onRefresh}
-            onFilterSelect={handleFilterSelect}
-            onCreateGroup={creteNewGroup}
-            onSelectStudent={handleSelectStudent}
-            onSelectGroup={handleSelectGroup}
-            onEditGroup={handleEditGroup}
-            onDeleteGroup={confirmDeleteGroup}
-          />
-        ) : (
-          <MessageChatPane
-            selectedStudentDetail={selectedStudentDetail}
-            selectedGroupDetail={selectedGroupDetail}
-            onBack={handleChatBack}
-          />
-        )}
-      </KeyboardAvoidingView>
+      <AdminHeader header="Messages" headerBackgroundColor="#F8F9FB" />
+      <AdminMessageList
+        selectedFilter={selectedFilter}
+        students={messageStudents}
+        groups={groupList}
+        refreshing={refreshing}
+        isStudentListLoading={isStudentListLoading}
+        isGroupListLoading={isGroupListLoading}
+        onRefresh={onRefresh}
+        onFilterSelect={handleFilterSelect}
+        onCreateGroup={creteNewGroup}
+        onSelectStudent={handleSelectStudent}
+        onSelectGroup={handleSelectGroup}
+        onEditGroup={handleEditGroup}
+        onDeleteGroup={confirmDeleteGroup}
+      />
       <LoadingOverlay visible={isGroupActionLoading} label="Processing..." />
       <ReuseModal
         visible={modal.visible}

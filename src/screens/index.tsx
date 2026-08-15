@@ -26,3 +26,4 @@ export { default as QuestionPaperScreen } from './QuestionPaperScreen';
 export { default as AchievementsScreen } from './AchievementsScreen';
 export { default as BillingRevenueScreen } from './BillingRevenueScreen';
 export { default as CreateAcademyScreen } from './CreateAcademyScreen';
+export { default as MessageChatPaneScreen } from './MessageChatPaneScreen';

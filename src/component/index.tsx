@@ -21,5 +21,4 @@ export { default as ListModal } from './ListModal';
 export { default as GroupRow } from './message/GroupRow';
 export { default as StudentRow } from './message/StudentRow';
 export { default as AdminMessageList } from './message/AdminMessageList';
-export { default as MessageChatPane } from './message/MessageChatPane';
 export type { MessageType } from './message/AdminMessageList';
