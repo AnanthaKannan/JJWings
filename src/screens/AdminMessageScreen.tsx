@@ -6,7 +6,6 @@ import React, {
   useState,
 } from 'react';
 import {
-  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -23,7 +22,6 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AdminHeader,
@@ -41,8 +39,6 @@ import {
   useGetMessagesQuery,
   useReadMessagesMutation,
   useDeleteMessageGroupMutation,
-  useSendMessageMutation,
-  useSendGroupMessageMutation,
 } from '../store/api';
 import { RootState } from '../store/store';
 import { useAndroidBackHandler } from '../hooks/useAndroidBackHandler';
@@ -75,9 +71,7 @@ export default function AdminMessageScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
-  const isStudent = useSelector((state: RootState) => state.common.isStudent);
   const adminId = useSelector((state: RootState) => state.common.adminId);
   const studentId = useSelector((state: RootState) => state.common.studentId);
   const currentUserId = isAdmin ? adminId : studentId ?? '';
@@ -98,18 +92,19 @@ export default function AdminMessageScreen() {
   const keyboardTopRef = useRef<number | null>(null);
   const composerKeyboardOffsetRef = useRef(0);
 
-  const isChatOpen = Boolean(activeRecipientId || activeGroupId);
+  const [selectedStudentDetail, setSelectedStudentDetail] =
+    useState<MessageStudent | null>(null);
+  const [selectedGroupDetail, setSelectedGroupDetail] = useState<Group | null>(
+    null,
+  );
+
+  const isChatOpen = Boolean(selectedStudentDetail || selectedGroupDetail);
 
   useEffect(() => {
     setSelectedFilter(getInitialMessageFilter(route.params?.filter));
   }, [route.params?.filter]);
 
-  const {
-    data: messages = [],
-    isLoading: isLoadingMessage,
-    isFetching: isFetchingMessage,
-    refetch: refetchMessages,
-  } = useGetMessagesQuery(
+  const { data: messages = [], refetch: refetchMessages } = useGetMessagesQuery(
     { studentId: activeRecipientId || '' },
     {
       skip: !isFocused || !currentUserId || (isAdmin && !activeRecipientId),
@@ -131,17 +126,10 @@ export default function AdminMessageScreen() {
     skip: !isFocused || !isAdmin || !(selectedFilter === 'group'),
   });
 
-  const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
-  const [sendGroupMessage, { isLoading: isSendingGroup }] =
-    useSendGroupMessageMutation();
   const [deleteMessageGroup, { isLoading: isDeletingGroup }] =
     useDeleteMessageGroupMutation();
   const [readMessages] = useReadMessagesMutation();
-  const isSendingAny = isSending || isSendingGroup;
   const isGroupActionLoading = isDeletingGroup;
-  const composerBottomPadding = keyboardVisible
-    ? 10
-    : Math.max(10, insets.bottom);
 
   // const sortedMessages = useMemo(() => sortByCreatedAt(messages), [messages]);
 
@@ -255,9 +243,6 @@ export default function AdminMessageScreen() {
   const chatMessages = activeConversation?.messages ?? EMPTY_CHAT_MESSAGES;
   const activeParticipant = activeConversation?.participant;
   const isGroupChat = activeParticipant?.model === 'Group';
-  // const activeParticipantCode =
-  //   activeParticipant?.model === 'Admin' ? undefined : activeParticipant?.code;
-  const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
   const scrollToChatBottom = useCallback((animated = false) => {
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated });
@@ -419,35 +404,10 @@ export default function AdminMessageScreen() {
     refetchMessages,
   ]);
 
-  const handleSend = async () => {
-    const message = draft.trim();
-    if (!message || !activeParticipant?.id || isSendingAny) return;
-
-    try {
-      setDraft('');
-
-      if (isGroupChat) {
-        await sendGroupMessage({
-          message,
-          groupId: activeParticipant.id,
-        }).unwrap();
-      } else {
-        await sendMessage({
-          message,
-          receivedTo: activeParticipant.id,
-        }).unwrap();
-        await refetchMessages();
-      }
-    } catch {
-      setDraft(message);
-      Alert.alert('Message not sent', 'Please try again.');
-    }
-  };
-
   const handleSelectStudent = useCallback(
     (student: MessageStudent) => {
-      setActiveGroupId(null);
-      setActiveRecipientId(student.id);
+      setSelectedStudentDetail(student);
+      setSelectedGroupDetail(null);
 
       if (student.unreadMessageCount <= 0) return;
 
@@ -459,8 +419,8 @@ export default function AdminMessageScreen() {
   );
 
   const handleSelectGroup = useCallback((group: Group) => {
-    setActiveRecipientId(null);
-    setActiveGroupId(group._id);
+    setSelectedStudentDetail(null);
+    setSelectedGroupDetail(group);
   }, []);
 
   const handleChatBack = useCallback(() => {
@@ -559,37 +519,24 @@ export default function AdminMessageScreen() {
           />
         ) : (
           <MessageChatPane
-            listRef={listRef}
+            selectedStudentDetail={selectedStudentDetail}
+            selectedGroupDetail={selectedGroupDetail}
             composerRef={composerRef}
-            messages={chatMessages}
-            currentUserId={currentUserId}
-            activeParticipant={activeParticipant}
-            isAdmin={isAdmin}
-            isStudent={isStudent}
+            activeParticipant={activeConversation?.participant}
             isGroupChat={isGroupChat}
-            isLoadingMessage={isLoadingMessage}
-            isFetchingMessage={isFetchingMessage}
-            refreshing={refreshing}
             draft={draft}
-            canSend={canSend}
-            isSending={isSendingAny}
-            composerBottomPadding={composerBottomPadding}
             composerKeyboardOffset={composerKeyboardOffset}
             keyboardVisible={keyboardVisible}
             keyboardTopRef={keyboardTopRef}
             setDraft={setDraft}
             onBack={handleChatBack}
-            onSend={handleSend}
-            onRefresh={onRefresh}
-            onScrollToBottom={scrollToChatBottom}
             onResetKeyboardCorrection={resetKeyboardCorrection}
             onUpdateComposerKeyboardOffset={updateComposerKeyboardOffset}
-            topInset={insets.top}
           />
         )}
       </KeyboardAvoidingView>
       <LoadingOverlay
-        visible={isSendingAny || isGroupActionLoading}
+        visible={isGroupActionLoading}
         label={
           isGroupActionLoading
             ? 'Deleting group...'

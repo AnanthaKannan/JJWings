@@ -148,8 +148,8 @@ type ApiMessage = {
   sendByModel: 'Admin' | 'Student' | string;
   receivedTo: ApiMessageParticipant;
   receivedToModel: 'Admin' | 'Student' | string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type ApiMessagesResponse = {
@@ -337,7 +337,6 @@ export type QuestionPaper = {
 export type MessageParticipant = {
   id: string;
   name: string;
-  code?: string;
   model: string;
   profilePicPath?: string;
 };
@@ -347,8 +346,8 @@ export type ChatMessage = {
   message: string;
   sendBy: MessageParticipant;
   receivedTo: MessageParticipant;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type MessageStudent = {
@@ -884,7 +883,6 @@ const mapMessageParticipant = (
 ): MessageParticipant => ({
   id: participant._id,
   name: participant.name ?? (model === 'Admin' ? 'Admin' : 'Student'),
-  code: participant.adminId ?? participant.studentId,
   model,
   profilePicPath: participant.profilePicPath,
 });

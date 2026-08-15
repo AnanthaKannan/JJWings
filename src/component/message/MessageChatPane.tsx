@@ -1,4 +1,12 @@
-import React, { Dispatch, RefObject, SetStateAction } from 'react';
+import React, {
+  Dispatch,
+  RefObject,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   FlatList,
   Platform,
@@ -8,71 +16,145 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSelector } from 'react-redux';
+import { useIsFocused } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ChatMessage, MessageParticipant } from '../../store/api';
+import {
+  ChatMessage,
+  MessageParticipant,
+  MessageStudent,
+  useGetMessagesQuery,
+  useSendGroupMessageMutation,
+  useSendMessageMutation,
+} from '../../store/api';
 import Avatar from '../Avatar';
 import LoadingState from '../LoadingState';
 import MessageBubble from './MessageBubble';
+import { RootState } from '../../store/store';
+import { Group } from '../../types';
+// import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
 
 type MessageChatPaneProps = {
-  listRef: RefObject<FlatList<ChatMessage> | null>;
   composerRef: RefObject<View | null>;
-  messages: ChatMessage[];
-  currentUserId: string;
   activeParticipant?: MessageParticipant;
-  isAdmin: boolean;
-  isStudent: boolean;
   isGroupChat: boolean;
-  isLoadingMessage: boolean;
-  isFetchingMessage: boolean;
-  refreshing: boolean;
   draft: string;
-  canSend: boolean;
-  isSending: boolean;
-  composerBottomPadding: number;
   composerKeyboardOffset: number;
   keyboardVisible: boolean;
   keyboardTopRef: RefObject<number | null>;
   setDraft: Dispatch<SetStateAction<string>>;
   onBack: () => void;
-  onSend: () => void;
-  onRefresh: () => void;
-  onScrollToBottom: (animated?: boolean) => void;
   onResetKeyboardCorrection: () => void;
   onUpdateComposerKeyboardOffset: (keyboardTop: number) => void;
-  topInset: number;
+  selectedStudentDetail: MessageStudent | null;
+  selectedGroupDetail: Group | null;
 };
 
 export default function MessageChatPane({
-  listRef,
   composerRef,
-  messages,
-  currentUserId,
-  activeParticipant,
-  isAdmin,
-  isStudent,
+  // activeParticipant,
+  selectedStudentDetail,
+  selectedGroupDetail,
   isGroupChat,
-  isLoadingMessage,
-  isFetchingMessage,
-  refreshing,
   draft,
-  canSend,
-  isSending,
-  composerBottomPadding,
   composerKeyboardOffset,
   keyboardVisible,
   keyboardTopRef,
   setDraft,
   onBack,
-  onSend,
-  onRefresh,
-  onScrollToBottom,
   onResetKeyboardCorrection,
   onUpdateComposerKeyboardOffset,
-  topInset,
 }: MessageChatPaneProps) {
+  const insets = useSafeAreaInsets();
+  const [activeParticipant, setActiveParticipant] = useState<{
+    id: string;
+    name: string;
+    profilePicPath: string;
+    model: string;
+  } | null>(null);
+  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+  const isStudent = useSelector((state: RootState) => state.common.isStudent);
+  const adminId = useSelector((state: RootState) => state.common.adminId);
+  const studentId = useSelector((state: RootState) => state.common.studentId);
+  const currentUserId = isAdmin ? adminId : studentId ?? '';
+  const [refreshing, setRefreshing] = useState(false);
+
+  const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
+  const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
+  const [sendGroupMessage, { isLoading: isSendingGroup }] =
+    useSendGroupMessageMutation();
+
+  useEffect(() => {
+    setActiveParticipant({
+      id: selectedGroupDetail?._id || selectedStudentDetail?.id || '',
+      name: selectedGroupDetail?.groupName || selectedStudentDetail?.name || '',
+      profilePicPath: selectedStudentDetail?.profilePicPath || '',
+      model: selectedGroupDetail?._id ? 'group' : 'individual',
+    });
+  }, [selectedStudentDetail, selectedGroupDetail]);
+
+  const composerBottomPadding = keyboardVisible
+    ? 10
+    : Math.max(10, insets.bottom);
+
+  const isSendingAny = isSending || isSendingGroup;
+
+  const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  const isFocused = useIsFocused();
+  const {
+    data: messages = [],
+    isLoading: isLoadingMessage,
+    isFetching: isFetchingMessage,
+    refetch: refetchMessages,
+  } = useGetMessagesQuery(
+    { studentId: activeParticipant?.id || '' },
+    {
+      skip: !isFocused || !currentUserId || (isAdmin && !activeParticipant?.id),
+    },
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetchMessages();
+    setRefreshing(false);
+  }, [refetchMessages]);
+
+  const scrollToChatBottom = useCallback((animated = false) => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated });
+    });
+  }, []);
+
+  const handleSend = async () => {
+    const message = draft.trim();
+    if (!message || !activeParticipant?.id || isSendingAny) return;
+
+    try {
+      setDraft('');
+
+      if (isGroupChat) {
+        await sendGroupMessage({
+          message,
+          groupId: activeParticipant.id,
+        }).unwrap();
+      } else {
+        await sendMessage({
+          message,
+          receivedTo: activeParticipant.id,
+        }).unwrap();
+        await refetchMessages();
+      }
+    } catch {
+      setDraft(message);
+      Alert.alert('Message not sent', 'Please try again.');
+    }
+  };
+
   return (
     <View style={styles.content}>
       <View style={styles.chatPane}>
@@ -80,8 +162,8 @@ export default function MessageChatPane({
           style={[
             styles.chatHeader,
             Platform.OS === 'android' && {
-              paddingTop: topInset,
-              minHeight: 62 + topInset,
+              paddingTop: insets.top,
+              minHeight: 62 + insets.top,
             },
           ]}
         >
@@ -120,8 +202,8 @@ export default function MessageChatPane({
           )}
           contentContainerStyle={styles.messageList}
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() => onScrollToBottom(false)}
-          onLayout={() => onScrollToBottom(false)}
+          onContentSizeChange={() => scrollToChatBottom(false)}
+          onLayout={() => scrollToChatBottom(false)}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -188,7 +270,7 @@ export default function MessageChatPane({
             onChangeText={setDraft}
             onFocus={() => {
               onResetKeyboardCorrection();
-              setTimeout(() => onScrollToBottom(true), 300);
+              setTimeout(() => scrollToChatBottom(true), 300);
             }}
             onBlur={onResetKeyboardCorrection}
             multiline
@@ -200,7 +282,7 @@ export default function MessageChatPane({
               styles.sendButton,
               (!canSend || isSending) && styles.sendButtonDisabled,
             ]}
-            onPress={onSend}
+            onPress={handleSend}
             disabled={!canSend || isSending}
             activeOpacity={0.82}
           >
