@@ -10,6 +10,7 @@ import {
   View,
   Alert,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
@@ -84,8 +85,6 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     });
   }, [route.params?.activeParticipant]);
 
-  const isSendingAny = isSending || isSendingGroup;
-
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const isFocused = useIsFocused();
@@ -101,6 +100,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     },
   );
 
+  const isSendingAny = isSending || isSendingGroup || isFetchingMessage;
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refetchMessages();
@@ -253,7 +253,11 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
               disabled={!canSend || isSending}
               activeOpacity={0.82}
             >
-              <MaterialIcons name="send" size={20} color="#FFFFFF" />
+              {isSendingAny ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <MaterialIcons name="send" size={20} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
           </View>
         </View>
