@@ -154,9 +154,6 @@ const AdminTabs = createBottomTabNavigator({
         const shouldHideTabBar = ['CreateMessageGroup', 'MessageChatPane'].some(
           route_ => route_ === routeName,
         );
-
-        console.log('shouldHideTabBar', shouldHideTabBar);
-        console.log('routeName', routeName);
         return {
           tabBarLabel: 'Message',
           tabBarStyle: shouldHideTabBar
