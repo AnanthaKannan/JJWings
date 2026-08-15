@@ -99,9 +99,7 @@ export type Feed = {
 export type Group = {
   _id: string;
   groupName: string;
-  studentCount: number;
-  studentIds: string[];
-  students?: Array<string | { _id?: string; id?: string }>;
+  studentIds: { _id: string; name: string; profilePicPath: string }[];
 };
 
 export type SendGroupMessage = {

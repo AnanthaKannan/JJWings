@@ -30,9 +30,9 @@ const GroupRow: FC<GroupRowParams> = ({
           {group.groupName}
         </Text>
       </View>
-      <Text style={styles.conversationPreview} numberOfLines={1}>
+      {/* <Text style={styles.conversationPreview} numberOfLines={1}>
         {group.studentCount} {group.studentCount === 1 ? 'student' : 'students'}
-      </Text>
+      </Text> */}
     </View>
     <View style={styles.groupActions}>
       <OptionsMenu

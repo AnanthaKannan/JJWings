@@ -234,7 +234,7 @@ export default function AdminMessageScreen() {
         participant: {
           id: selectedMessageGroup._id,
           name: selectedMessageGroup.groupName,
-          code: `${selectedMessageGroup.studentCount} students`,
+          code: `${selectedMessageGroup.studentIds.length} students`,
           model: 'Group' as const,
           profilePicPath: undefined,
         },
@@ -537,8 +537,8 @@ export default function AdminMessageScreen() {
     setListModel({
       title: group.groupName,
       students: group.studentIds?.map(student => ({
-        key: student,
-        value: student,
+        key: student._id,
+        value: student.name,
       })),
       open: true,
     });

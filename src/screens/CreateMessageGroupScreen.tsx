@@ -71,7 +71,10 @@ export default function CreateMessageGroupScreen() {
     const editingGroupDetail = route.params?.group as Group | undefined;
 
     setGroupName(editingGroupDetail?.groupName || '');
-    setSelectedStudentIds(editingGroupDetail?.studentIds || []);
+    const studentIds = editingGroupDetail?.studentIds.map(
+      student => student._id,
+    );
+    setSelectedStudentIds(studentIds || []);
   }, [route.params?.group]);
 
   const {
