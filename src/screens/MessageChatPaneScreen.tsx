@@ -71,6 +71,8 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
   const [sendGroupMessage, { isLoading: isSendingGroup }] =
     useSendGroupMessageMutation();
 
+  const [padding, setPadding] = useState(Math.max(insets.bottom, 10));
+
   const isGroupChat = activeParticipant?.model === 'group';
 
   useEffect(() => {
@@ -222,12 +224,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
             }
           />
 
-          <View
-            style={[
-              styles.composer,
-              { paddingBottom: Math.max(insets.bottom, 10) },
-            ]}
-          >
+          <View style={[styles.composer, { paddingBottom: padding }]}>
             <TextInput
               style={styles.composerInput}
               placeholder={
@@ -241,6 +238,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
               value={draft}
               onChangeText={setDraft}
               multiline
+              onFocus={() => setPadding(10)}
               blurOnSubmit={false}
               editable={Boolean(activeParticipant?.id) && !isSending}
             />
