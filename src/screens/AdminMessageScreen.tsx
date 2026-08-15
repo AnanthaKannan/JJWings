@@ -522,8 +522,6 @@ export default function AdminMessageScreen() {
             selectedStudentDetail={selectedStudentDetail}
             selectedGroupDetail={selectedGroupDetail}
             composerRef={composerRef}
-            activeParticipant={activeConversation?.participant}
-            isGroupChat={isGroupChat}
             draft={draft}
             composerKeyboardOffset={composerKeyboardOffset}
             keyboardVisible={keyboardVisible}

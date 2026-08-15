@@ -25,7 +25,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   ChatMessage,
-  MessageParticipant,
   MessageStudent,
   useGetMessagesQuery,
   useSendGroupMessageMutation,
@@ -40,8 +39,6 @@ import { Group } from '../../types';
 
 type MessageChatPaneProps = {
   composerRef: RefObject<View | null>;
-  activeParticipant?: MessageParticipant;
-  isGroupChat: boolean;
   draft: string;
   composerKeyboardOffset: number;
   keyboardVisible: boolean;
@@ -56,10 +53,8 @@ type MessageChatPaneProps = {
 
 export default function MessageChatPane({
   composerRef,
-  // activeParticipant,
   selectedStudentDetail,
   selectedGroupDetail,
-  isGroupChat,
   draft,
   composerKeyboardOffset,
   keyboardVisible,
@@ -87,6 +82,8 @@ export default function MessageChatPane({
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [sendGroupMessage, { isLoading: isSendingGroup }] =
     useSendGroupMessageMutation();
+
+  const isGroupChat = activeParticipant?.model === 'group';
 
   useEffect(() => {
     setActiveParticipant({
