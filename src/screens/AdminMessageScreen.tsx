@@ -150,7 +150,7 @@ export default function AdminMessageScreen() {
     isLoading: isGroupListLoading,
     refetch: refetchMessageGroups,
   } = useGetMessageGroupQuery(undefined, {
-    skip: !isFocused || !isAdmin,
+    skip: !isFocused || !isAdmin || !(selectedFilter === 'group'),
   });
 
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();

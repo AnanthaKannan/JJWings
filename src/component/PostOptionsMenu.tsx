@@ -90,20 +90,6 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
                   { top: position.top, left: position.left },
                 ]}
               >
-                {/* <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={handleTogglePrivate}
-                >
-                  <MaterialIcons
-                    name={isPrivate ? 'public' : 'lock-outline'}
-                    size={20}
-                    color="#050505"
-                  />
-                  <Text style={styles.menuItemText}>
-                    {isPrivate ? 'Make public' : 'Make private'}
-                  </Text>
-                </TouchableOpacity> */}
-
                 <View style={styles.divider} />
 
                 <TouchableOpacity

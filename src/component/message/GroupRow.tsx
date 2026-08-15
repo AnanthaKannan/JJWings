@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Group } from '../../types';
 import Avatar from '../Avatar';
+import OptionsMenu from '../OptionsMenu';
 
 const GroupRow = ({
   group,
@@ -32,7 +32,27 @@ const GroupRow = ({
       </Text>
     </View>
     <View style={styles.groupActions}>
-      <TouchableOpacity
+      <OptionsMenu
+        options={[
+          { key: 'edit', label: 'Edit Group', icon: 'edit', onPress: onEdit },
+          {
+            key: 'delete',
+            label: 'Delete Group',
+            icon: 'delete-outline',
+            onPress: onDelete,
+            destructive: true,
+          },
+          // {
+          //   key: 'remove',
+          //   label: 'Remove student',
+          //   icon: 'person-remove',
+          //   destructive: true,
+          //   confirm: { title: 'Remove student?', message: 'They will lose access immediately.' },
+          //   onPress: handleRemove,
+          // },
+        ]}
+      />
+      {/* <TouchableOpacity
         style={styles.groupActionButton}
         onPress={onEdit}
         activeOpacity={0.82}
@@ -45,7 +65,7 @@ const GroupRow = ({
         activeOpacity={0.82}
       >
         <MaterialIcons name="delete-outline" size={18} color="#DC2626" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   </TouchableOpacity>
 );
