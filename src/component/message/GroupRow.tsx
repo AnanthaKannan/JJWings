@@ -1,19 +1,22 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Group } from '../../types';
 import Avatar from '../Avatar';
 import OptionsMenu from '../OptionsMenu';
 
-const GroupRow = ({
-  group,
-  onPress,
-  onEdit,
-  onDelete,
-}: {
+type GroupRowParams = {
   group: Group;
   onPress: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  showStudents: () => void;
+};
+const GroupRow: FC<GroupRowParams> = ({
+  group,
+  onPress,
+  onEdit,
+  onDelete,
+  showStudents,
 }) => (
   <TouchableOpacity
     style={styles.studentRow}
@@ -34,6 +37,12 @@ const GroupRow = ({
     <View style={styles.groupActions}>
       <OptionsMenu
         options={[
+          {
+            key: 'show',
+            label: 'Group Students',
+            icon: 'groups',
+            onPress: showStudents,
+          },
           { key: 'edit', label: 'Edit Group', icon: 'edit', onPress: onEdit },
           {
             key: 'delete',

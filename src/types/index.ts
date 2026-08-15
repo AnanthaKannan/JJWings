@@ -100,7 +100,7 @@ export type Group = {
   _id: string;
   groupName: string;
   studentCount: number;
-  studentIds?: string[];
+  studentIds: string[];
   students?: Array<string | { _id?: string; id?: string }>;
 };
 

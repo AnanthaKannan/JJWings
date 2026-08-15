@@ -39,6 +39,7 @@ import {
   GroupRow,
   Avatar,
   StudentRow,
+  ListModal,
 } from '../component';
 import {
   ChatMessage,
@@ -57,6 +58,7 @@ import { useAndroidBackHandler } from '../hooks/useAndroidBackHandler';
 import { Group } from '../types';
 import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
 import MessageBubble from '../component/message/MessageBubble';
+import { List } from '../component/ListModal';
 
 type Conversation = {
   participant: MessageParticipant;
@@ -94,6 +96,12 @@ const MODAL_INITIAL: ReuseModalProps = {
   description: '',
 };
 
+type ListModal = {
+  open: boolean;
+  students: List[];
+  title: string;
+};
+
 export default function AdminMessageScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
@@ -123,6 +131,11 @@ export default function AdminMessageScreen() {
   const composerRef = useRef<View>(null);
   const keyboardTopRef = useRef<number | null>(null);
   const composerKeyboardOffsetRef = useRef(0);
+  const [listModel, setListModel] = useState<ListModal>({
+    students: [],
+    title: '',
+    open: false,
+  });
 
   const isChatOpen = Boolean(activeRecipientId || activeGroupId);
 
@@ -520,6 +533,17 @@ export default function AdminMessageScreen() {
     navigation.navigate('CreateMessageGroup', { group });
   };
 
+  const handleShowStudent = (group: Group) => {
+    setListModel({
+      title: group.groupName,
+      students: group.studentIds?.map(student => ({
+        key: student,
+        value: student,
+      })),
+      open: true,
+    });
+  };
+
   const deleteGroup = async (group: Group) => {
     try {
       await deleteMessageGroup(group._id).unwrap();
@@ -562,6 +586,12 @@ export default function AdminMessageScreen() {
         filters={FILTERS}
         onSelect={handleFilterSelect}
         selected={selectedFilter}
+      />
+      <ListModal
+        visible={listModel.open}
+        onClose={() => setListModel({ open: false, students: [], title: '' })}
+        title={listModel.title}
+        list={listModel.students}
       />
       <FloatingAddButton onPress={creteNewGroup} />
       {selectedFilter === 'individual' ? (
@@ -618,6 +648,7 @@ export default function AdminMessageScreen() {
               group={item}
               onPress={() => handleSelectGroup(item)}
               onEdit={() => handleEditGroup(item)}
+              showStudents={() => handleShowStudent(item)}
               onDelete={() => confirmDeleteGroup(item)}
             />
           )}
