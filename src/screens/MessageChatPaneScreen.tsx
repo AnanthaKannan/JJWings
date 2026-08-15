@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useSelector } from 'react-redux';
@@ -131,129 +132,133 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     }
   };
 
-  const scrollToChatBottom = useCallback((animated = false) => {
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated });
-    });
-  }, []);
-
   const navigateToMessages = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
   return (
-    <View style={styles.content}>
-      <View style={styles.chatPane}>
-        <View
-          style={[
-            styles.chatHeader,
-            Platform.OS === 'android' && {
-              paddingTop: insets.top,
-              minHeight: 62 + insets.top,
-            },
-          ]}
-        >
-          {isAdmin || isStudent ? (
-            <TouchableOpacity
-              style={styles.chatBackButton}
-              onPress={navigateToMessages}
-              activeOpacity={0.78}
-            >
-              <MaterialIcons name="arrow-back" size={22} color="#1E293B" />
-            </TouchableOpacity>
-          ) : null}
-          {isGroupChat ? (
-            <Avatar name="" icon="groups" />
-          ) : (
-            <Avatar
-              name={activeParticipant?.name || ''}
-              profilePic={activeParticipant?.profilePicPath}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <View style={styles.content}>
+        <View style={styles.chatPane}>
+          <View
+            style={[
+              styles.chatHeader,
+              Platform.OS === 'android' && {
+                paddingTop: insets.top,
+                minHeight: 62 + insets.top,
+              },
+            ]}
+          >
+            {isAdmin || isStudent ? (
+              <TouchableOpacity
+                style={styles.chatBackButton}
+                onPress={navigateToMessages}
+                activeOpacity={0.78}
+              >
+                <MaterialIcons name="arrow-back" size={22} color="#1E293B" />
+              </TouchableOpacity>
+            ) : null}
+            {isGroupChat ? (
+              <Avatar name="" icon="groups" />
+            ) : (
+              <Avatar
+                name={activeParticipant?.name || ''}
+                profilePic={activeParticipant?.profilePicPath}
+              />
+            )}
+            <View style={styles.chatHeaderText}>
+              <Text style={styles.chatName} numberOfLines={1}>
+                {activeParticipant?.name ??
+                  (isAdmin ? 'Select a student' : 'Admin')}
+              </Text>
+            </View>
+          </View>
+
+          <FlatList
+            ref={listRef}
+            data={messages}
+            inverted
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => (
+              <MessageBubble item={item} currentUserId={currentUserId} />
+            )}
+            contentContainerStyle={styles.messageList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#4F46E5"
+                colors={['#4F46E5']}
+              />
+            }
+            ListEmptyComponent={
+              (isLoadingMessage || isFetchingMessage) && !isGroupChat ? (
+                <LoadingState label="...." />
+              ) : (
+                <View style={styles.emptyChat}>
+                  <MaterialIcons
+                    name={isGroupChat ? 'campaign' : 'chat-bubble-outline'}
+                    size={42}
+                    color="#94A3B8"
+                  />
+                  <Text style={styles.emptyTitle}>
+                    {isGroupChat ? 'Send a group message' : 'No messages yet'}
+                  </Text>
+                  <Text style={styles.emptyText}>
+                    {isGroupChat
+                      ? 'Every student in this group will receive it individually.'
+                      : activeParticipant?.id
+                      ? 'Send the first message to start this chat.'
+                      : 'Select a student to start chatting.'}
+                  </Text>
+                </View>
+              )
+            }
+          />
+
+          <View
+            style={[
+              styles.composer,
+              { paddingBottom: Math.max(insets.bottom, 10) },
+            ]}
+          >
+            <TextInput
+              style={styles.composerInput}
+              placeholder={
+                activeParticipant?.id
+                  ? isGroupChat
+                    ? 'Message the whole group'
+                    : 'Type a message'
+                  : 'Choose a chat first'
+              }
+              placeholderTextColor="#94A3B8"
+              value={draft}
+              onChangeText={setDraft}
+              multiline
+              blurOnSubmit={false}
+              editable={Boolean(activeParticipant?.id) && !isSending}
             />
-          )}
-          <View style={styles.chatHeaderText}>
-            <Text style={styles.chatName} numberOfLines={1}>
-              {activeParticipant?.name ??
-                (isAdmin ? 'Select a student' : 'Admin')}
-            </Text>
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!canSend || isSending) && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={!canSend || isSending}
+              activeOpacity={0.82}
+            >
+              <MaterialIcons name="send" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </View>
-
-        <FlatList
-          ref={listRef}
-          data={messages}
-          inverted
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <MessageBubble item={item} currentUserId={currentUserId} />
-          )}
-          contentContainerStyle={styles.messageList}
-          keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() => scrollToChatBottom(false)}
-          onLayout={() => scrollToChatBottom(false)}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#4F46E5"
-              colors={['#4F46E5']}
-            />
-          }
-          ListEmptyComponent={
-            (isLoadingMessage || isFetchingMessage) && !isGroupChat ? (
-              <LoadingState label="...." />
-            ) : (
-              <View style={styles.emptyChat}>
-                <MaterialIcons
-                  name={isGroupChat ? 'campaign' : 'chat-bubble-outline'}
-                  size={42}
-                  color="#94A3B8"
-                />
-                <Text style={styles.emptyTitle}>
-                  {isGroupChat ? 'Send a group message' : 'No messages yet'}
-                </Text>
-                <Text style={styles.emptyText}>
-                  {isGroupChat
-                    ? 'Every student in this group will receive it individually.'
-                    : activeParticipant?.id
-                    ? 'Send the first message to start this chat.'
-                    : 'Select a student to start chatting.'}
-                </Text>
-              </View>
-            )
-          }
-        />
-
-        <View style={[styles.composer]}>
-          <TextInput
-            style={styles.composerInput}
-            placeholder={
-              activeParticipant?.id
-                ? isGroupChat
-                  ? 'Message the whole group'
-                  : 'Type a message'
-                : 'Choose a chat first'
-            }
-            placeholderTextColor="#94A3B8"
-            value={draft}
-            onChangeText={setDraft}
-            multiline
-            blurOnSubmit={false}
-            editable={Boolean(activeParticipant?.id) && !isSending}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!canSend || isSending) && styles.sendButtonDisabled,
-            ]}
-            onPress={handleSend}
-            disabled={!canSend || isSending}
-            activeOpacity={0.82}
-          >
-            <MaterialIcons name="send" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
