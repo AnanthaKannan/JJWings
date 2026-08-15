@@ -147,10 +147,13 @@ export default function AdminMessageScreen() {
     data: messages = [],
     isLoading,
     refetch: refetchMessages,
-  } = useGetMessagesQuery(undefined, {
-    skip: !isFocused || !currentUserId || (isAdmin && !activeRecipientId),
-    // pollingInterval: 20000,
-  });
+  } = useGetMessagesQuery(
+    { studentId: activeRecipientId || '' },
+    {
+      skip: !isFocused || !currentUserId || (isAdmin && !activeRecipientId),
+      // pollingInterval: 20000,
+    },
+  );
   const {
     data: messageStudents = [],
     isLoading: isStudentListLoading,
@@ -721,10 +724,6 @@ export default function AdminMessageScreen() {
                     {activeParticipant?.name ??
                       (isAdmin ? 'Select a student' : 'Admin')}
                   </Text>
-                  {/* <Text style={styles.chatSubText} numberOfLines={1}>
-                    {activeParticipantCode ??
-                      (isStudent ? studentName || 'Student' : 'Conversation')}
-                  </Text> */}
                 </View>
               </View>
 

@@ -1303,9 +1303,9 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
     }),
 
-    getMessages: builder.query<ChatMessage[], void>({
-      query: () => ({
-        url: '/messages',
+    getMessages: builder.query<ChatMessage[], { studentId: string }>({
+      query: ({ studentId }) => ({
+        url: `/messages/${studentId}`,
         params: { page: 1, limit: DEFAULT_LIMIT },
       }),
       transformResponse: (response: ApiMessagesResponse) =>
@@ -1885,7 +1885,7 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
       invalidatesTags: [
         { type: 'Messages', id: 'LIST' },
-        { type: 'Messages', id: 'STUDENTS' },
+        // { type: 'Messages', id: 'STUDENTS' },
       ],
       async onQueryStarted({ studentId }, { dispatch, queryFulfilled }) {
         let readCount = 0;
