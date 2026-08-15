@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     zIndex: 2,
-    elevation: 8,
+    // elevation: 8,
   },
   composerInput: {
     flex: 1,
