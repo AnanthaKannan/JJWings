@@ -1,12 +1,4 @@
-import React, {
-  Dispatch,
-  RefObject,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -38,31 +30,15 @@ import { Group } from '../../types';
 // import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
 
 type MessageChatPaneProps = {
-  composerRef: RefObject<View | null>;
-  draft: string;
-  composerKeyboardOffset: number;
-  keyboardVisible: boolean;
-  keyboardTopRef: RefObject<number | null>;
-  setDraft: Dispatch<SetStateAction<string>>;
   onBack: () => void;
-  onResetKeyboardCorrection: () => void;
-  onUpdateComposerKeyboardOffset: (keyboardTop: number) => void;
   selectedStudentDetail: MessageStudent | null;
   selectedGroupDetail: Group | null;
 };
 
 export default function MessageChatPane({
-  composerRef,
   selectedStudentDetail,
   selectedGroupDetail,
-  draft,
-  composerKeyboardOffset,
-  keyboardVisible,
-  keyboardTopRef,
-  setDraft,
   onBack,
-  onResetKeyboardCorrection,
-  onUpdateComposerKeyboardOffset,
 }: MessageChatPaneProps) {
   const insets = useSafeAreaInsets();
   const [activeParticipant, setActiveParticipant] = useState<{
@@ -77,6 +53,7 @@ export default function MessageChatPane({
   const studentId = useSelector((state: RootState) => state.common.studentId);
   const currentUserId = isAdmin ? adminId : studentId ?? '';
   const [refreshing, setRefreshing] = useState(false);
+  const [draft, setDraft] = useState('');
 
   const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
@@ -93,10 +70,6 @@ export default function MessageChatPane({
       model: selectedGroupDetail?._id ? 'group' : 'individual',
     });
   }, [selectedStudentDetail, selectedGroupDetail]);
-
-  const composerBottomPadding = keyboardVisible
-    ? 10
-    : Math.max(10, insets.bottom);
 
   const isSendingAny = isSending || isSendingGroup;
 
@@ -120,12 +93,6 @@ export default function MessageChatPane({
     await refetchMessages();
     setRefreshing(false);
   }, [refetchMessages]);
-
-  const scrollToChatBottom = useCallback((animated = false) => {
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated });
-    });
-  }, []);
 
   const handleSend = async () => {
     const message = draft.trim();
@@ -151,6 +118,12 @@ export default function MessageChatPane({
       Alert.alert('Message not sent', 'Please try again.');
     }
   };
+
+  const scrollToChatBottom = useCallback((animated = false) => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated });
+    });
+  }, []);
 
   return (
     <View style={styles.content}>
@@ -234,25 +207,7 @@ export default function MessageChatPane({
           }
         />
 
-        <View
-          ref={composerRef}
-          onLayout={() => {
-            if (
-              Platform.OS === 'android' &&
-              keyboardVisible &&
-              keyboardTopRef.current
-            ) {
-              onUpdateComposerKeyboardOffset(keyboardTopRef.current);
-            }
-          }}
-          style={[
-            styles.composer,
-            { paddingBottom: composerBottomPadding },
-            Platform.OS === 'android' && composerKeyboardOffset > 0
-              ? { marginBottom: composerKeyboardOffset }
-              : null,
-          ]}
-        >
+        <View style={[styles.composer]}>
           <TextInput
             style={styles.composerInput}
             placeholder={
@@ -265,11 +220,6 @@ export default function MessageChatPane({
             placeholderTextColor="#94A3B8"
             value={draft}
             onChangeText={setDraft}
-            onFocus={() => {
-              onResetKeyboardCorrection();
-              setTimeout(() => scrollToChatBottom(true), 300);
-            }}
-            onBlur={onResetKeyboardCorrection}
             multiline
             blurOnSubmit={false}
             editable={Boolean(activeParticipant?.id) && !isSending}

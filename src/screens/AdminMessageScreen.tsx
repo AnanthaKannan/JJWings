@@ -1,19 +1,10 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
   StatusBar,
   StyleSheet,
-  View,
 } from 'react-native';
 import {
   CommonActions,
@@ -31,12 +22,9 @@ import {
   MessageType,
 } from '../component';
 import {
-  ChatMessage,
   MessageStudent,
-  MessageParticipant,
   useGetMessageStudentsQuery,
   useGetMessageGroupQuery,
-  useGetMessagesQuery,
   useReadMessagesMutation,
   useDeleteMessageGroupMutation,
 } from '../store/api';
@@ -44,18 +32,6 @@ import { RootState } from '../store/store';
 import { useAndroidBackHandler } from '../hooks/useAndroidBackHandler';
 import { Group } from '../types';
 import ReuseModal, { ReuseModalProps } from '../component/ReuseModal';
-
-type Conversation = {
-  participant: MessageParticipant;
-  lastMessage?: ChatMessage;
-  messages: ChatMessage[];
-};
-
-const EMPTY_CHAT_MESSAGES: ChatMessage[] = [];
-const KEYBOARD_COMPOSER_GAP = 32;
-
-const getOtherParticipant = (message: ChatMessage, currentUserId: string) =>
-  message.sendBy.id === currentUserId ? message.receivedTo : message.sendBy;
 
 const getInitialMessageFilter = (filter?: string): MessageType =>
   filter === 'group' ? 'group' : 'individual';
@@ -72,25 +48,11 @@ export default function AdminMessageScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
-  const adminId = useSelector((state: RootState) => state.common.adminId);
-  const studentId = useSelector((state: RootState) => state.common.studentId);
-  const currentUserId = isAdmin ? adminId : studentId ?? '';
-  const [activeRecipientId, setActiveRecipientId] = useState<string | null>(
-    route.params?.studentId ?? null,
-  );
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<MessageType>(() =>
     getInitialMessageFilter(route.params?.filter),
   );
   const [modal, setModal] = useState<ReuseModalProps>(MODAL_INITIAL);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [composerKeyboardOffset, setComposerKeyboardOffset] = useState(0);
-  const listRef = useRef<FlatList<ChatMessage>>(null);
-  const composerRef = useRef<View>(null);
-  const keyboardTopRef = useRef<number | null>(null);
-  const composerKeyboardOffsetRef = useRef(0);
 
   const [selectedStudentDetail, setSelectedStudentDetail] =
     useState<MessageStudent | null>(null);
@@ -103,13 +65,6 @@ export default function AdminMessageScreen() {
   useEffect(() => {
     setSelectedFilter(getInitialMessageFilter(route.params?.filter));
   }, [route.params?.filter]);
-
-  const { data: messages = [], refetch: refetchMessages } = useGetMessagesQuery(
-    { studentId: activeRecipientId || '' },
-    {
-      skip: !isFocused || !currentUserId || (isAdmin && !activeRecipientId),
-    },
-  );
 
   const {
     data: messageStudents = [],
@@ -130,153 +85,6 @@ export default function AdminMessageScreen() {
     useDeleteMessageGroupMutation();
   const [readMessages] = useReadMessagesMutation();
   const isGroupActionLoading = isDeletingGroup;
-
-  // const sortedMessages = useMemo(() => sortByCreatedAt(messages), [messages]);
-
-  const conversations = useMemo<Conversation[]>(() => {
-    if (!currentUserId) return [];
-
-    const map = new Map<string, Conversation>();
-
-    messages.forEach(message => {
-      const participant = getOtherParticipant(message, currentUserId);
-      const existing = map.get(participant.id);
-
-      if (existing) {
-        existing.messages.push(message);
-        existing.lastMessage = message;
-      } else {
-        map.set(participant.id, {
-          participant,
-          lastMessage: message,
-          messages: [message],
-        });
-      }
-    });
-
-    return Array.from(map.values()).sort((a, b) => {
-      const aTime = new Date(a.lastMessage?.createdAt ?? 0).getTime();
-      const bTime = new Date(b.lastMessage?.createdAt ?? 0).getTime();
-      return bTime - aTime;
-    });
-  }, [currentUserId, messages]);
-
-  const selectedMessageStudent = useMemo(
-    () => messageStudents.find(student => student.id === activeRecipientId),
-    [activeRecipientId, messageStudents],
-  );
-
-  const selectedMessageGroup = useMemo(
-    () => groupList.find(group => group._id === activeGroupId),
-    [activeGroupId, groupList],
-  );
-
-  const studentAdminParticipant = useMemo(
-    () =>
-      messages
-        .flatMap(message => [message.sendBy, message.receivedTo])
-        .find(participant => participant.model === 'Admin'),
-    [messages],
-  );
-
-  const activeConversation = useMemo(() => {
-    if (isAdmin && activeGroupId) {
-      if (!selectedMessageGroup) return undefined;
-
-      return {
-        participant: {
-          id: selectedMessageGroup._id,
-          name: selectedMessageGroup.groupName,
-          code: `${selectedMessageGroup.studentIds.length} students`,
-          model: 'Group' as const,
-          profilePicPath: undefined,
-        },
-        // Group broadcasts are send-only here - replies come back to the
-        // admin as individual student conversations, not into this thread.
-        messages: [],
-      };
-    }
-
-    if (isAdmin) {
-      const existingConversation = conversations.find(
-        item => item.participant.id === activeRecipientId,
-      );
-
-      if (existingConversation) return existingConversation;
-
-      if (!selectedMessageStudent) return undefined;
-
-      return {
-        participant: {
-          id: selectedMessageStudent.id,
-          name: selectedMessageStudent.name,
-          code: selectedMessageStudent.studentId,
-          model: 'Student' as const,
-          profilePicPath: selectedMessageStudent.profilePicPath,
-        },
-        messages: [],
-      };
-    }
-
-    if (!studentAdminParticipant) return undefined;
-
-    return {
-      participant: studentAdminParticipant,
-      messages: messages.filter(
-        message =>
-          message.sendBy.id === studentAdminParticipant.id ||
-          message.receivedTo.id === studentAdminParticipant.id,
-      ),
-      lastMessage: messages[messages.length - 1],
-    };
-  }, [
-    activeRecipientId,
-    activeGroupId,
-    conversations,
-    isAdmin,
-    selectedMessageGroup,
-    selectedMessageStudent,
-    messages,
-    studentAdminParticipant,
-  ]);
-
-  const chatMessages = activeConversation?.messages ?? EMPTY_CHAT_MESSAGES;
-  const activeParticipant = activeConversation?.participant;
-  const isGroupChat = activeParticipant?.model === 'Group';
-  const scrollToChatBottom = useCallback((animated = false) => {
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated });
-    });
-  }, []);
-
-  const resetKeyboardCorrection = useCallback(() => {
-    keyboardTopRef.current = null;
-    composerKeyboardOffsetRef.current = 0;
-    setKeyboardVisible(false);
-    setComposerKeyboardOffset(0);
-  }, []);
-
-  const updateComposerKeyboardOffset = useCallback((keyboardTop: number) => {
-    if (Platform.OS !== 'android') return;
-
-    requestAnimationFrame(() => {
-      composerRef.current?.measureInWindow((_, y, __, height) => {
-        const composerBottom = y + height;
-        const overlap = composerBottom + KEYBOARD_COMPOSER_GAP - keyboardTop;
-        const nextOffset = Math.max(
-          0,
-          composerKeyboardOffsetRef.current + overlap,
-        );
-
-        if (Math.abs(nextOffset - composerKeyboardOffsetRef.current) < 1) {
-          return;
-        }
-
-        composerKeyboardOffsetRef.current = nextOffset;
-        setComposerKeyboardOffset(nextOffset);
-      });
-    });
-  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -302,84 +110,6 @@ export default function AdminMessageScreen() {
     };
   }, [isChatOpen, isAdmin, navigation]);
 
-  useEffect(() => {
-    if (chatMessages.length === 0) return;
-
-    scrollToChatBottom(false);
-    const firstTimer = setTimeout(() => scrollToChatBottom(false), 120);
-    const secondTimer = setTimeout(() => scrollToChatBottom(true), 320);
-
-    return () => {
-      clearTimeout(firstTimer);
-      clearTimeout(secondTimer);
-    };
-  }, [
-    activeRecipientId,
-    activeGroupId,
-    chatMessages.length,
-    scrollToChatBottom,
-  ]);
-
-  useEffect(() => {
-    const keyboardShowSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      event => {
-        setKeyboardVisible(true);
-        keyboardTopRef.current = event.endCoordinates.screenY;
-        composerKeyboardOffsetRef.current = 0;
-        setComposerKeyboardOffset(0);
-
-        if (Platform.OS === 'android') {
-          setTimeout(
-            () => updateComposerKeyboardOffset(event.endCoordinates.screenY),
-            80,
-          );
-          setTimeout(
-            () => updateComposerKeyboardOffset(event.endCoordinates.screenY),
-            260,
-          );
-        }
-
-        scrollToChatBottom(true);
-      },
-    );
-    const keyboardHideSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      resetKeyboardCorrection,
-    );
-
-    return () => {
-      keyboardShowSubscription.remove();
-      keyboardHideSubscription.remove();
-    };
-  }, [
-    resetKeyboardCorrection,
-    scrollToChatBottom,
-    updateComposerKeyboardOffset,
-  ]);
-
-  useEffect(() => {
-    if (!isFocused) return undefined;
-    if (isAdmin && activeGroupId) return undefined; // group threads are send-only, nothing to mark read
-
-    const readStudentId = isAdmin ? activeRecipientId : studentId;
-    if (!readStudentId) return undefined;
-
-    return () => {
-      const data = isAdmin ? { studentId: readStudentId } : {};
-      readMessages(data)
-        .unwrap()
-        .catch(() => undefined);
-    };
-  }, [
-    activeRecipientId,
-    activeGroupId,
-    isAdmin,
-    isFocused,
-    readMessages,
-    studentId,
-  ]);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -389,8 +119,6 @@ export default function AdminMessageScreen() {
         } else {
           await refetchMessageStudents();
         }
-      } else {
-        await refetchMessages();
       }
     } finally {
       setRefreshing(false);
@@ -401,7 +129,6 @@ export default function AdminMessageScreen() {
     selectedFilter,
     refetchGroupList,
     refetchMessageStudents,
-    refetchMessages,
   ]);
 
   const handleSelectStudent = useCallback(
@@ -425,8 +152,8 @@ export default function AdminMessageScreen() {
 
   const handleChatBack = useCallback(() => {
     if (isAdmin) {
-      setActiveRecipientId(null);
-      setActiveGroupId(null);
+      setSelectedStudentDetail(null);
+      setSelectedGroupDetail(null);
       return;
     }
 
@@ -521,28 +248,11 @@ export default function AdminMessageScreen() {
           <MessageChatPane
             selectedStudentDetail={selectedStudentDetail}
             selectedGroupDetail={selectedGroupDetail}
-            composerRef={composerRef}
-            draft={draft}
-            composerKeyboardOffset={composerKeyboardOffset}
-            keyboardVisible={keyboardVisible}
-            keyboardTopRef={keyboardTopRef}
-            setDraft={setDraft}
             onBack={handleChatBack}
-            onResetKeyboardCorrection={resetKeyboardCorrection}
-            onUpdateComposerKeyboardOffset={updateComposerKeyboardOffset}
           />
         )}
       </KeyboardAvoidingView>
-      <LoadingOverlay
-        visible={isGroupActionLoading}
-        label={
-          isGroupActionLoading
-            ? 'Deleting group...'
-            : isGroupChat
-            ? 'Sending to group...'
-            : 'Sending message...'
-        }
-      />
+      <LoadingOverlay visible={isGroupActionLoading} label="Processing..." />
       <ReuseModal
         visible={modal.visible}
         state={modal.state}
