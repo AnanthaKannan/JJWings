@@ -696,6 +696,7 @@ type AvailableQuestionsArg = {
   type?: 'homework' | 'exam' | 'practice';
   page?: number;
   limit?: number;
+  search?: string;
 };
 
 type RankingArg = {
@@ -1160,23 +1161,27 @@ export const jjWingsApi = createApi({
       QuestionsResult,
       AvailableQuestionsArg
     >({
-      query: ({ studentId, level, type, page, limit }) => ({
+      query: ({ studentId, level, type, page, limit, search }) => ({
         url: `/admin/questions/available/${studentId}`,
         params: {
           page: page ?? 1,
           limit: limit ?? DEFAULT_QUESTIONS_LIMIT,
           ...(typeof level === 'number' ? { level } : {}),
           ...(type ? { type } : {}),
+          ...(search ? { search } : {}),
         },
       }),
       transformResponse: (response: ApiQuestionsResponse) => ({
         questions: response.questions.map(mapQuestion),
         meta: response.meta,
       }),
+
       serializeQueryArgs: ({ endpointName, queryArgs }) =>
         `${endpointName}-${queryArgs.studentId}-${queryArgs.type ?? 'ALL'}-${
           queryArgs.level ?? 'ALL'
-        }-${queryArgs.limit ?? DEFAULT_QUESTIONS_LIMIT}`,
+        }-${queryArgs.search ?? ''}-${
+          queryArgs.limit ?? DEFAULT_QUESTIONS_LIMIT
+        }`,
       merge: (currentCache, newPage) => {
         if (newPage.meta.page === 1) {
           currentCache.questions = newPage.questions;
@@ -1197,6 +1202,7 @@ export const jjWingsApi = createApi({
         currentArg?.page !== previousArg?.page ||
         currentArg?.type !== previousArg?.type ||
         currentArg?.level !== previousArg?.level ||
+        currentArg?.search !== previousArg?.search ||
         currentArg?.limit !== previousArg?.limit,
       providesTags: (_result, _error, { studentId }) => [
         { type: 'Questions', id: `AVAILABLE_${studentId}` },

@@ -16,6 +16,7 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
+import useDebounce from '../hooks/useDebounce';
 import {
   AdminHeader,
   BottomLodeMore,
@@ -106,8 +107,8 @@ export default function AssignByLevelScreen() {
   const [isLevelPickerOpen, setIsLevelPickerOpen] = useState(false);
   const [assignmentResult, setAssignmentResult] =
     useState<AssignHomeworkResult | null>(null);
+  const debouncedSearchTerm = useDebounce(search.trim(), 800);
 
-  const cleanSearch = search.trim();
   const {
     data: questionsData,
     isLoading,
@@ -115,7 +116,7 @@ export default function AssignByLevelScreen() {
   } = useGetQuestionsQuery(
     {
       type: typeFilter,
-      ...(cleanSearch.length > 0 ? { search: cleanSearch } : {}),
+      search: debouncedSearchTerm,
       page,
     },
     {
@@ -126,34 +127,14 @@ export default function AssignByLevelScreen() {
     useAssignHomeworkMutation();
   useEffect(() => {
     setPage(1);
-  }, [typeFilter, cleanSearch]);
+  }, [typeFilter, debouncedSearchTerm]);
 
-  const questions = useMemo(
+  const filteredQuestions = useMemo(
     () => questionsData?.questions ?? [],
     [questionsData?.questions],
   );
   const hasMorePages = questionsData?.meta.hasNextPage === true;
   const isLoadingMore = isFetching && !isLoading && page > 1;
-
-  const filteredQuestions = useMemo(() => {
-    const searchText = cleanSearch.toLowerCase();
-
-    return questions.filter(question => {
-      if (searchText.length === 0) return true;
-
-      return (
-        question.id.toLowerCase().includes(searchText) ||
-        question.questionId?.toLowerCase().includes(searchText) ||
-        question.question.some(item =>
-          item.toLowerCase().includes(searchText),
-        ) ||
-        String(question.level ?? '').includes(searchText)
-      );
-    });
-    // .sort((a, b) =>
-    //   (a.questionId ?? a.id).localeCompare(b.questionId ?? b.id),
-    // );
-  }, [cleanSearch, questions]);
 
   const hasQuestions = filteredQuestions.length > 0;
   const allQuestionsSelected =
@@ -161,7 +142,7 @@ export default function AssignByLevelScreen() {
     filteredQuestions.every(question => selectedQuestionIds.has(question.id));
   const selectedTypeLabel = getAssignmentTypeLabel(typeFilter).toLowerCase();
   const canAssign = selectedQuestionIds.size > 0 && selectedLevels.size > 0;
-  const showLoader = isFocused && isLoading && questions.length === 0;
+  const showLoader = isFocused && isLoading && filteredQuestions.length === 0;
   const selectedLevelList = useMemo(
     () => Array.from(selectedLevels).sort((a, b) => a - b),
     [selectedLevels],
