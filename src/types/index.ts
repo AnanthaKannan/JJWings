@@ -156,6 +156,7 @@ export type Comment = {
   content: string;
   isBlocked: boolean;
   createdAt: string;
+  approved: boolean;
 };
 
 export type ParentCommentRes = GeneralResponse & {
@@ -170,6 +171,22 @@ export type GroupMessages = {
 
 export type GroupMessagesRes = GeneralResponse & {
   data: GroupMessages[];
+};
+
+export type NonApprovedComment = {
+  _id: string;
+  content: string;
+  createdAt: string;
+  approved: boolean;
+  userDetail: {
+    _id: string;
+    name: string;
+    profilePicPath: string;
+  };
+};
+
+export type NonApprovedCommentRes = GeneralResponse & {
+  data: NonApprovedComment[];
 };
 
 export type CreateComment = {

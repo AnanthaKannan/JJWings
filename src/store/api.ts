@@ -28,6 +28,8 @@ import {
   GroupMessagesRes,
   GroupMessages,
   LogOutArg,
+  NonApprovedComment,
+  NonApprovedCommentRes,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -1038,12 +1040,11 @@ export const jjWingsApi = createApi({
     }),
 
     logOut: builder.mutation<string, LogOutArg>({
-      query: ({ username, password, deviceId }) => ({
+      query: ({ fcmToken, deviceId }) => ({
         url: '/auth/logout',
         method: 'POST',
         body: {
-          username,
-          password,
+          ...(fcmToken ? { fcmToken } : {}),
           ...(deviceId ? { deviceId } : {}),
         },
       }),
@@ -1855,6 +1856,24 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Comment', id: 'LIST' }],
     }),
 
+    approveComment: builder.mutation<string, { commentId: string }>({
+      query: ({ commentId }) => ({
+        url: `/comment/${commentId}/approve`,
+        method: 'PUT',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Comment', id: 'NON_APPROVED' }],
+    }),
+
+    getNonApprovedComment: builder.query<NonApprovedComment[], void>({
+      query: () => ({
+        url: `/comment/admin/non-approve-comment`,
+        method: 'GET',
+      }),
+      transformResponse: (res: NonApprovedCommentRes) => res.data,
+      providesTags: [{ type: 'Comment', id: 'NON_APPROVED' }],
+    }),
+
     createComment: builder.mutation<string, CreateComment>({
       query: body => ({
         url: '/comment',
@@ -1863,6 +1882,18 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'Comment', id: 'LIST' }],
+    }),
+
+    deleteComment: builder.mutation<string, { commentId: string }>({
+      query: ({ commentId }) => ({
+        url: `/comment/parent/${commentId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [
+        { type: 'Comment', id: 'LIST' },
+        { type: 'Comment', id: 'NON_APPROVED' },
+      ],
     }),
 
     toggleLike: builder.mutation<string, { feedId: string }>({
@@ -2101,6 +2132,9 @@ export const {
   useLazyGetParentCommentQuery,
   useGetGroupMessagesQuery,
   useGetParentCommentQuery,
+  useDeleteCommentMutation,
   useToggleLikeMutation,
   useLogOutMutation,
+  useGetNonApprovedCommentQuery,
+  useApproveCommentMutation,
 } = jjWingsApi;

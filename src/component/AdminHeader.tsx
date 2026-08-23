@@ -63,11 +63,11 @@ const adminNavItems: AdminNavItem[] = [
     routeName: 'AdminTeachers',
     requiresRole: 'superadmin',
   },
-  // {
-  //   label: 'Notification Send',
-  //   icon: 'campaign',
-  //   routeName: 'AdminNotificationSend',
-  // },
+  {
+    label: 'Comment Approval',
+    icon: 'pending-actions',
+    routeName: 'CommentApproval',
+  },
   {
     label: 'Update Password',
     icon: 'lock-reset',

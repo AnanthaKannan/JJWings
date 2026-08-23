@@ -14,16 +14,25 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  KeyboardAvoidingView,
+  Keyboard,
+  KeyboardEvent,
   Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
   ListRenderItem,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSelector, useDispatch } from 'react-redux';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { Comment } from '../types';
 import Avatar from './Avatar';
 import LoadingState from './LoadingState';
+import PostOptionsMenu from './PostOptionsMenu';
+import { RootState } from '../store/store';
+import { setModal, resetModal } from '../store/slices';
+import { useDeleteCommentMutation } from '../store/api';
+import LoadingOverlay from './LoadingOverlay';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -64,21 +73,38 @@ const formatRelativeTime = (isoDate: string): string => {
   return `${weeks}w`;
 };
 
-const CommentRow: React.FC<{ item: Comment }> = ({ item }) => (
+const CommentRow: React.FC<{
+  item: Comment;
+  userId: string;
+  onDelete: (commentId: string, content: string) => void;
+}> = ({ item, userId, onDelete }) => (
   <View style={styles.commentRow}>
     <Avatar
       name={item.userDetail.name}
       profilePic={item.userDetail.profilePicPath}
     />
     <View style={styles.commentBody}>
-      <Text style={styles.userName}>
-        {item.userDetail.name}
-        <Text style={styles.timeText}>
-          {' '}
-          · {formatRelativeTime(item.createdAt)}
+      <View style={styles.insideContainer}>
+        <Text style={styles.userName}>
+          {item.userDetail.name}
+          <Text style={styles.timeText}>
+            · {formatRelativeTime(item.createdAt)}
+          </Text>
         </Text>
-      </Text>
+        {item.userDetail._id === userId && (
+          <PostOptionsMenu
+            icon="more-horiz"
+            onDelete={() => onDelete(item._id, item.content)}
+          />
+        )}
+      </View>
+
       <Text style={styles.commentText}>{item.content}</Text>
+      {!item.approved && (
+        <Text style={[styles.timeText, { marginTop: 5 }]}>
+          Once approved by admin, it will be visible to everyone.
+        </Text>
+      )}
     </View>
   </View>
 );
@@ -98,8 +124,15 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   const [sheetHeight, setSheetHeight] = useState(HALF_HEIGHT);
   const [inputText, setInputText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const insets = useSafeAreaInsets();
+  const { studentId, adminId } = useSelector(
+    (state: RootState) => state.common,
+  );
 
   const isOverLimit = inputText.length > MAX_COMMENT_LENGTH;
+  const [deleteComment, { isLoading: isDeleting }] = useDeleteCommentMutation();
+  const dispatch = useDispatch();
 
   // tracks whether the FlatList is scrolled to the very top — only then
   // should a downward drag over the list be handed to the sheet instead of
@@ -133,8 +166,35 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     if (visible) {
       translateY.setValue(SCREEN_HEIGHT);
       openToHeight(HALF_HEIGHT);
+    } else {
+      setKeyboardHeight(0);
     }
   }, [visible, openToHeight, translateY]);
+
+  // Modal renders in its own native window on Android, so KeyboardAvoidingView
+  // alone won't shrink/shift the sheet reliably. Track the keyboard manually
+  // and push the sheet up ourselves on both platforms.
+  useEffect(() => {
+    const showEvt =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: KeyboardEvent) => {
+      setKeyboardHeight(e.endCoordinates.height + 42);
+    };
+    const onHide = () => {
+      setKeyboardHeight(0);
+    };
+
+    const showSub = Keyboard.addListener(showEvt, onShow);
+    const hideSub = Keyboard.addListener(hideEvt, onHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleGestureMove = (gesture: PanResponderGestureState) => {
     if (gesture.dy > 0) {
@@ -145,7 +205,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     }
   };
 
-  const handleGestureRelease = (gesture: PanResponderGestureState) => {
+  const HandleGestureRelease = (gesture: PanResponderGestureState) => {
     const draggedDown = gesture.dy;
     const draggedUp = -gesture.dy;
     const fastFlickDown = gesture.vy > VELOCITY_THRESHOLD;
@@ -187,7 +247,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => handleGestureMove(gesture),
-      onPanResponderRelease: (_, gesture) => handleGestureRelease(gesture),
+      onPanResponderRelease: (_, gesture) => HandleGestureRelease(gesture),
       onPanResponderTerminationRequest: () => false,
     }),
   ).current;
@@ -213,7 +273,7 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
         return false;
       },
       onPanResponderMove: (_, gesture) => handleGestureMove(gesture),
-      onPanResponderRelease: (_, gesture) => handleGestureRelease(gesture),
+      onPanResponderRelease: (_, gesture) => HandleGestureRelease(gesture),
     }),
   ).current;
 
@@ -234,8 +294,55 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     }
   };
 
+  const handleDeleteComment = (commentId: string, content: string) => {
+    dispatch(
+      setModal({
+        state: 'confirm',
+        visible: true,
+        title: 'Are you sure?',
+        description: `Do you want to delete this comment? \n *${content}*`,
+        onCancel: () => {
+          dispatch(resetModal());
+        },
+        onConfirm: async () => {
+          try {
+            await deleteComment({ commentId }).unwrap();
+            dispatch(
+              setModal({
+                state: 'success',
+                visible: true,
+                title: 'Comment Deleted',
+                description: 'Comment has been deleted successfully.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          } catch {
+            dispatch(
+              setModal({
+                state: 'failure',
+                visible: true,
+                title: 'Failed to Delete Comment',
+                description:
+                  'Something went wrong while deleting the comment. Please try again later.',
+                onDone: () => {
+                  dispatch(resetModal());
+                },
+              }),
+            );
+          }
+        },
+      }),
+    );
+  };
+
   const renderItem: ListRenderItem<Comment> = ({ item }) => (
-    <CommentRow item={item} />
+    <CommentRow
+      item={item}
+      userId={studentId || adminId}
+      onDelete={handleDeleteComment}
+    />
   );
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -262,7 +369,10 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
             styles.sheet,
             {
               height: sheetHeight,
-              transform: [{ translateY }],
+              transform: [
+                { translateY },
+                { translateY: keyboardHeight > 0 ? -keyboardHeight : 0 },
+              ],
             },
           ]}
         >
@@ -314,58 +424,60 @@ const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
             />
           </View>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            {isOverLimit ? (
-              <Text style={styles.errorText}>
-                Comment is too long ({inputText.length}/{MAX_COMMENT_LENGTH})
-              </Text>
+          <LoadingOverlay visible={isDeleting} />
+
+          {isOverLimit ? (
+            <Text style={styles.errorText}>
+              Comment is too long ({inputText.length}/{MAX_COMMENT_LENGTH})
+            </Text>
+          ) : null}
+          <View style={styles.inputBar}>
+            {currentUserAvatar ? (
+              <Image
+                source={{ uri: currentUserAvatar }}
+                style={styles.inputAvatar}
+              />
             ) : null}
-            <View style={styles.inputBar}>
-              {currentUserAvatar ? (
-                <Image
-                  source={{ uri: currentUserAvatar }}
-                  style={styles.inputAvatar}
-                />
-              ) : null}
-              <View
-                style={[
-                  styles.inputWrapper,
-                  isOverLimit && styles.inputWrapperError,
-                ]}
-              >
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Write a comment..."
-                  placeholderTextColor="#8a8d91"
-                  value={inputText}
-                  onChangeText={setInputText}
-                  multiline
-                />
-              </View>
-              <TouchableOpacity
-                onPress={handleSend}
-                disabled={!inputText.trim() || isOverLimit || isSubmitting}
-                hitSlop={8}
-                style={styles.sendButton}
-              >
-                <MaterialIcons
-                  name="send"
-                  size={22}
-                  color={
-                    inputText.trim() && !isOverLimit ? '#1877F2' : '#c4c7cc'
-                  }
-                />
-              </TouchableOpacity>
+            <View
+              style={[
+                styles.inputWrapper,
+                isOverLimit && styles.inputWrapperError,
+              ]}
+            >
+              <TextInput
+                style={styles.textInput}
+                placeholder="Write a comment..."
+                placeholderTextColor="#8a8d91"
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+              />
             </View>
-            <View>
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={!inputText.trim() || isOverLimit || isSubmitting}
+              hitSlop={8}
+              style={styles.sendButton}
+            >
+              <MaterialIcons
+                name="send"
+                size={22}
+                color={inputText.trim() && !isOverLimit ? '#1877F2' : '#c4c7cc'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View
+            style={{
+              paddingBottom: keyboardHeight > 0 ? 4 : insets.bottom || 8,
+            }}
+          >
+            {!adminId && (
               <Text style={styles.commentVisibleText}>
-                Your comment will be published once it is approved by the
-                teacher.
+                Your comment will be published once it is approved by the admin.
               </Text>
-            </View>
-          </KeyboardAvoidingView>
+            )}
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -517,6 +629,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     paddingHorizontal: 4,
   },
+  insideContainer: { flexDirection: 'row', justifyContent: 'space-between' },
 });
 
 export default CommentBottomSheet;
