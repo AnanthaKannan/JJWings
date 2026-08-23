@@ -22,3 +22,4 @@ export { default as GroupRow } from './message/GroupRow';
 export { default as StudentRow } from './message/StudentRow';
 export { default as AdminMessageList } from './message/AdminMessageList';
 export type { MessageType } from './message/AdminMessageList';
+export { MessageTypeEnum } from './message/AdminMessageList';

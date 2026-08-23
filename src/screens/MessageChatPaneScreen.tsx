@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from 'react';
 import {
   FlatList,
   Platform,
@@ -26,14 +32,18 @@ import {
   MessageStudent,
   useGetMessagesQuery,
   useSendGroupMessageMutation,
+  useGetGroupMessagesQuery,
   useSendMessageMutation,
 } from '../store/api';
-import Avatar from '../component/Avatar';
-import LoadingState from '../component/LoadingState';
+import {
+  Avatar,
+  MessageType,
+  MessageTypeEnum,
+  LoadingState,
+} from '../component';
 import MessageBubble from '../component/message/MessageBubble';
 import { RootState } from '../store/store';
 import { Group } from '../types';
-// import { useAndroidBackHandler } from '../../hooks/useAndroidBackHandler';
 
 type MessageChatPaneProps = {
   onBack: () => void;
@@ -45,7 +55,7 @@ export type ActiveParticipantType = {
   id: string;
   name: string;
   profilePicPath: string;
-  model: string;
+  model: MessageType;
 };
 
 export default function MessageChatPane({}: MessageChatPaneProps) {
@@ -73,7 +83,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
 
   const [padding, setPadding] = useState(Math.max(insets.bottom, 10));
 
-  const isGroupChat = activeParticipant?.model === 'group';
+  const isGroupChat = activeParticipant?.model === MessageTypeEnum.GROUP;
 
   useEffect(() => {
     const ap = route.params?.activeParticipant as ActiveParticipantType | null;
@@ -98,16 +108,62 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
   } = useGetMessagesQuery(
     { studentId: activeParticipant?.id || '' },
     {
-      skip: !isFocused || !currentUserId || (isAdmin && !activeParticipant?.id),
+      skip:
+        !isFocused ||
+        !currentUserId ||
+        !activeParticipant?.id ||
+        !(activeParticipant.model === MessageTypeEnum.INDIVIDUAL),
     },
   );
 
+  const {
+    data: rawGroupMessages = [],
+    isLoading: isLoadingGroupMessage,
+    isFetching: isFetchingGroupMessage,
+    refetch: refetchGroupMessages,
+  } = useGetGroupMessagesQuery(
+    { groupId: activeParticipant?.id || '' },
+    {
+      skip:
+        !isFocused ||
+        !currentUserId ||
+        !activeParticipant?.id ||
+        !(activeParticipant?.model === MessageTypeEnum.GROUP),
+    },
+  );
+
+  const groupMessages = useMemo(() => {
+    if (!rawGroupMessages) return [];
+    const messagesRes: ChatMessage[] = rawGroupMessages.map(message => ({
+      id: message._id,
+      message: message.text,
+      sendBy: {
+        id: adminId,
+        name: 'suerHero',
+        model: 'admin',
+      },
+      receivedTo: {
+        id: '',
+        name: '',
+        model: 'student',
+      },
+      createdAt: message.date,
+      updatedAt: message.date,
+    }));
+    return messagesRes;
+  }, [adminId, rawGroupMessages]);
+
   const isSendingAny = isSending || isSendingGroup || isFetchingMessage;
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetchMessages();
+    if (isGroupChat) {
+      await refetchGroupMessages();
+    } else {
+      await refetchMessages();
+    }
     setRefreshing(false);
-  }, [refetchMessages]);
+  }, [isGroupChat, refetchMessages, refetchGroupMessages]);
 
   const handleSend = async () => {
     const message = draft.trim();
@@ -126,7 +182,6 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
           message,
           receivedTo: activeParticipant.id,
         }).unwrap();
-        await refetchMessages();
       }
     } catch {
       setDraft(message);
@@ -182,7 +237,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
 
           <FlatList
             ref={listRef}
-            data={messages}
+            data={isGroupChat ? groupMessages : messages}
             inverted
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
@@ -200,7 +255,11 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
               />
             }
             ListEmptyComponent={
-              (isLoadingMessage || isFetchingMessage) && !isGroupChat ? (
+              (isLoadingMessage ||
+                isFetchingMessage ||
+                isLoadingGroupMessage ||
+                isFetchingGroupMessage) &&
+              !isGroupChat ? (
                 <LoadingState label="...." />
               ) : (
                 <View style={styles.emptyChat}>

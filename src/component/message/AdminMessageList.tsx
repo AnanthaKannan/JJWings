@@ -12,6 +12,10 @@ import GroupRow from './GroupRow';
 import StudentRow from './StudentRow';
 
 export type MessageType = 'group' | 'individual';
+export enum MessageTypeEnum {
+  'GROUP' = 'group',
+  'INDIVIDUAL' = 'individual',
+}
 
 type AdminMessageListProps = {
   selectedFilter: MessageType;
@@ -30,8 +34,8 @@ type AdminMessageListProps = {
 };
 
 const FILTERS: { label: string; value: MessageType }[] = [
-  { label: 'Students', value: 'individual' },
-  { label: 'Group', value: 'group' },
+  { label: 'Students', value: MessageTypeEnum.INDIVIDUAL },
+  { label: 'Group', value: MessageTypeEnum.GROUP },
 ];
 
 const EMPTY_LIST_MODAL = {
@@ -82,7 +86,7 @@ export default function AdminMessageList({
         list={listModal.students}
       />
       <FloatingAddButton onPress={onCreateGroup} />
-      {selectedFilter === 'individual' ? (
+      {selectedFilter === MessageTypeEnum.INDIVIDUAL ? (
         <FlatList
           data={students}
           keyExtractor={item => item.id}

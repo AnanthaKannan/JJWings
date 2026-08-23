@@ -25,6 +25,8 @@ import {
   GroupResponse,
   SaveGroupReq,
   SendGroupMessage,
+  GroupMessagesRes,
+  GroupMessages,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -1421,6 +1423,16 @@ export const jjWingsApi = createApi({
         body: { message },
       }),
       transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST_MESSAGES' }],
+    }),
+
+    getGroupMessages: builder.query<GroupMessages[], { groupId: string }>({
+      query: ({ groupId }) => ({
+        url: `/group/${groupId}/messages`,
+        method: 'GET',
+      }),
+      transformResponse: (res: GroupMessagesRes) => res.data,
+      providesTags: [{ type: 'MessageGroups', id: 'LIST_MESSAGES' }],
     }),
 
     sendNotification: builder.mutation<string, SendNotificationArg>({
@@ -2070,6 +2082,7 @@ export const {
   useCreateOrgMutation,
   useCreateCommentMutation,
   useLazyGetParentCommentQuery,
+  useGetGroupMessagesQuery,
   useGetParentCommentQuery,
   useToggleLikeMutation,
 } = jjWingsApi;

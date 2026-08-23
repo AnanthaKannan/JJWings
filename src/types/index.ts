@@ -162,6 +162,16 @@ export type ParentCommentRes = GeneralResponse & {
   data: Comment[];
 };
 
+export type GroupMessages = {
+  text: string;
+  _id: string;
+  date: string;
+};
+
+export type GroupMessagesRes = GeneralResponse & {
+  data: GroupMessages[];
+};
+
 export type CreateComment = {
   feedId: string;
   content: string;
