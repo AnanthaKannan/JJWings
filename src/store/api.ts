@@ -27,6 +27,7 @@ import {
   SendGroupMessage,
   GroupMessagesRes,
   GroupMessages,
+  LogOutArg,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -1034,6 +1035,19 @@ export const jjWingsApi = createApi({
         },
       }),
       transformResponse: mapLogin,
+    }),
+
+    logOut: builder.mutation<string, LogOutArg>({
+      query: ({ username, password, deviceId }) => ({
+        url: '/auth/logout',
+        method: 'POST',
+        body: {
+          username,
+          password,
+          ...(deviceId ? { deviceId } : {}),
+        },
+      }),
+      transformResponse: () => 'success',
     }),
 
     switchStudentLogin: builder.mutation<LoginResult, SwitchStudentLoginArg>({
@@ -2088,4 +2102,5 @@ export const {
   useGetGroupMessagesQuery,
   useGetParentCommentQuery,
   useToggleLikeMutation,
+  useLogOutMutation,
 } = jjWingsApi;

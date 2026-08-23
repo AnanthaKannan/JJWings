@@ -176,3 +176,8 @@ export type CreateComment = {
   feedId: string;
   content: string;
 };
+
+export type LogOutArg = {
+  deviceId: string;
+  fcmToken: string | null;
+};
