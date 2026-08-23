@@ -81,7 +81,6 @@ export default function ProfileScreen() {
     try {
       const deviceId = await getDeviceId();
       const fcmToken = await getPushToken();
-      console.log(deviceId, fcmToken);
       await logOutDevice({ deviceId, fcmToken }).unwrap();
     } catch (error) {
       console.error('Failed to remove student device id', error);
