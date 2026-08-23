@@ -96,6 +96,22 @@ export type Feed = {
   isLikedByMe: boolean;
 };
 
+export type Group = {
+  _id: string;
+  groupName: string;
+  studentIds: { _id: string; name: string; profilePicPath: string }[];
+};
+
+export type SendGroupMessage = {
+  message: string;
+  groupId: string;
+};
+
+export type SaveGroupReq = {
+  groupName: string;
+  studentIds: string[];
+};
+
 type FilePath = 'feed' | 'profile';
 
 type FileType = 'content' | 'file';
@@ -115,6 +131,11 @@ export type CreateContentArg = {
 
 export type FeedData = GeneralResponse & {
   data: Feed[];
+};
+
+export type GroupResponse = GeneralResponse & {
+  data?: Group[];
+  result?: Group[];
 };
 
 export type GeneralResponse = {
@@ -142,6 +163,16 @@ export type ParentCommentRes = GeneralResponse & {
   data: Comment[];
 };
 
+export type GroupMessages = {
+  text: string;
+  _id: string;
+  date: string;
+};
+
+export type GroupMessagesRes = GeneralResponse & {
+  data: GroupMessages[];
+};
+
 export type NonApprovedComment = {
   _id: string;
   content: string;
@@ -161,4 +192,9 @@ export type NonApprovedCommentRes = GeneralResponse & {
 export type CreateComment = {
   feedId: string;
   content: string;
+};
+
+export type LogOutArg = {
+  deviceId: string;
+  fcmToken: string | null;
 };

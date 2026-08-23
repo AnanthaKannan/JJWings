@@ -40,9 +40,13 @@ export default function AchievementsScreen() {
   }, [refetch]);
 
   const header = isAdmin ? (
-    <AdminHeader header="Feeds" />
+    <AdminHeader header="Feeds" showBackButton={true} />
   ) : (
-    <StudentHeader header="Feeds" headerBackgroundColor="#EEF2FF" />
+    <StudentHeader
+      showBackButton={true}
+      header="Feeds"
+      headerBackgroundColor="#EEF2FF"
+    />
   );
 
   return (
@@ -56,12 +60,6 @@ export default function AchievementsScreen() {
           aspectRatio={1080 / 1350}
           onRefresh={onRefresh}
           refreshing={refreshing}
-          // onLoadMore={async () => {
-          //   // fetch next page from your API here
-          //   return [
-          //     { id: '4', url: 'https://picsum.photos/id/1020/1080/1350' },
-          //   ];
-          // }}
         />
 
         <Modal
@@ -76,7 +74,12 @@ export default function AchievementsScreen() {
           />
         </Modal>
 
-        {isAdmin && <FloatingAddButton onPress={() => setCreatingPost(true)} />}
+        {isAdmin && (
+          <FloatingAddButton
+            hasBottomBar={false}
+            onPress={() => setCreatingPost(true)}
+          />
+        )}
       </View>
 
       <LoadingOverlay visible={isBusy} label="Updating Feeds..." />

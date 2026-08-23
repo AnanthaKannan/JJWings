@@ -303,7 +303,7 @@ export default function TeacherDirectoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
-        <AdminHeader header="Teachers" />
+        <AdminHeader header="Teachers" showBackButton={true} />
         <View style={styles.restrictedState}>
           <MaterialIcons name="lock" size={32} color="#94A3B8" />
           <Text style={styles.restrictedTitle}>Admin access required</Text>
@@ -318,7 +318,7 @@ export default function TeacherDirectoryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
-      <AdminHeader header="Teachers" />
+      <AdminHeader header="Teachers" showBackButton={true} />
 
       <View style={styles.summaryRow}>
         <View>
@@ -365,7 +365,7 @@ export default function TeacherDirectoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       </View>
-      <FloatingAddButton onPress={openCreateModal} />
+      <FloatingAddButton onPress={openCreateModal} hasBottomBar={false} />
 
       <ReuseModal
         visible={modal.visible}
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 18,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingTop: 8,

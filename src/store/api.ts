@@ -21,6 +21,13 @@ import {
   ParentCommentRes,
   Comment,
   CreateComment,
+  Group,
+  GroupResponse,
+  SaveGroupReq,
+  SendGroupMessage,
+  GroupMessagesRes,
+  GroupMessages,
+  LogOutArg,
   NonApprovedComment,
   NonApprovedCommentRes,
 } from '../types';
@@ -146,8 +153,8 @@ type ApiMessage = {
   sendByModel: 'Admin' | 'Student' | string;
   receivedTo: ApiMessageParticipant;
   receivedToModel: 'Admin' | 'Student' | string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type ApiMessagesResponse = {
@@ -335,7 +342,6 @@ export type QuestionPaper = {
 export type MessageParticipant = {
   id: string;
   name: string;
-  code?: string;
   model: string;
   profilePicPath?: string;
 };
@@ -345,8 +351,8 @@ export type ChatMessage = {
   message: string;
   sendBy: MessageParticipant;
   receivedTo: MessageParticipant;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type MessageStudent = {
@@ -731,7 +737,7 @@ type SendMessageArg = {
 };
 
 type ReadMessagesArg = {
-  studentId: string;
+  studentId?: string;
 };
 
 const mapStudent = (student: ApiStudent): Student => ({
@@ -882,7 +888,6 @@ const mapMessageParticipant = (
 ): MessageParticipant => ({
   id: participant._id,
   name: participant.name ?? (model === 'Admin' ? 'Admin' : 'Student'),
-  code: participant.adminId ?? participant.studentId,
   model,
   profilePicPath: participant.profilePicPath,
 });
@@ -967,6 +972,7 @@ export const jjWingsApi = createApi({
     'Teachers',
     'Game',
     'Comment',
+    'MessageGroups',
   ],
   endpoints: builder => ({
     getHomeworks: builder.query<HomeworksResult, HomeworkArg>({
@@ -1031,6 +1037,18 @@ export const jjWingsApi = createApi({
         },
       }),
       transformResponse: mapLogin,
+    }),
+
+    logOut: builder.mutation<string, LogOutArg>({
+      query: ({ fcmToken, deviceId }) => ({
+        url: '/auth/logout',
+        method: 'POST',
+        body: {
+          ...(fcmToken ? { fcmToken } : {}),
+          ...(deviceId ? { deviceId } : {}),
+        },
+      }),
+      transformResponse: () => 'success',
     }),
 
     switchStudentLogin: builder.mutation<LoginResult, SwitchStudentLoginArg>({
@@ -1300,14 +1318,17 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
     }),
 
-    getMessages: builder.query<ChatMessage[], void>({
-      query: () => ({
-        url: '/messages',
+    getMessages: builder.query<ChatMessage[], { studentId: string }>({
+      query: ({ studentId }) => ({
+        url: `/messages/${studentId}`,
         params: { page: 1, limit: DEFAULT_LIMIT },
       }),
       transformResponse: (response: ApiMessagesResponse) =>
         response.data.map(mapMessage),
-      providesTags: [{ type: 'Messages', id: 'LIST' }],
+      providesTags: [
+        { type: 'Messages', id: 'LIST' },
+        { type: 'MessageGroups', id: 'LIST_MESSAGES' },
+      ],
     }),
 
     getMessageStudents: builder.query<MessageStudent[], void>({
@@ -1370,6 +1391,66 @@ export const jjWingsApi = createApi({
         { type: 'FileUploads', id: 'FEED' },
         { type: 'Comment', id: 'LIST' },
       ],
+    }),
+
+    getMessageGroup: builder.query<Group[], void>({
+      query: () => ({
+        url: '/group',
+      }),
+      transformResponse: (response: GroupResponse) =>
+        response.result ?? response.data ?? [],
+      providesTags: [{ type: 'MessageGroups', id: 'LIST' }],
+    }),
+
+    createMessageGroup: builder.mutation<string, SaveGroupReq>({
+      query: body => ({
+        url: '/group',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST' }],
+    }),
+
+    updateMessageGroup: builder.mutation<
+      string,
+      SaveGroupReq & { groupId: string }
+    >({
+      query: ({ groupId, groupName, studentIds }) => ({
+        url: `/group/${groupId}`,
+        method: 'PUT',
+        body: { groupName, studentIds },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST' }],
+    }),
+
+    deleteMessageGroup: builder.mutation<string, string>({
+      query: groupId => ({
+        url: `/group/${groupId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST' }],
+    }),
+
+    sendGroupMessage: builder.mutation<string, SendGroupMessage>({
+      query: ({ message, groupId }) => ({
+        url: `/group/${groupId}/send-message`,
+        method: 'POST',
+        body: { message },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'MessageGroups', id: 'LIST_MESSAGES' }],
+    }),
+
+    getGroupMessages: builder.query<GroupMessages[], { groupId: string }>({
+      query: ({ groupId }) => ({
+        url: `/group/${groupId}/messages`,
+        method: 'GET',
+      }),
+      transformResponse: (res: GroupMessagesRes) => res.data,
+      providesTags: [{ type: 'MessageGroups', id: 'LIST_MESSAGES' }],
     }),
 
     sendNotification: builder.mutation<string, SendNotificationArg>({
@@ -1862,7 +1943,7 @@ export const jjWingsApi = createApi({
       transformResponse: () => 'success',
       invalidatesTags: [
         { type: 'Messages', id: 'LIST' },
-        { type: 'Messages', id: 'STUDENTS' },
+        // { type: 'Messages', id: 'STUDENTS' },
       ],
       async onQueryStarted({ studentId }, { dispatch, queryFulfilled }) {
         let readCount = 0;
@@ -1987,11 +2068,16 @@ export const {
   useGetHomeworksQuery,
   useLazyGetLoginQuery,
   useSwitchStudentLoginMutation,
+  useCreateMessageGroupMutation,
+  useDeleteMessageGroupMutation,
+  useGetMessageGroupQuery,
+  useUpdateMessageGroupMutation,
   useGetFeedListQuery,
   useUpdateHomeworkMutation,
   useGetHomeworkByIdQuery,
   useAddGameScoreMutation,
   useGetTopGameScoreByLevelQuery,
+  useSendGroupMessageMutation,
   useGetStudentsQuery,
   useGetSameDeviceStudentsQuery,
   useGetScoreDetailsQuery,
@@ -2044,9 +2130,11 @@ export const {
   useCreateOrgMutation,
   useCreateCommentMutation,
   useLazyGetParentCommentQuery,
+  useGetGroupMessagesQuery,
   useGetParentCommentQuery,
   useDeleteCommentMutation,
   useToggleLikeMutation,
+  useLogOutMutation,
   useGetNonApprovedCommentQuery,
   useApproveCommentMutation,
 } = jjWingsApi;

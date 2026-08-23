@@ -23,6 +23,7 @@ type AdminHeaderProps = {
   header: string;
   showBackButton?: boolean;
   headerBackgroundColor?: string;
+  onBackPress?: () => void;
 };
 
 type AdminNavItem = {
@@ -94,6 +95,7 @@ export default function AdminHeader({
   header,
   showBackButton,
   headerBackgroundColor,
+  onBackPress,
 }: AdminHeaderProps) {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -134,7 +136,14 @@ export default function AdminHeader({
     <View style={headerStyle}>
       <TouchableOpacity
         onPress={() => {
-          if (showBackButton) navigation.goBack();
+          if (!showBackButton) return;
+
+          if (onBackPress) {
+            onBackPress();
+            return;
+          }
+
+          navigation.goBack();
         }}
         style={styles.leftArea}
         disabled={!showBackButton}

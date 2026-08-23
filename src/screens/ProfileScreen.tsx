@@ -14,14 +14,14 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { clearSavedLoginCredentials, getDeviceId } from '../util/authStorage';
 import { logout } from '../store/slices';
 import { RootState } from '../store/store';
-import { useDeleteStudentDeviceIdMutation } from '../store/api';
+import { useLogOutMutation } from '../store/api';
+import { getStudentPushToken as getPushToken } from '../services/pushNotifications';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
-  const studentId = useSelector((state: RootState) => state.common.studentId);
-  const [deleteStudentDeviceId] = useDeleteStudentDeviceIdMutation();
+  const [logOutDevice] = useLogOutMutation();
   const scale = useRef(new Animated.Value(0.7)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const float = useRef(new Animated.Value(0)).current;
@@ -78,13 +78,12 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    if (!isAdmin && studentId) {
-      try {
-        const deviceId = await getDeviceId();
-        await deleteStudentDeviceId({ studentId, deviceId }).unwrap();
-      } catch (error) {
-        console.error('Failed to remove student device id', error);
-      }
+    try {
+      const deviceId = await getDeviceId();
+      const fcmToken = await getPushToken();
+      await logOutDevice({ deviceId, fcmToken }).unwrap();
+    } catch (error) {
+      console.error('Failed to remove student device id', error);
     }
 
     await clearSavedLoginCredentials();
