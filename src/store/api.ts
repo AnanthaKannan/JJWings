@@ -1310,7 +1310,10 @@ export const jjWingsApi = createApi({
       }),
       transformResponse: (response: ApiMessagesResponse) =>
         response.data.map(mapMessage),
-      providesTags: [{ type: 'Messages', id: 'LIST' }],
+      providesTags: [
+        { type: 'Messages', id: 'LIST' },
+        { type: 'MessageGroups', id: 'LIST_MESSAGES' },
+      ],
     }),
 
     getMessageStudents: builder.query<MessageStudent[], void>({
