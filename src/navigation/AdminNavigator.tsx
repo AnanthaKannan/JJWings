@@ -31,6 +31,7 @@ import {
   TopExplorerScreen,
   UpdatePasswordScreen,
   MessageChatPaneScreen,
+  CommentApprovalScreen,
 } from '../screens';
 import { MessageTabIcon, NotificationTabIcon } from './TabIcons';
 
@@ -182,6 +183,13 @@ const AdminTabs = createBottomTabNavigator({
     },
     AdminTeachers: {
       screen: TeacherDirectoryScreen,
+      options: {
+        tabBarItemStyle: { display: 'none' },
+        tabBarStyle: { display: 'none' },
+      },
+    },
+    CommentApproval: {
+      screen: CommentApprovalScreen,
       options: {
         tabBarItemStyle: { display: 'none' },
         tabBarStyle: { display: 'none' },
