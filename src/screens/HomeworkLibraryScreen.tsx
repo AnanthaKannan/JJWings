@@ -23,6 +23,7 @@ import {
   EmptyData,
   FloatingAddButton,
   LoadingOverlay,
+  OptionsMenu,
 } from '../component';
 import {
   useDeleteQuestionMutation,
@@ -49,6 +50,12 @@ type Module = {
 
 type LibraryTypeFilter = 'homework' | 'practice' | 'exam';
 
+enum FilterTypeEnum {
+  'HOMEWORK' = 'homework',
+  'practice' = 'practice',
+  'exam' = 'exam',
+}
+
 const ICON_COLORS = [
   { iconBg: '#DBEAFE', iconColor: '#3B82F6', iconType: 'grid' as ModuleIcon },
   { iconBg: '#FEF3C7', iconColor: '#F59E0B', iconType: 'plus' as ModuleIcon },
@@ -74,8 +81,8 @@ const evaluateMath = (expr: string): string => {
 };
 
 const getTaskTypeLabel = (type: LibraryTypeFilter) => {
-  if (type === 'exam') return 'Exam';
-  if (type === 'practice') return 'Practice';
+  if (type === FilterTypeEnum.exam) return 'Exam';
+  if (type === FilterTypeEnum.practice) return 'Practice';
   return 'Homework';
 };
 
@@ -128,15 +135,11 @@ const ModuleCard = ({
   onPress,
   onUpdatePress,
   onDeletePress,
-  isUpdating,
-  isDeleting,
 }: {
   item: Module;
   onPress: () => void;
   onUpdatePress: () => void;
   onDeletePress: () => void;
-  isUpdating: boolean;
-  isDeleting: boolean;
 }) => {
   const updatedTime = formatHomeworkTime(item.updatedAt);
 
@@ -169,36 +172,23 @@ const ModuleCard = ({
               ) : null}
             </View>
           </View>
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              style={[
-                styles.updateButton,
-                isUpdating && styles.actionButtonOff,
-              ]}
-              onPress={event => {
-                event.stopPropagation();
-                onUpdatePress();
-              }}
-              disabled={isUpdating}
-              activeOpacity={0.82}
-            >
-              <MaterialIcons name="edit" size={19} color="#2563EB" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.deleteButton,
-                isDeleting && styles.actionButtonOff,
-              ]}
-              onPress={event => {
-                event.stopPropagation();
-                onDeletePress();
-              }}
-              disabled={isDeleting}
-              activeOpacity={0.82}
-            >
-              <MaterialIcons name="delete-outline" size={20} color="#B91C1C" />
-            </TouchableOpacity>
-          </View>
+          <OptionsMenu
+            options={[
+              {
+                key: 'edit',
+                label: 'Edit',
+                icon: 'edit',
+                onPress: onUpdatePress,
+              },
+              {
+                key: 'delete',
+                label: 'Delete',
+                icon: 'delete-outline',
+                onPress: onDeletePress,
+                destructive: true,
+              },
+            ]}
+          />
         </View>
       </View>
     </TouchableOpacity>
@@ -370,7 +360,7 @@ export default function HomeworkLibraryScreen() {
 
   const handleDeletePress = (item: Module) => {
     Alert.alert(
-      'Delete homework?',
+      `Delete ${getTaskTypeLabel(typeFilter)} ?`,
       `Delete "${item.title}" and its ${item.questions.length} question(s)?`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -498,8 +488,6 @@ export default function HomeworkLibraryScreen() {
             onPress={() => handleModulePress(item)}
             onUpdatePress={() => openUpdateModal(item)}
             onDeletePress={() => handleDeletePress(item)}
-            isUpdating={isUpdating}
-            isDeleting={isDeleting}
           />
         )}
         ListEmptyComponent={
@@ -584,7 +572,7 @@ export default function HomeworkLibraryScreen() {
           <View style={styles.updateModalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} numberOfLines={1}>
-                Update Homework
+                Update {getTaskTypeLabel(typeFilter)}
               </Text>
               <TouchableOpacity onPress={closeUpdateModal}>
                 <MaterialIcons name="close" size={24} color="#1A202C" />
