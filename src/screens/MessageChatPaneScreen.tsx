@@ -317,7 +317,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
               placeholder={
                 activeParticipant?.id
                   ? isGroupChat
-                    ? 'Message the whole group'
+                    ? 'Every student in this group will receive it individually.'
                     : 'Type a message'
                   : 'Choose a chat first'
               }
