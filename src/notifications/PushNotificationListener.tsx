@@ -2,10 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 
-import {
-  jjWingsApi,
-  useLazyGetUnreadMessageCountQuery,
-} from '../store/api';
+import { jjWingsApi, useLazyGetUnreadMessageCountQuery } from '../store/api';
 import {
   setMessageUnreadCount,
   showNotificationAttention,
@@ -42,7 +39,7 @@ export default function PushNotificationListener() {
 
   useEffect(() => {
     const unsubscribeMessage = onPushMessage(message => {
-      if (message.title === 'New message') {
+      if (message.title?.toLowerCase() === 'new message') {
         syncUnreadMessageCount();
         return;
       } else if (message.title) {
