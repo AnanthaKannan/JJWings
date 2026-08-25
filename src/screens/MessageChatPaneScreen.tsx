@@ -34,6 +34,7 @@ import {
   useSendGroupMessageMutation,
   useGetGroupMessagesQuery,
   useSendMessageMutation,
+  useReadMessagesMutation,
 } from '../store/api';
 import {
   Avatar,
@@ -66,10 +67,15 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     profilePicPath: string;
     model: string;
   } | null>(null);
-  const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
-  const isStudent = useSelector((state: RootState) => state.common.isStudent);
-  const adminId = useSelector((state: RootState) => state.common.adminId);
-  const studentId = useSelector((state: RootState) => state.common.studentId);
+  const {
+    isAdmin,
+    isStudent,
+    adminId,
+    studentId,
+    studentName,
+    studentProfilePic,
+  } = useSelector((state: RootState) => state.common);
+
   const currentUserId = isAdmin ? adminId : studentId ?? '';
   const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -80,39 +86,27 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [sendGroupMessage, { isLoading: isSendingGroup }] =
     useSendGroupMessageMutation();
+  const [readMessages] = useReadMessagesMutation();
 
   const [padding, setPadding] = useState(Math.max(insets.bottom, 10));
 
   const isGroupChat = activeParticipant?.model === MessageTypeEnum.GROUP;
 
-  useEffect(() => {
-    const ap = route.params?.activeParticipant as ActiveParticipantType | null;
-    if (!ap) return;
-
-    setActiveParticipant({
-      id: ap.id,
-      name: ap.name,
-      profilePicPath: ap.profilePicPath,
-      model: ap.model,
-    });
-  }, [route.params?.activeParticipant]);
-
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const isFocused = useIsFocused();
   const {
-    data: messages = [],
+    data: messageDetail,
     isLoading: isLoadingMessage,
     isFetching: isFetchingMessage,
     refetch: refetchMessages,
   } = useGetMessagesQuery(
-    { studentId: activeParticipant?.id || '' },
+    { studentId: studentId || activeParticipant?.id || '' },
     {
       skip:
         !isFocused ||
         !currentUserId ||
-        !activeParticipant?.id ||
-        !(activeParticipant.model === MessageTypeEnum.INDIVIDUAL),
+        !(activeParticipant?.model === MessageTypeEnum.INDIVIDUAL),
     },
   );
 
@@ -155,6 +149,41 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
 
   const isSendingAny = isSending || isSendingGroup || isFetchingMessage;
 
+  useEffect(() => {
+    const ap = route.params?.activeParticipant as ActiveParticipantType | null;
+
+    if (ap) {
+      setActiveParticipant({
+        id: ap.id,
+        name: ap.name,
+        profilePicPath: ap.profilePicPath,
+        model: ap.model,
+      });
+    } else if (isStudent) {
+      const adminDetail = messageDetail?.adminDetails;
+      setActiveParticipant({
+        id: adminDetail?._id as string,
+        name: adminDetail?.name as string,
+        profilePicPath: adminDetail?.profilePicPath as string,
+        model: MessageTypeEnum.INDIVIDUAL,
+      });
+
+      if (!adminDetail?._id) return;
+      readMessages({ userId: adminDetail._id })
+        .unwrap()
+        .catch(() => undefined);
+    }
+  }, [
+    route.params?.activeParticipant,
+    isStudent,
+    studentId,
+    studentName,
+    studentProfilePic,
+    readMessages,
+    messageDetail?.adminDetails,
+    isFocused,
+  ]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     if (isGroupChat) {
@@ -168,7 +197,6 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
   const handleSend = async () => {
     const message = draft.trim();
     if (!message || !activeParticipant?.id || isSendingAny) return;
-
     try {
       setDraft('');
 
@@ -237,7 +265,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
 
           <FlatList
             ref={listRef}
-            data={isGroupChat ? groupMessages : messages}
+            data={isGroupChat ? groupMessages : messageDetail?.chatMessages}
             inverted
             keyExtractor={item => item.id}
             renderItem={({ item }) => (

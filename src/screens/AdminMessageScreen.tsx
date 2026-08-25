@@ -89,7 +89,7 @@ export default function AdminMessageScreen() {
   const handleSelectStudent = useCallback(
     (student: MessageStudent) => {
       if (student.unreadMessageCount > 0) {
-        readMessages({ studentId: student.id })
+        readMessages({ userId: student.id })
           .unwrap()
           .catch(() => undefined);
       }

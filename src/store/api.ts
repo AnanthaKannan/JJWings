@@ -30,6 +30,7 @@ import {
   LogOutArg,
   NonApprovedComment,
   NonApprovedCommentRes,
+  AdminDetails,
 } from '../types';
 
 const DEFAULT_LIMIT = 500;
@@ -160,6 +161,7 @@ type ApiMessage = {
 type ApiMessagesResponse = {
   data: ApiMessage[];
   meta: ApiMeta;
+  adminDetails: AdminDetails;
 };
 
 type ApiMessageStudent = {
@@ -738,7 +740,7 @@ type SendMessageArg = {
 };
 
 type ReadMessagesArg = {
-  studentId?: string;
+  userId: string;
 };
 
 const mapStudent = (student: ApiStudent): Student => ({
@@ -1324,13 +1326,20 @@ export const jjWingsApi = createApi({
       providesTags: [{ type: 'Notifications', id: 'ADMIN' }],
     }),
 
-    getMessages: builder.query<ChatMessage[], { studentId: string }>({
+    getMessages: builder.query<
+      { chatMessages: ChatMessage[]; adminDetails: AdminDetails },
+      { studentId: string }
+    >({
       query: ({ studentId }) => ({
         url: `/messages/${studentId}`,
         params: { page: 1, limit: DEFAULT_LIMIT },
       }),
-      transformResponse: (response: ApiMessagesResponse) =>
-        response.data.map(mapMessage),
+      transformResponse: (response: ApiMessagesResponse) => {
+        return {
+          chatMessages: response.data.map(mapMessage),
+          adminDetails: response.adminDetails,
+        };
+      },
       providesTags: [
         { type: 'Messages', id: 'LIST' },
         { type: 'MessageGroups', id: 'LIST_MESSAGES' },
@@ -1951,14 +1960,14 @@ export const jjWingsApi = createApi({
         { type: 'Messages', id: 'LIST' },
         // { type: 'Messages', id: 'STUDENTS' },
       ],
-      async onQueryStarted({ studentId }, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ userId }, { dispatch, queryFulfilled }) {
         let readCount = 0;
         const patchResult = dispatch(
           jjWingsApi.util.updateQueryData(
             'getMessageStudents',
             undefined,
             students => {
-              const student = students.find(item => item.id === studentId);
+              const student = students.find(item => item.id === userId);
               if (student) {
                 readCount = student.unreadMessageCount;
                 student.unreadMessageCount = 0;
