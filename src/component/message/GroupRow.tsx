@@ -61,20 +61,6 @@ const GroupRow: FC<GroupRowParams> = ({
           // },
         ]}
       />
-      {/* <TouchableOpacity
-        style={styles.groupActionButton}
-        onPress={onEdit}
-        activeOpacity={0.82}
-      >
-        <MaterialIcons name="edit" size={18} color="#4F46E5" />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.groupActionButton, styles.groupDeleteButton]}
-        onPress={onDelete}
-        activeOpacity={0.82}
-      >
-        <MaterialIcons name="delete-outline" size={18} color="#DC2626" />
-      </TouchableOpacity> */}
     </View>
   </TouchableOpacity>
 );

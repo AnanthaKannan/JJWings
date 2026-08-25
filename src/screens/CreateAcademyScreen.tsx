@@ -692,7 +692,7 @@ const CreateAcademyScreen: FC = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 32, paddingBottom: 64 },
   title: {
     fontSize: 26,
     fontWeight: '700',

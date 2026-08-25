@@ -26,7 +26,7 @@ import {
   useUploadFileMutation,
   useCreateContentFeedMutation,
 } from '../store/api'; // adjust to your actual RTK Query slice
-import Avatar from './Avatar';
+import AdminHeader from './AdminHeader';
 
 interface SelectedImage {
   uri: string;
@@ -44,7 +44,6 @@ export interface CreatePostScreenProps {
 
 const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
   userName,
-  userAvatarUri,
   onClose,
   onPosted,
 }) => {
@@ -159,24 +158,7 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerSide} />
-        <Text style={styles.headerTitle}>Create post</Text>
-        <View style={styles.headerSide}>
-          <TouchableOpacity
-            onPress={onClose}
-            style={styles.closeButton}
-            hitSlop={8}
-          >
-            <MaterialIcons name="close" size={20} color="#050505" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.userRow}>
-        <Avatar profilePic={userAvatarUri} name={userName} />
-        <Text style={styles.userName}>{userName}</Text>
-      </View>
+      <AdminHeader header="Create post" showBackButton={true} />
 
       <TextInput
         style={styles.input}

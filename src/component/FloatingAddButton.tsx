@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type FloatingAddButtonProps = {
   onPress?: () => void;
@@ -13,9 +14,13 @@ export default function FloatingAddButton({
   icon = 'add',
   hasBottomBar = true,
 }: FloatingAddButtonProps) {
+  const insets = useSafeAreaInsets();
   return (
     <TouchableOpacity
-      style={[styles.fab, { bottom: hasBottomBar ? 18 : 70 }]}
+      style={[
+        styles.fab,
+        { bottom: (hasBottomBar ? 18 : 70) + Math.max(insets.bottom, 10) },
+      ]}
       onPress={onPress}
       activeOpacity={0.86}
     >

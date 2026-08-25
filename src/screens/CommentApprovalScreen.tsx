@@ -183,7 +183,7 @@ const CommentApprovalScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AdminHeader header="Comment Approvals" />
+      <AdminHeader header="Comment Approvals" showBackButton={true} />
       <FlatList
         style={styles.screen}
         contentContainerStyle={styles.listContent}

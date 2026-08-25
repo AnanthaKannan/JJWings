@@ -15,6 +15,7 @@ export { default as ImageFeed } from './ImageFeed';
 export { default as PostActionsBar } from './PostActionsBar';
 export { default as CreatePostScreen } from './CreatePostScreen';
 export { default as PostOptionsMenu } from './PostOptionsMenu';
+export { default as OptionsMenu } from './OptionsMenu';
 export { default as CommentBottomSheet } from './CommentBottomSheet';
 export { default as Filter } from './Filter';
 export { default as ListModal } from './ListModal';
