@@ -53,6 +53,7 @@ export default function Header({ heading, sideHead, onBack }: HeaderProps) {
       sideHead={sideHead}
       showBackButton={true}
       onBack={handleBack}
+      headerBackgroundColor="null"
     />
   );
 }
