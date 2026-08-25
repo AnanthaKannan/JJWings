@@ -20,6 +20,7 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useDebounce from '../hooks/useDebounce';
 import {
@@ -139,6 +140,7 @@ export default function AssignHomeworkScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const debouncedSearchTerm = useDebounce(search.trim(), 800);
+  const insets = useSafeAreaInsets();
   const {
     data: tasksData,
     isLoading,
@@ -392,7 +394,12 @@ export default function AssignHomeworkScreen() {
         />
 
         {selectedIds.size > 0 && (
-          <View style={styles.footer}>
+          <View
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom, 10) },
+            ]}
+          >
             <View style={styles.footerLeft}>
               <Text style={styles.footerLabel}>SELECTION</Text>
               <Text style={styles.footerCount}>

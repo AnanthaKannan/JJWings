@@ -189,6 +189,12 @@ export type NonApprovedCommentRes = GeneralResponse & {
   data: NonApprovedComment[];
 };
 
+export type AdminDetails = {
+  _id: string;
+  name: string;
+  profilePicPath: string;
+};
+
 export type CreateComment = {
   feedId: string;
   content: string;

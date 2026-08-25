@@ -89,7 +89,7 @@ export default function AdminMessageScreen() {
   const handleSelectStudent = useCallback(
     (student: MessageStudent) => {
       if (student.unreadMessageCount > 0) {
-        readMessages({ studentId: student.id })
+        readMessages({ userId: student.id })
           .unwrap()
           .catch(() => undefined);
       }
@@ -183,8 +183,8 @@ export default function AdminMessageScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FB" />
-      <AdminHeader header="Messages" headerBackgroundColor="#F8F9FB" />
+      <StatusBar barStyle="dark-content" backgroundColor="#EEF2FF" />
+      <AdminHeader header="Messages" headerBackgroundColor="#EEF2FF" />
       <AdminMessageList
         selectedFilter={selectedFilter}
         students={messageStudents}
@@ -218,7 +218,7 @@ export default function AdminMessageScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F8F9FB',
+    backgroundColor: '#EEF2FF',
   },
   flex: {
     flex: 1,

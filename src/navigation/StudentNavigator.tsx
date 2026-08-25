@@ -8,10 +8,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import {
   AchievementsScreen,
-  AdminMessageScreen,
   Calculate,
   GameScreen,
   HomeworkScreen,
+  MessageChatPaneScreen,
   NotificationsScreen,
   PracticeScreen,
   ProfileScreen,
@@ -223,7 +223,7 @@ const MainTabs = createBottomTabNavigator({
       },
     },
     StudentMessages: {
-      screen: AdminMessageScreen,
+      screen: MessageChatPaneScreen,
       options: {
         tabBarStyle: { display: 'none' },
         tabBarLabel: 'Messages',
