@@ -1830,6 +1830,15 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'Messages', id: 'LIST' }],
     }),
 
+    deleteMessage: builder.mutation<string, { messageId: string }>({
+      query: ({ messageId }) => ({
+        url: `/messages/${messageId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: [{ type: 'Messages', id: 'LIST' }],
+    }),
+
     generateOtp: builder.mutation<GeneralResponse, GenerateOtpReq>({
       query: ({ email }) => ({
         url: '/send-otp',
@@ -2136,6 +2145,7 @@ export const {
   useDeleteQuestionPaperMutation,
   useLazyGetQuestionPaperDownloadQuery,
   useGetAchievementsQuery,
+  useDeleteMessageMutation,
   useDeleteAchievementMutation,
   useGenerateOtpMutation,
   useDeleteFeedMutation,

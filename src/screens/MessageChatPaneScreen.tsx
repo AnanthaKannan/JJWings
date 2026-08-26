@@ -35,12 +35,14 @@ import {
   useGetGroupMessagesQuery,
   useSendMessageMutation,
   useReadMessagesMutation,
+  useDeleteMessageMutation,
 } from '../store/api';
 import {
   Avatar,
   MessageType,
   MessageTypeEnum,
   LoadingState,
+  LoadingOverlay,
 } from '../component';
 import MessageBubble from '../component/message/MessageBubble';
 import { RootState } from '../store/store';
@@ -86,6 +88,8 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [sendGroupMessage, { isLoading: isSendingGroup }] =
     useSendGroupMessageMutation();
+  const [deleteMessage, { isLoading: isDeletingMessage }] =
+    useDeleteMessageMutation();
   const [readMessages] = useReadMessagesMutation();
 
   const [padding, setPadding] = useState(Math.max(insets.bottom, 10));
@@ -221,16 +225,12 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     navigation.goBack();
   }, [navigation]);
 
-  const deleteMessage = (messageId: string) => {
-    console.log('message deleted', messageId);
-  };
-
   const handleDeleteMessage = (
     isMine: boolean,
     messageId: string,
     message: string,
   ) => {
-    if (!isMine) return;
+    if (!isMine || isGroupChat) return;
 
     Alert.alert(
       'Delete Message ?',
@@ -240,7 +240,9 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
         {
           text: 'Confirm',
           style: 'destructive',
-          onPress: () => deleteMessage(messageId),
+          onPress: () => {
+            deleteMessage({ messageId });
+          },
         },
       ],
       { cancelable: true },
@@ -377,6 +379,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
           </View>
         </View>
       </View>
+      <LoadingOverlay visible={isDeletingMessage} />
     </KeyboardAvoidingView>
   );
 }
