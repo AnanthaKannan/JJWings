@@ -384,6 +384,7 @@ type LoginApiResponse = {
   token: string;
   role: 'student' | 'admin';
   orgId: string;
+  expired: boolean;
   user: {
     id: string;
     name: string;
@@ -408,6 +409,7 @@ type LoginResult = {
   level?: number;
   profilePicPath?: string;
   vertical: boolean;
+  expired: boolean;
 };
 
 type UploadFile = {
@@ -776,6 +778,7 @@ const mapLogin = (response: LoginApiResponse): LoginResult => {
     level: response.user.level,
     profilePicPath: response.user.profilePicPath,
     vertical: response.user.vertical,
+    expired: response.expired,
   };
 };
 

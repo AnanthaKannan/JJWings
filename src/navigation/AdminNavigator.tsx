@@ -276,4 +276,12 @@ const AdminTabs = createBottomTabNavigator({
   },
 });
 
+export const ExpiredTabs = createNativeStackNavigator({
+  screenOptions: { headerShown: false },
+  screens: {
+    BillingRevenue: { screen: BillingRevenueScreen },
+    Logout: { screen: ProfileScreen },
+  },
+});
+
 export default AdminTabs;

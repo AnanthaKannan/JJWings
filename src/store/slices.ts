@@ -31,6 +31,7 @@ interface AuthState {
   messageUnreadCount: number;
   mockDeviceId: string;
   modal: ReuseModalProps;
+  expired: boolean;
 }
 
 const initialState: AuthState = {
@@ -61,6 +62,7 @@ const initialState: AuthState = {
   hasNotificationAttention: false,
   messageUnreadCount: 0,
   mockDeviceId: '',
+  expired: false,
   modal: {
     state: 'success',
     visible: false,
@@ -84,6 +86,7 @@ const commonSlice = createSlice({
         studentProfilePic?: string | null;
         token?: string;
         vertical: boolean;
+        expired: boolean;
       }>,
     ) => {
       state.studentId = action.payload.studentId;
@@ -99,6 +102,7 @@ const commonSlice = createSlice({
       state.isAuthenticated = true;
       state.token = action.payload.token ?? null;
       state.vertical = action.payload.vertical;
+      state.expired = action.payload.expired;
     },
     setMockDeviceId: (state, action) => {
       state.mockDeviceId = action.payload.mockDeviceId ?? '';
@@ -114,6 +118,7 @@ const commonSlice = createSlice({
         adminOrgId?: string | null;
         adminRoles?: string[];
         token?: string;
+        expired: boolean;
       }>,
     ) => {
       state.adminId = action.payload.adminId;
@@ -127,6 +132,7 @@ const commonSlice = createSlice({
       state.isStudent = false;
       state.isAuthenticated = true;
       state.token = action.payload.token ?? null;
+      state.expired = action.payload.expired;
     },
     setQuestions: (
       state,

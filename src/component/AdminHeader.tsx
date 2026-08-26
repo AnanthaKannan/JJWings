@@ -32,6 +32,7 @@ type AdminNavItem = {
   routeName: string;
   params?: object;
   requiresRole?: string;
+  expired?: boolean;
 };
 
 const adminNavItems: AdminNavItem[] = [
@@ -83,11 +84,13 @@ const adminNavItems: AdminNavItem[] = [
     icon: 'attach-money',
     routeName: 'BillingRevenue',
     requiresRole: 'superadmin',
+    expired: false,
   },
   {
     label: 'Logout',
     icon: 'logout',
     routeName: 'Logout',
+    expired: false,
   },
 ];
 
@@ -100,14 +103,8 @@ export default function AdminHeader({
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const { adminName, adminRoles, isAdmin, adminProfilePic } = useSelector(
-    (state: RootState) => state.common,
-  );
-  // const adminProfilePic = useSelector(
-  //   (state: RootState) => state.common.adminProfilePic,
-  // );
-  // const adminRoles = useSelector((state: RootState) => state.common.adminRoles);
-  // const isAdmin = useSelector((state: RootState) => state.common.isAdmin);
+  const { adminName, adminRoles, isAdmin, adminProfilePic, expired } =
+    useSelector((state: RootState) => state.common);
   const adminInitial = (adminName.trim()[0] ?? 'A').toUpperCase();
   const displayName = adminName.trim() || 'Admin';
   const profilePicUrl = getFileUrl(adminProfilePic);
@@ -231,8 +228,9 @@ export default function AdminHeader({
                 {adminNavItems
                   .filter(
                     item =>
-                      !item.requiresRole ||
-                      adminRoles.includes(item.requiresRole),
+                      (!item.requiresRole ||
+                        adminRoles.includes(item.requiresRole)) &&
+                      item.expired === !expired,
                   )
                   .map(item => (
                     <TouchableOpacity

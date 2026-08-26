@@ -102,6 +102,7 @@ export default function LoginScreen() {
             studentLevel: result.data.level,
             studentProfilePic: result.data.profilePicPath,
             token: result.data.token,
+            expired: result.data.expired,
           }),
         );
       } else {
@@ -115,13 +116,26 @@ export default function LoginScreen() {
             adminOrgId: result.data.orgId,
             adminRoles: result.data.roles,
             token: result.data.token,
+            expired: result.data.expired,
           }),
         );
       }
-      navigation.reset({
-        index: 0,
-        routes: [{ name: result.data.role === 'student' ? 'Main' : 'Admin' }],
-      });
+
+      if (result.data.expired === true) {
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: result.data.role === 'student' ? 'Main' : 'Expired',
+            },
+          ],
+        });
+      } else {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: result.data.role === 'student' ? 'Main' : 'Admin' }],
+        });
+      }
       return true;
     }
 
