@@ -221,6 +221,32 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     navigation.goBack();
   }, [navigation]);
 
+  const deleteMessage = (messageId: string) => {
+    console.log('message deleted', messageId);
+  };
+
+  const handleDeleteMessage = (
+    isMine: boolean,
+    messageId: string,
+    message: string,
+  ) => {
+    if (!isMine) return;
+
+    Alert.alert(
+      'Delete Message ?',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: () => deleteMessage(messageId),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -269,7 +295,11 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
             inverted
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
-              <MessageBubble item={item} currentUserId={currentUserId} />
+              <MessageBubble
+                item={item}
+                currentUserId={currentUserId}
+                onDelete={handleDeleteMessage}
+              />
             )}
             contentContainerStyle={styles.messageList}
             keyboardShouldPersistTaps="handled"
