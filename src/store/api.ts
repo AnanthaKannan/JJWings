@@ -150,6 +150,11 @@ type ApiMessageParticipant = {
 type ApiMessage = {
   _id: string;
   message?: string;
+  voiceUrl?: string;
+  voicePath?: string;
+  audioUrl?: string;
+  audioPath?: string;
+  voiceDuration?: number;
   sendBy: ApiMessageParticipant;
   sendByModel: 'Admin' | 'Student' | string;
   receivedTo: ApiMessageParticipant;
@@ -351,6 +356,8 @@ export type MessageParticipant = {
 export type ChatMessage = {
   id: string;
   message: string;
+  voiceUrl?: string;
+  voiceDuration?: number;
   sendBy: MessageParticipant;
   receivedTo: MessageParticipant;
   createdAt: string;
@@ -735,8 +742,21 @@ type SendNotificationArg = {
 };
 
 type SendMessageArg = {
-  message: string;
+  message?: string;
+  voiceUrl?: string;
+  voiceDuration?: number;
   receivedTo: string;
+};
+
+type DeleteMessageArg = {
+  messageId: string;
+  groupId?: string;
+};
+
+type UploadVoiceMessageArg = {
+  uri: string;
+  name?: string;
+  mimeType?: string;
 };
 
 type ReadMessagesArg = {
@@ -898,6 +918,12 @@ const mapMessageParticipant = (
 const mapMessage = (message: ApiMessage): ChatMessage => ({
   id: message._id,
   message: message.message ?? '',
+  voiceUrl:
+    message.voiceUrl ??
+    message.voicePath ??
+    message.audioUrl ??
+    message.audioPath,
+  voiceDuration: message.voiceDuration,
   sendBy: mapMessageParticipant(message.sendBy, message.sendByModel),
   receivedTo: mapMessageParticipant(
     message.receivedTo,
@@ -1450,10 +1476,10 @@ export const jjWingsApi = createApi({
     }),
 
     sendGroupMessage: builder.mutation<string, SendGroupMessage>({
-      query: ({ message, groupId }) => ({
+      query: ({ groupId, ...body }) => ({
         url: `/group/${groupId}/send-message`,
         method: 'POST',
-        body: { message },
+        body,
       }),
       transformResponse: () => 'success',
       invalidatesTags: [{ type: 'MessageGroups', id: 'LIST_MESSAGES' }],
@@ -1830,6 +1856,53 @@ export const jjWingsApi = createApi({
       invalidatesTags: [{ type: 'Messages', id: 'LIST' }],
     }),
 
+    deleteMessage: builder.mutation<string, DeleteMessageArg>({
+      query: ({ messageId, groupId }) => ({
+        url: groupId
+          ? `/group/${groupId}/messages/${messageId}`
+          : `/messages/${messageId}`,
+        method: 'DELETE',
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { groupId }) => [
+        groupId
+          ? { type: 'MessageGroups' as const, id: 'LIST_MESSAGES' }
+          : { type: 'Messages' as const, id: 'LIST' },
+      ],
+    }),
+
+    uploadVoiceMessage: builder.mutation<
+      string | undefined,
+      UploadVoiceMessageArg
+    >({
+      query: ({ uri, name, mimeType }) => {
+        const formData = new FormData();
+        formData.append('path', 'message');
+        formData.append('file', {
+          uri,
+          type: mimeType ?? 'audio/mp4',
+          name: name ?? 'voice-message.m4a',
+        } as any);
+
+        return {
+          url: '/uploads',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      transformResponse: (response: UploadResponse) =>
+        response.file?.path ??
+        response.file?.url ??
+        response.url ??
+        response.fileUrl ??
+        response.location ??
+        response.path ??
+        response.data?.url ??
+        response.data?.fileUrl ??
+        response.data?.location ??
+        response.data?.path,
+    }),
+
     generateOtp: builder.mutation<GeneralResponse, GenerateOtpReq>({
       query: ({ email }) => ({
         url: '/send-otp',
@@ -2131,6 +2204,8 @@ export const {
   useReadMessagesMutation,
   useSendNotificationMutation,
   useSendMessageMutation,
+  useDeleteMessageMutation,
+  useUploadVoiceMessageMutation,
   useGetQuestionPapersQuery,
   useUploadQuestionPaperMutation,
   useDeleteQuestionPaperMutation,

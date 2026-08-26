@@ -103,7 +103,9 @@ export type Group = {
 };
 
 export type SendGroupMessage = {
-  message: string;
+  message?: string;
+  voiceUrl?: string;
+  voiceDuration?: number;
   groupId: string;
 };
 
@@ -112,7 +114,7 @@ export type SaveGroupReq = {
   studentIds: string[];
 };
 
-type FilePath = 'feed' | 'profile';
+type FilePath = 'feed' | 'profile' | 'message';
 
 type FileType = 'content' | 'file';
 
@@ -165,6 +167,9 @@ export type ParentCommentRes = GeneralResponse & {
 
 export type GroupMessages = {
   text: string;
+  voiceUrl?: string;
+  voicePath?: string;
+  voiceDuration?: number;
   _id: string;
   date: string;
 };
