@@ -17,8 +17,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   ActivityIndicator,
+  PermissionsAndroid,
+  AppState,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import { useSelector } from 'react-redux';
 import {
   useIsFocused,
@@ -35,6 +38,8 @@ import {
   useGetGroupMessagesQuery,
   useSendMessageMutation,
   useReadMessagesMutation,
+  useDeleteMessageMutation,
+  useUploadVoiceMessageMutation,
 } from '../store/api';
 import {
   Avatar,
@@ -45,6 +50,7 @@ import {
 import MessageBubble from '../component/message/MessageBubble';
 import { RootState } from '../store/store';
 import { Group } from '../types';
+import { getFileUrl } from '../util/fileUrl';
 
 type MessageChatPaneProps = {
   onBack: () => void;
@@ -79,14 +85,24 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
   const currentUserId = isAdmin ? adminId : studentId ?? '';
   const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(
+    null,
+  );
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const recordingTimeRef = useRef(0);
 
   const canSend = draft.trim().length > 0 && Boolean(activeParticipant?.id);
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [sendGroupMessage, { isLoading: isSendingGroup }] =
     useSendGroupMessageMutation();
   const [readMessages] = useReadMessagesMutation();
+  const [deleteMessage] = useDeleteMessageMutation();
+  const [uploadVoiceMessage, { isLoading: isUploadingVoice }] =
+    useUploadVoiceMessageMutation();
 
   const [padding, setPadding] = useState(Math.max(insets.bottom, 10));
 
@@ -131,6 +147,8 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     const messagesRes: ChatMessage[] = rawGroupMessages.map(message => ({
       id: message._id,
       message: message.text,
+      voiceUrl: message.voiceUrl ?? message.voicePath,
+      voiceDuration: message.voiceDuration,
       sendBy: {
         id: adminId,
         name: 'suerHero',
@@ -147,7 +165,18 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     return messagesRes;
   }, [adminId, rawGroupMessages]);
 
-  const isSendingAny = isSending || isSendingGroup || isFetchingMessage;
+  const isSendingAny =
+    isSending || isSendingGroup || isFetchingMessage || isUploadingVoice;
+
+  useEffect(() => {
+    return () => {
+      AudioRecorderPlayer.removeRecordBackListener();
+      AudioRecorderPlayer.removePlayBackListener();
+      AudioRecorderPlayer.removePlaybackEndListener();
+      AudioRecorderPlayer.stopPlayer().catch(() => undefined);
+      AudioRecorderPlayer.stopRecorder().catch(() => undefined);
+    };
+  }, []);
 
   useEffect(() => {
     const ap = route.params?.activeParticipant as ActiveParticipantType | null;
@@ -196,7 +225,9 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
 
   const handleSend = async () => {
     const message = draft.trim();
-    if (!message || !activeParticipant?.id || isSendingAny) return;
+    if (!message || !activeParticipant?.id || isSendingAny || isRecording) {
+      return;
+    }
     try {
       setDraft('');
 
@@ -217,13 +248,191 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     }
   };
 
+  const requestRecordPermission = async () => {
+    if (Platform.OS !== 'android') return true;
+    if (AppState.currentState !== 'active') return false;
+
+    try {
+      const permission = PermissionsAndroid.PERMISSIONS.RECORD_AUDIO;
+      const alreadyGranted = await PermissionsAndroid.check(permission);
+
+      if (alreadyGranted) return true;
+
+      const result = await PermissionsAndroid.request(permission, {
+        title: 'Microphone permission',
+        message: 'JJWings needs microphone access to record voice messages.',
+        buttonPositive: 'Allow',
+        buttonNegative: 'Cancel',
+      });
+
+      return result === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (error) {
+      console.error('Failed to request microphone permission', error);
+      return false;
+    }
+  };
+
+  const sendVoiceMessage = async (uri: string, duration: number) => {
+    if (!activeParticipant?.id) return;
+
+    const extension = Platform.OS === 'ios' ? 'm4a' : 'mp4';
+    const voiceUrl = await uploadVoiceMessage({
+      uri,
+      name: `voice-message-${Date.now()}.${extension}`,
+      mimeType: Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp4',
+    }).unwrap();
+
+    if (!voiceUrl) {
+      throw new Error('Voice upload failed');
+    }
+
+    const message = draft.trim();
+    setDraft('');
+
+    if (isGroupChat) {
+      await sendGroupMessage({
+        groupId: activeParticipant.id,
+        message: message || undefined,
+        voiceUrl,
+        voiceDuration: duration,
+      }).unwrap();
+    } else {
+      await sendMessage({
+        receivedTo: activeParticipant.id,
+        message: message || undefined,
+        voiceUrl,
+        voiceDuration: duration,
+      }).unwrap();
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (!activeParticipant?.id || isSendingAny || isRecording) return;
+
+    try {
+      const hasPermission = await requestRecordPermission();
+      if (!hasPermission) {
+        Alert.alert(
+          'Microphone blocked',
+          'Please allow microphone access to record voice messages.',
+        );
+        return;
+      }
+
+      await AudioRecorderPlayer.stopPlayer().catch(() => undefined);
+      AudioRecorderPlayer.removePlayBackListener();
+      AudioRecorderPlayer.removePlaybackEndListener();
+      setPlayingMessageId(null);
+      recordingTimeRef.current = 0;
+      setRecordingTime(0);
+      AudioRecorderPlayer.setSubscriptionDuration(0.2);
+      AudioRecorderPlayer.addRecordBackListener(recording => {
+        const position = recording.currentPosition ?? 0;
+        recordingTimeRef.current = position;
+        setRecordingTime(position);
+      });
+      await AudioRecorderPlayer.startRecorder();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Failed to start voice recording', error);
+      Alert.alert('Recording failed', 'Please try recording again.');
+    }
+  };
+
+  const handleStopRecording = async (shouldSend = true) => {
+    if (!isRecording) return;
+
+    try {
+      const uri = await AudioRecorderPlayer.stopRecorder();
+      AudioRecorderPlayer.removeRecordBackListener();
+      const duration = recordingTimeRef.current;
+      setIsRecording(false);
+      setRecordingTime(0);
+
+      if (!shouldSend) return;
+
+      if (duration < 800) {
+        Alert.alert('Too short', 'Hold a little longer before sending.');
+        return;
+      }
+
+      await sendVoiceMessage(uri, duration);
+    } catch (error) {
+      console.error('Failed to send voice message', error);
+      Alert.alert('Voice message not sent', 'Please try again.');
+    }
+  };
+
+  const handlePlayVoice = async (item: ChatMessage) => {
+    const voiceUrl = getFileUrl(item.voiceUrl);
+    if (!voiceUrl) return;
+
+    try {
+      if (playingMessageId === item.id) {
+        await AudioRecorderPlayer.stopPlayer();
+        AudioRecorderPlayer.removePlayBackListener();
+        AudioRecorderPlayer.removePlaybackEndListener();
+        setPlayingMessageId(null);
+        return;
+      }
+
+      await AudioRecorderPlayer.stopPlayer().catch(() => undefined);
+      AudioRecorderPlayer.removePlayBackListener();
+      AudioRecorderPlayer.removePlaybackEndListener();
+      setPlayingMessageId(item.id);
+      AudioRecorderPlayer.addPlaybackEndListener(() => {
+        AudioRecorderPlayer.removePlaybackEndListener();
+        AudioRecorderPlayer.removePlayBackListener();
+        setPlayingMessageId(null);
+      });
+      await AudioRecorderPlayer.startPlayer(voiceUrl);
+    } catch (error) {
+      console.error('Failed to play voice message', error);
+      setPlayingMessageId(null);
+      Alert.alert(
+        'Playback failed',
+        'Please try playing this voice message again.',
+      );
+    }
+  };
+
+  const deleteSelectedMessage = async (item: ChatMessage) => {
+    setDeletingMessageId(item.id);
+    try {
+      await deleteMessage({
+        messageId: item.id,
+        groupId: isGroupChat ? activeParticipant?.id : undefined,
+      }).unwrap();
+    } catch (error) {
+      console.error('Failed to delete message', error);
+      Alert.alert('Unable to delete', 'Please try again.');
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
+  const handleDeleteMessage = (item: ChatMessage) => {
+    Alert.alert(
+      'Delete message?',
+      'This message will be removed from the chat.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteSelectedMessage(item),
+        },
+      ],
+    );
+  };
+
   const navigateToMessages = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.keyboardAvoider}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
@@ -269,7 +478,14 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
             inverted
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
-              <MessageBubble item={item} currentUserId={currentUserId} />
+              <MessageBubble
+                item={item}
+                currentUserId={currentUserId}
+                playingMessageId={playingMessageId}
+                deletingMessageId={deletingMessageId}
+                onPlayVoice={handlePlayVoice}
+                onDelete={handleDeleteMessage}
+              />
             )}
             contentContainerStyle={styles.messageList}
             keyboardShouldPersistTaps="handled"
@@ -312,10 +528,40 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
           />
 
           <View style={[styles.composer, { paddingBottom: padding }]}>
+            <TouchableOpacity
+              style={[
+                styles.micButton,
+                isRecording && styles.micButtonRecording,
+                (!activeParticipant?.id || isSendingAny) &&
+                  styles.composerButtonDisabled,
+              ]}
+              onPress={
+                isRecording
+                  ? () => handleStopRecording(true)
+                  : handleStartRecording
+              }
+              disabled={!activeParticipant?.id || isSendingAny}
+              activeOpacity={0.82}
+            >
+              {isUploadingVoice ? (
+                <ActivityIndicator size="small" color="#4F46E5" />
+              ) : (
+                <MaterialIcons
+                  name={isRecording ? 'stop' : 'keyboard-voice'}
+                  size={21}
+                  color={isRecording ? '#FFFFFF' : '#4F46E5'}
+                />
+              )}
+            </TouchableOpacity>
             <TextInput
               style={styles.composerInput}
               placeholder={
-                activeParticipant?.id
+                isRecording
+                  ? `Recording ${Math.max(
+                      1,
+                      Math.round(recordingTime / 1000),
+                    )}s`
+                  : activeParticipant?.id
                   ? isGroupChat
                     ? 'Every student in this group will receive it individually.'
                     : 'Type a message'
@@ -327,15 +573,27 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
               multiline
               onFocus={() => setPadding(10)}
               blurOnSubmit={false}
-              editable={Boolean(activeParticipant?.id) && !isSending}
+              editable={
+                Boolean(activeParticipant?.id) && !isSendingAny && !isRecording
+              }
             />
+            {isRecording ? (
+              <TouchableOpacity
+                style={styles.cancelRecordButton}
+                onPress={() => handleStopRecording(false)}
+                activeOpacity={0.82}
+              >
+                <MaterialIcons name="close" size={20} color="#B91C1C" />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                (!canSend || isSending) && styles.sendButtonDisabled,
+                (!canSend || isSendingAny || isRecording) &&
+                  styles.sendButtonDisabled,
               ]}
               onPress={handleSend}
-              disabled={!canSend || isSending}
+              disabled={!canSend || isSendingAny || isRecording}
               activeOpacity={0.82}
             >
               {isSendingAny ? (
@@ -355,6 +613,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: '#EEF2FF',
+  },
+  keyboardAvoider: {
+    flex: 1,
   },
   chatPane: {
     flex: 1,
@@ -413,6 +674,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     textAlignVertical: 'top',
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  micButtonRecording: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
+  },
+  composerButtonDisabled: {
+    opacity: 0.48,
+  },
+  cancelRecordButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sendButton: {
     width: 44,
