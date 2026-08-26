@@ -35,12 +35,14 @@ import {
   useGetGroupMessagesQuery,
   useSendMessageMutation,
   useReadMessagesMutation,
+  useDeleteMessageMutation,
 } from '../store/api';
 import {
   Avatar,
   MessageType,
   MessageTypeEnum,
   LoadingState,
+  LoadingOverlay,
 } from '../component';
 import MessageBubble from '../component/message/MessageBubble';
 import { RootState } from '../store/store';
@@ -86,6 +88,8 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [sendGroupMessage, { isLoading: isSendingGroup }] =
     useSendGroupMessageMutation();
+  const [deleteMessage, { isLoading: isDeletingMessage }] =
+    useDeleteMessageMutation();
   const [readMessages] = useReadMessagesMutation();
 
   const [padding, setPadding] = useState(Math.max(insets.bottom, 10));
@@ -221,6 +225,30 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
     navigation.goBack();
   }, [navigation]);
 
+  const handleDeleteMessage = (
+    isMine: boolean,
+    messageId: string,
+    message: string,
+  ) => {
+    if (!isMine || isGroupChat) return;
+
+    Alert.alert(
+      'Delete Message ?',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: () => {
+            deleteMessage({ messageId });
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -269,7 +297,11 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
             inverted
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
-              <MessageBubble item={item} currentUserId={currentUserId} />
+              <MessageBubble
+                item={item}
+                currentUserId={currentUserId}
+                onDelete={handleDeleteMessage}
+              />
             )}
             contentContainerStyle={styles.messageList}
             keyboardShouldPersistTaps="handled"
@@ -347,6 +379,7 @@ export default function MessageChatPane({}: MessageChatPaneProps) {
           </View>
         </View>
       </View>
+      <LoadingOverlay visible={isDeletingMessage} />
     </KeyboardAvoidingView>
   );
 }

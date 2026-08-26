@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ChatMessage } from '../../store/api';
 
@@ -20,24 +20,28 @@ const formatMessageTime = (dateValue?: string) => {
 const MessageBubble = ({
   item,
   currentUserId,
+  onDelete,
 }: {
   item: ChatMessage;
   currentUserId: string;
+  onDelete: (isMine: boolean, messageId: string, message: string) => void;
 }) => {
   const isMine = item.sendBy.id === currentUserId;
 
   return (
     <View style={[styles.messageRow, isMine && styles.messageRowMine]}>
-      <View
+      <Pressable
+        onLongPress={() => onDelete(isMine, item.id, item.message)}
         style={[styles.bubble, isMine ? styles.myBubble : styles.theirBubble]}
       >
         <Text style={[styles.messageText, isMine && styles.myMessageText]}>
           {item.message}
         </Text>
+
         <Text style={[styles.messageTime, isMine && styles.myMessageTime]}>
           {formatMessageTime(item.createdAt)}
         </Text>
-      </View>
+      </Pressable>
     </View>
   );
 };
