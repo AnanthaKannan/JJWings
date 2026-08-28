@@ -30,6 +30,7 @@ import {
   useGetQuestionsQuery,
   useUpdateQuestionMutation,
 } from '../store/api';
+import { createPdf } from '../util/pdfGenerator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,11 +135,13 @@ const ModuleCard = ({
   item,
   onPress,
   onUpdatePress,
+  onDownloadPress,
   onDeletePress,
 }: {
   item: Module;
   onPress: () => void;
   onUpdatePress: () => void;
+  onDownloadPress: () => void;
   onDeletePress: () => void;
 }) => {
   const updatedTime = formatHomeworkTime(item.updatedAt);
@@ -174,6 +177,12 @@ const ModuleCard = ({
           </View>
           <OptionsMenu
             options={[
+              {
+                key: 'download',
+                label: 'Download',
+                icon: 'edit',
+                onPress: onDownloadPress,
+              },
               {
                 key: 'edit',
                 label: 'Edit',
@@ -358,6 +367,12 @@ export default function HomeworkLibraryScreen() {
     }
   };
 
+  const handleDownloadPress = (item: Module) => {
+    console.log(item);
+    const result = createPdf(item.questions, 8);
+    console.log('>>>>>>>>>>>>>>>>>>>', result);
+  };
+
   const handleDeletePress = (item: Module) => {
     Alert.alert(
       `Delete ${getTaskTypeLabel(typeFilter)} ?`,
@@ -488,6 +503,7 @@ export default function HomeworkLibraryScreen() {
             onPress={() => handleModulePress(item)}
             onUpdatePress={() => openUpdateModal(item)}
             onDeletePress={() => handleDeletePress(item)}
+            onDownloadPress={() => handleDownloadPress(item)}
           />
         )}
         ListEmptyComponent={
