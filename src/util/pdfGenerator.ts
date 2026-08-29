@@ -9,7 +9,7 @@ const createQuestionHTML = (question: string, index: number) => {
 
   for (let i = 0; i < tokens.length; i += 2) {
     const number = tokens[i];
-    const operator = tokens[i + 1] || '';
+    const operator = tokens[i + 1] || '&nbsp;';
 
     lines.push(`
       <div class="token">
