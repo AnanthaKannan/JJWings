@@ -180,7 +180,7 @@ const ModuleCard = ({
               {
                 key: 'download',
                 label: 'Download',
-                icon: 'edit',
+                icon: 'download',
                 onPress: onDownloadPress,
               },
               {
@@ -368,9 +368,7 @@ export default function HomeworkLibraryScreen() {
   };
 
   const handleDownloadPress = (item: Module) => {
-    console.log(item);
-    const result = createPdf(item.questions, 8);
-    console.log('>>>>>>>>>>>>>>>>>>>', result);
+    createPdf(item.questions, 8);
   };
 
   const handleDeletePress = (item: Module) => {

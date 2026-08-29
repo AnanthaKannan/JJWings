@@ -19,6 +19,7 @@ import { useSelector, useDispatch } from 'react-redux';
 
 import { RootState } from '../store/store';
 import {
+  Homework,
   useGetHomeworksQuery,
   useUnassignHomeworkMutation,
 } from '../store/api';
@@ -30,8 +31,10 @@ import {
   BottomLodeMore,
   LoadingOverlay,
   LoadingState,
+  OptionsMenu,
   StudentHeader,
 } from '../component';
+import { createPdf } from '../util/pdfGenerator';
 
 interface HomeworkCardProps {
   questionId: string;
@@ -50,6 +53,7 @@ interface HomeworkCardProps {
   studentName?: string;
   contentType?: 'homework' | 'exam';
   isUnassigning?: boolean;
+  onDownloadPress: () => void;
   onUnassign?: (questionId: string) => void;
 }
 
@@ -76,6 +80,7 @@ function HomeworkCard({
   studentName,
   contentType = 'homework',
   isUnassigning = false,
+  onDownloadPress,
   onUnassign,
 }: HomeworkCardProps) {
   const navigation = useNavigation<any>();
@@ -174,29 +179,42 @@ function HomeworkCard({
               </View>
             </View>
           ) : (
-            <View style={styles.questionRow}>
-              <Text style={styles.questionIcon}>📋</Text>
-              <Text style={styles.questionCount}>
-                {result.length}/{question.length} questions
-              </Text>
-              {updatedTime.length > 0 && (
-                <Text style={styles.updatedText}>• {updatedTime}</Text>
-              )}
+            <View style={{ marginTop: 10 }}>
+              <View style={styles.questionRow}>
+                <Text style={styles.questionIcon}>📋</Text>
+                <Text style={styles.questionCount}>
+                  {result.length}/{question.length} questions
+                </Text>
+                {updatedTime.length > 0 && (
+                  <Text style={styles.updatedText}>• {updatedTime}</Text>
+                )}
+              </View>
             </View>
           )}
         </View>
         <View style={styles.actionRow}>
-          {/* Attend button — hidden for COMPLETED */}
           {canUseAction && (
-            <TouchableOpacity
-              style={styles.attendBtn}
-              activeOpacity={0.85}
-              onPress={handleAttend}
-            >
-              <Text style={styles.attendBtnText}>
-                {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row' }}>
+              <TouchableOpacity
+                style={styles.attendBtn}
+                activeOpacity={0.85}
+                onPress={handleAttend}
+              >
+                <Text style={styles.attendBtnText}>
+                  {state !== HomeworkState.COMPLETED ? 'Attend' : 'View'}
+                </Text>
+              </TouchableOpacity>
+              <OptionsMenu
+                options={[
+                  {
+                    key: 'download',
+                    label: 'Download',
+                    icon: 'download',
+                    onPress: onDownloadPress,
+                  },
+                ]}
+              />
+            </View>
           )}
           {isAdminReview && state === HomeworkState.NEW && onUnassign && (
             <TouchableOpacity
@@ -335,6 +353,10 @@ export default function HomeworkScreen() {
     );
   };
 
+  const handleDownloadPress = (item: Homework) => {
+    createPdf(item.question?.question || [], 8);
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#EEF2FF" />
@@ -413,6 +435,7 @@ export default function HomeworkScreen() {
             contentType={contentType}
             isUnassigning={unassigningQuestionId === item.questionId}
             onUnassign={handleUnassignQuestion}
+            onDownloadPress={() => handleDownloadPress(item)}
           />
         )}
         ListEmptyComponent={
