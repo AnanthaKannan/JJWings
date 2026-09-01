@@ -35,7 +35,7 @@ const createQuestionHTML = (question: string, index: number) => {
   `;
 };
 
-export const createPdf = async (questions: string[], questionsPerRow = 4) => {
+export const createPdf = async (questions: string[], questionsPerRow = 7) => {
   // Create rows
   const rows: string[] = [];
 
@@ -74,7 +74,7 @@ export const createPdf = async (questions: string[], questionsPerRow = 4) => {
 
           .logo img {
             width: 30%;
-            margin-bottom: 20px;
+            margin-bottom: 27px;
           }
 
           .row {

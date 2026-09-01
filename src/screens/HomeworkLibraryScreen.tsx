@@ -368,7 +368,7 @@ export default function HomeworkLibraryScreen() {
   };
 
   const handleDownloadPress = (item: Module) => {
-    createPdf(item.questions, 8);
+    createPdf(item.questions);
   };
 
   const handleDeletePress = (item: Module) => {
