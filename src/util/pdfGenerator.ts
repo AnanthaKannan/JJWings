@@ -2,8 +2,43 @@ import { generatePDF } from 'react-native-html-to-pdf';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Platform, PermissionsAndroid, Alert } from 'react-native';
 
+const PDF_MIME_TYPE = 'application/pdf';
+
+const openPdf = (path: string) => {
+  ReactNativeBlobUtil.android
+    .actionViewIntent(path, PDF_MIME_TYPE)
+    .catch(error => {
+      console.error('Failed to open generated PDF', error);
+      Alert.alert('Unable to open', 'No app was found to view this PDF.');
+    });
+};
+
+const showDownloadedPrompt = (fileName: string, openPath: string) => {
+  Alert.alert('Downloaded', `${fileName} has been saved to Downloads.`, [
+    { text: 'OK' },
+    {
+      text: 'Open',
+      onPress: () => openPdf(openPath),
+    },
+  ]);
+};
+
+const showDownloadNotification = async (fileName: string, path: string) => {
+  try {
+    await ReactNativeBlobUtil.android.addCompleteDownload({
+      title: fileName,
+      description: 'PDF downloaded',
+      mime: PDF_MIME_TYPE,
+      path,
+      showNotification: true,
+    });
+  } catch (error) {
+    console.error('Failed to show generated PDF download notification', error);
+  }
+};
+
 const createQuestionHTML = (question: string, index: number) => {
-  const tokens = question.match(/\d+|[+\-*\/]/g) || [];
+  const tokens = question.match(/\d+|[+\-*/]/g) || [];
 
   const lines: string[] = [];
 
@@ -149,21 +184,18 @@ export const createPdf = async (
     if (Platform.Version >= 29) {
       // Android 10+: MediaStore puts it in the real Downloads folder,
       // visible in the Downloads app/file manager immediately, no permission prompt.
-      await ReactNativeBlobUtil.MediaCollection.copyToMediaStore(
-        {
-          name: pdfName,
-          parentFolder: '',
-          mimeType: 'application/pdf',
-        },
-        'Download',
-        generated.filePath,
-      );
-      Alert.alert(
-        'Download',
-        'File downloaded successfully, Please check the file in the download folder.',
-      );
-      // console.log('downloadPath', downloadPath);
-      // await FileViewer.open(downloadPath, { showOpenWithDialog: true });
+      const savedUri =
+        await ReactNativeBlobUtil.MediaCollection.copyToMediaStore(
+          {
+            name: pdfName,
+            parentFolder: '',
+            mimeType: PDF_MIME_TYPE,
+          },
+          'Download',
+          generated.filePath,
+        );
+      await showDownloadNotification(pdfName, generated.filePath);
+      showDownloadedPrompt(questionName, savedUri);
     } else {
       // Android 9 and below: no MediaStore Downloads collection, so request
       // legacy storage permission and copy the file directly.
@@ -172,11 +204,8 @@ export const createPdf = async (
       );
       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
         await ReactNativeBlobUtil.fs.cp(generated.filePath, downloadPath);
-        Alert.alert(
-          'Download',
-          'File downloaded successfully, Please check the file in the download folder.',
-        );
-        // await FileViewer.open(downloadPath, { showOpenWithDialog: true });
+        await showDownloadNotification(pdfName, downloadPath);
+        showDownloadedPrompt(pdfName, downloadPath);
       } else {
         Alert.alert(
           'Permission needed',
