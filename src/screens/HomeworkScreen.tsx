@@ -354,7 +354,7 @@ export default function HomeworkScreen() {
   };
 
   const handleDownloadPress = (item: Homework) => {
-    createPdf(item.question?.question || []);
+    createPdf(item.question?.question || [], item.questionId);
   };
 
   return (

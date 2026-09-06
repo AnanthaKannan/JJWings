@@ -1,5 +1,6 @@
 import { generatePDF } from 'react-native-html-to-pdf';
-import FileViewer from 'react-native-file-viewer';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Platform, PermissionsAndroid, Alert } from 'react-native';
 
 const createQuestionHTML = (question: string, index: number) => {
   const tokens = question.match(/\d+|[+\-*\/]/g) || [];
@@ -35,7 +36,11 @@ const createQuestionHTML = (question: string, index: number) => {
   `;
 };
 
-export const createPdf = async (questions: string[], questionsPerRow = 7) => {
+export const createPdf = async (
+  questions: string[],
+  questionName: string,
+  questionsPerRow = 7,
+) => {
   // Create rows
   const rows: string[] = [];
 
@@ -133,16 +138,51 @@ export const createPdf = async (questions: string[], questionsPerRow = 7) => {
     </html>
   `;
 
-  console.log(html);
-  const result = await generatePDF({
+  const generated = await generatePDF({
     html,
     fileName: 'student-questions',
-    directory: 'Documents',
   });
 
-  await FileViewer.open(result.filePath, {
-    showOpenWithDialog: true,
-  });
-
-  return result;
+  if (Platform.OS === 'android') {
+    const pdfName = `student-questions-${questionName}.pdf`;
+    const downloadPath = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${pdfName}`;
+    if (Platform.Version >= 29) {
+      // Android 10+: MediaStore puts it in the real Downloads folder,
+      // visible in the Downloads app/file manager immediately, no permission prompt.
+      await ReactNativeBlobUtil.MediaCollection.copyToMediaStore(
+        {
+          name: pdfName,
+          parentFolder: '',
+          mimeType: 'application/pdf',
+        },
+        'Download',
+        generated.filePath,
+      );
+      Alert.alert(
+        'Download',
+        'File downloaded successfully, Please check the file in the download folder.',
+      );
+      // console.log('downloadPath', downloadPath);
+      // await FileViewer.open(downloadPath, { showOpenWithDialog: true });
+    } else {
+      // Android 9 and below: no MediaStore Downloads collection, so request
+      // legacy storage permission and copy the file directly.
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        await ReactNativeBlobUtil.fs.cp(generated.filePath, downloadPath);
+        Alert.alert(
+          'Download',
+          'File downloaded successfully, Please check the file in the download folder.',
+        );
+        // await FileViewer.open(downloadPath, { showOpenWithDialog: true });
+      } else {
+        Alert.alert(
+          'Permission needed',
+          'Storage permission is required to save to Downloads.',
+        );
+      }
+    }
+  }
 };
