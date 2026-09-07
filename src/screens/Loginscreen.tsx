@@ -338,8 +338,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   bannerImage: {
-    width: '110%',
-    height: 100,
+    width: '90%',
+    height: 60,
+    marginBottom: 30,
   },
   avatarWrapper: {
     marginBottom: -28,
