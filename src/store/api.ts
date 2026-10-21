@@ -1577,6 +1577,19 @@ export const jjWingsApi = createApi({
       transformResponse: (response: ResetPasswordResponse) => response,
     }),
 
+    recalculateStudentScore: builder.mutation<string, { studentId: string }>({
+      query: ({ studentId }) => ({
+        url: '/admin/scores/recalculate',
+        method: 'POST',
+        body: { studentId },
+      }),
+      transformResponse: () => 'success',
+      invalidatesTags: (_result, _error, { studentId }) => [
+        { type: 'Score', id: studentId },
+        { type: 'Students', id: 'LIST' },
+      ],
+    }),
+
     updateStudentDeviceId: builder.mutation<string, UpdateStudentDeviceIdArg>({
       query: ({ deviceId, authToken }) => ({
         url: '/student',
@@ -2117,6 +2130,7 @@ export const {
   useUpdateStudentPasswordMutation,
   useUpdateAdminPasswordMutation,
   useResetPasswordMutation,
+  useRecalculateStudentScoreMutation,
   useUpdateStudentDeviceIdMutation,
   useDeleteStudentDeviceIdMutation,
   useUploadFileMutation,
