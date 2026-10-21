@@ -20,6 +20,7 @@ import {
   useGetStudentsQuery,
   useUpdateStudentMutation,
   useResetPasswordMutation,
+  useRecalculateStudentScoreMutation,
 } from '../store/api';
 import { randomNumber } from '../util/fn';
 import {
@@ -188,12 +189,17 @@ const modalInitial: ReuseModalProps = {
 const TouchableBtn = ({
   onPress,
   text,
+  style,
 }: {
   onPress: () => void;
   text: string;
+  style?: any;
 }) => {
   return (
-    <TouchableOpacity style={styles.modalSecondaryAction} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.modalSecondaryAction, style]}
+      onPress={onPress}
+    >
       <Text style={styles.modalSecondaryActionText}>{text}</Text>
     </TouchableOpacity>
   );
@@ -231,6 +237,8 @@ export default function StudentDirectoryScreen() {
     useUpdateStudentMutation();
   const [resetPassword, { isLoading: isResetPasswordLoading }] =
     useResetPasswordMutation();
+  const [recalculateStudentScore, { isLoading: isScoreRecalculating }] =
+    useRecalculateStudentScoreMutation();
 
   // Reset to page 1 whenever the level filter changes
   useEffect(() => {
@@ -472,6 +480,25 @@ export default function StudentDirectoryScreen() {
     });
   };
 
+  const handleModalRefreshScorePress = async () => {
+    if (!selectedStudent) return;
+    try {
+      await recalculateStudentScore({
+        studentId: selectedStudent.id,
+      }).unwrap();
+      closeActionsModal();
+    } catch (error) {
+      console.error('Failed to refresh student score:', error);
+      setModal({
+        visible: true,
+        state: 'failure',
+        title: 'Refresh Score',
+        description: 'Unable to refresh the score right now. Please try again.',
+      });
+      closeActionsModal();
+    }
+  };
+
   const handleDeleteStudent = async () => {
     if (!selectedStudent) return;
 
@@ -600,11 +627,15 @@ export default function StudentDirectoryScreen() {
         <Text style={styles.fabIcon}>＋</Text>
       </TouchableOpacity> */}
       <LoadingOverlay
-        visible={isHorizontalUpdating || isResetPasswordLoading}
+        visible={
+          isHorizontalUpdating || isResetPasswordLoading || isScoreRecalculating
+        }
         label={
           isResetPasswordLoading
             ? 'Resetting password...'
-            : 'Updating student...'
+            : isScoreRecalculating
+              ? 'Refreshing score...'
+              : 'Updating student...'
         }
       />
 
@@ -748,9 +779,13 @@ export default function StudentDirectoryScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableBtn
-              text="Reset Password"
-              onPress={handleModalResetPasswordPress}
-            />
+                text="Refresh Score"
+                onPress={handleModalRefreshScorePress}
+              />
+              <TouchableBtn
+                text="Reset Password"
+                onPress={handleModalResetPasswordPress}
+              />
             <TouchableOpacity
               style={styles.modalDangerAction}
               onPress={handleDeleteStudent}

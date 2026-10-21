@@ -158,6 +158,7 @@ const generateSafeExpression = (
 
 const QuestionRow = ({
   item,
+  index,
   showMarks,
   onChange,
   onMarksChange,
@@ -175,6 +176,7 @@ const QuestionRow = ({
 
   return (
     <View style={styles.questionRow}>
+      <Text style={styles.questionNumber}>{index + 1}.</Text>
       <TextInput
         style={[
           styles.expressionInput,
@@ -1084,6 +1086,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+  },
+  questionNumber: {
+    width: 32,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#64748B',
   },
   expressionInput: {
     flex: 1,
